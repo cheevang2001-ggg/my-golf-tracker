@@ -17,13 +17,26 @@ def load_data():
 def save_data(week, player, pars, birdies):
     existing_data = load_data()
     
-    # Create the new entry
+    # Create the new row of data
     new_entry = pd.DataFrame([{
         'Week': week,
         'Player': player,
         'Pars_Count': pars,
         'Birdies_Count': birdies
     }])
+    
+    # FIX: Check if the sheet has any data yet. 
+    # If 'Week' isn't in the columns, we just skip the "filtering" part.
+    if not existing_data.empty and 'Week' in existing_data.columns:
+        # Remove any existing entry for this player/week to allow updates
+        updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
+        final_df = pd.concat([updated_df, new_entry], ignore_index=True)
+    else:
+        # If it's the first time, our final data is just the new entry
+        final_df = new_entry
+    
+    # Update the Google Sheet
+    conn.update(data=final_df)
     
     # Remove any existing entry for this player/week to allow updates
     updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
