@@ -46,7 +46,7 @@ def save_data(week, player, pars, birdies):
     conn.update(data=updated_df)
 
 # --- STEP 2: APP LAYOUT ---
-st.title("⛳ GGG Golf League Tracker")
+st.title("GGGolf Winter League Tracker")
 
 tab1, tab2, tab3 = st.tabs(["📝 Enter Stats", "🏆 Leaderboard", "📅 Weekly Log"])
 
