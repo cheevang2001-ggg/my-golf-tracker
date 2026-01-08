@@ -65,8 +65,16 @@ current_handicaps = get_handicaps()
 PLAYERS = sorted(list(current_handicaps.keys()))
 
 with tab1:
-    st.header("Input Weekly Stats")
+    st.header("Live Scorecard")
     
+    # 1. Initialize Session State for the temporary scorecard if it doesn't exist
+    if 'scorecard' not in st.session_state:
+        st.session_state.scorecard = {
+            'Par': 0, 'Birdie': 0, 'Eagle': 0,
+            'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0
+        }
+
+    # --- SECTION 1: SELECTION ---
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
@@ -74,37 +82,66 @@ with tab1:
     default_hcp = int(current_handicaps.get(player_select, 0))
     st.divider()
     
-    # LIVE MATH INPUTS
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c1:
-        score_input = st.number_input("Gross Score", min_value=20, max_value=150, value=45)
-    with c2:
-        hcp_input = st.number_input(f"Handicap for {player_select}", value=default_hcp, key=f"hcp_box_{player_select}")
-    with c3:
-        calculated_net = score_input - hcp_input
-        st.metric(label="Calculated Net Score", value=calculated_net)
+    # --- SECTION 2: CONTINUOUS COUNTERS ---
+    st.subheader("Hole-by-Hole Entry")
+    st.caption("Click the + and - buttons as you play. Values are saved locally until you submit.")
+
+    # Create two rows of buttons for live counting
+    r1_col1, r1_col2, r1_col3 = st.columns(3)
+    r2_col1, r2_col2, r2_col3 = st.columns(3)
+
+    categories = [
+        ("Par", r1_col1, 'Par'), ("Birdie", r1_col2, 'Birdie'), ("Eagle", r1_col3, 'Eagle'),
+        ("Gimme Par", r2_col1, 'G_Par'), ("Gimme Birdie", r2_col2, 'G_Birdie'), ("Gimme Eagle", r2_col3, 'G_Eagle')
+    ]
+
+    for label, col, key in categories:
+        with col:
+            # This number input stays in memory because it is linked to session_state
+            st.session_state.scorecard[key] = st.number_input(
+                label, 
+                min_value=0, 
+                value=st.session_state.scorecard[key],
+                key=f"input_{key}"
+            )
 
     st.divider()
 
-    with st.form("stat_entry", clear_on_submit=True):
-        st.caption("Enter hole breakdown:")
+    # --- SECTION 3: ROUND TOTALS & SUBMISSION ---
+    st.subheader("Finalize Round")
+    m1, m2, m3 = st.columns(3)
+    
+    score_input = m1.number_input("Gross Score", min_value=20, value=45)
+    hcp_input = m2.number_input(f"Handicap", value=default_hcp, key=f"hcp_final_{player_select}")
+    
+    # Live Math
+    calculated_net = score_input - hcp_input
+    m3.metric("Live Net Score", calculated_net)
+
+    if st.button("🚀 Submit Final Round to Sheets"):
+        # Save all categories from session state
+        save_data(
+            week_select, player_select, 
+            st.session_state.scorecard['Par'], 
+            st.session_state.scorecard['Birdie'], 
+            st.session_state.scorecard['Eagle'],
+            st.session_state.scorecard['G_Par'], 
+            st.session_state.scorecard['G_Birdie'], 
+            st.session_state.scorecard['G_Eagle'],
+            score_input, hcp_input
+        )
         
-        row1_1, row1_2, row1_3 = st.columns(3)
-        p_in = row1_1.number_input("Par (1.85 pts)", min_value=0, value=0)
-        b_in = row1_2.number_input("Birdie (2.5 pts)", min_value=0, value=0)
-        e_in = row1_3.number_input("Eagle (3 pts)", min_value=0, value=0)
-        
-        row2_1, row2_2, row2_3 = st.columns(3)
-        gp_in = row2_1.number_input("Gimme Par (1 pt)", min_value=0, value=0)
-        gb_in = row2_2.number_input("Gimme Birdie (1.75 pts)", min_value=0, value=0)
-        ge_in = row2_3.number_input("Gimme Eagle (2 pts)", min_value=0, value=0)
-        
-        submit_button = st.form_submit_button("Save to Google Sheets")
-        
-        if submit_button:
-            save_data(week_select, player_select, p_in, b_in, e_in, gp_in, gb_in, ge_in, score_input, hcp_input)
-            st.success(f"✅ Saved! {player_select}'s Net Score: {calculated_net}")
-            st.rerun()
+        # Reset the temporary scorecard for the next entry
+        for key in st.session_state.scorecard:
+            st.session_state.scorecard[key] = 0
+            
+        st.success(f"✅ Round Submitted! {player_select} finished with a net {calculated_net}.")
+        st.rerun()
+
+    if st.button("🗑️ Clear Local Scorecard"):
+        for key in st.session_state.scorecard:
+            st.session_state.scorecard[key] = 0
+        st.rerun()
 
 with tab2:
     st.header("Season Standings")
@@ -127,6 +164,16 @@ with tab2:
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Avg Net'], ascending=[False, True])
         
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
+        
+        # --- NEW TRENDING CHART ---
+        st.divider()
+        st.subheader("📈 Performance Trending")
+        st.caption("Weekly Points by Player")
+        
+        # Prepare data for trending chart (Week vs Points per Player)
+        trend_df = df.pivot_table(index='Week', columns='Player', values='Points', aggfunc='sum').fillna(0)
+        st.line_chart(trend_df)
+        
         st.subheader("Season Points Total")
         st.bar_chart(data=leaderboard, x="Player", y="Points")
     else:
