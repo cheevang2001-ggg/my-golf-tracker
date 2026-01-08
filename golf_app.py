@@ -77,35 +77,43 @@ PLAYERS = sorted(list(current_handicaps.keys()))
 with tab1:
     st.header("Input Weekly Stats")
     
-    # STEP 1: These inputs are OUTSIDE the form to allow "Live Math"
+    # --- SECTION 1: PLAYER SELECTION ---
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     
-    # Get the handicap and the Gross Score outside the form
+    # Get the saved handicap for this player
     default_hcp = int(current_handicaps.get(player_select, 0))
     
-    # We move the Gross Score here so the app sees changes instantly
-    score_input = st.number_input("Gross Score", min_value=20, max_value=150, value=45)
+    st.divider()
     
-    # STEP 2: The Form handles the rest
-    with st.form("stat_entry", clear_on_submit=True):
-        # Handicap input (stays reactive to player_select)
+    # --- SECTION 2: LIVE MATH INPUTS (Outside the Form) ---
+    # Because these are outside the form, changing them triggers an instant update.
+    c1, c2, c3 = st.columns([1, 1, 1])
+    
+    with c1:
+        score_input = st.number_input("Gross Score", min_value=20, max_value=150, value=45)
+    
+    with c2:
         hcp_input = st.number_input(
             f"Handicap for {player_select}", 
             value=default_hcp, 
-            key=f"hcp_box_{player_select}"
+            key=f"hcp_box_{player_select}" # Unique key ensures it updates when player changes
         )
         
-        st.divider()
-        
-        # LIVE CALCULATION: This will now update instantly as you change the Gross Score above
+    with c3:
+        # LIVE CALCULATION
         calculated_net = score_input - hcp_input
         st.metric(label="Calculated Net Score", value=calculated_net)
-        
-        c1, c2 = st.columns(2)
-        pars_input = c1.number_input("Total Pars", min_value=0, max_value=18, value=0)
-        birdies_input = c2.number_input("Total Birdies", min_value=0, max_value=18, value=0)
+
+    st.divider()
+
+    # --- SECTION 3: STATS FORM ---
+    with st.form("stat_entry", clear_on_submit=True):
+        st.caption("Enter stats below and click save:")
+        col_a, col_b = st.columns(2)
+        pars_input = col_a.number_input("Total Pars", min_value=0, max_value=18, value=0)
+        birdies_input = col_b.number_input("Total Birdies", min_value=0, max_value=18, value=0)
         
         submit_button = st.form_submit_button("Save to Google Sheets")
         
