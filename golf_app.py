@@ -12,16 +12,16 @@ DEFAULT_HANDICAPS = {
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# This tells Streamlit to keep the data in memory for 2 minutes 
-# unless we manually tell it to refresh.
-@st.cache_data(ttl=120) 
+# 1. CACHE THIS: Only ask Google once every 10 minutes (ttl=600)
+# This prevents the "Rate Limit" error.
+@st.cache_data(ttl=600)
 def load_data():
-    return conn.read(ttl=120)
+    return conn.read()
 
+# 2. FIX: This now uses 'load_data()' instead of 'conn.read(ttl=0)'
+# It reads from the memory, not the internet.
 def get_handicaps():
-    # We use a 0-second TTL here specifically for the Admin/Handicap lookup
-    # so it stays snappy, but the main data is cached.
-    df = conn.read(ttl=0) 
+    df = load_data() 
     if not df.empty and 'Handicap' in df.columns:
         latest = df.sort_values('Week').groupby('Player')['Handicap'].last().to_dict()
         for player in DEFAULT_HANDICAPS:
@@ -31,7 +31,12 @@ def get_handicaps():
     return DEFAULT_HANDICAPS
 
 def save_data(week, player, pars, birdies, score, hcp_val):
-    existing_data = conn.read(ttl=0) # Read fresh to avoid overwriting
+    # We clear the cache immediately so the next read is fresh
+    st.cache_data.clear()
+    
+    # We force a fresh read ONLY when saving to ensure we don't overwrite data
+    existing_data = conn.read(ttl=0) 
+    
     net_score = score - hcp_val
     
     new_entry = pd.DataFrame([{
