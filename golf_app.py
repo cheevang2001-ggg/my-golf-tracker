@@ -114,6 +114,12 @@ with tab2:
     df = load_data()
     if not df.empty:
         df['Points'] = (df['Birdies_Count'] * 2) + (df['Pars_Count'] * 1)
+
+        # ADD 'hide_index=True' HERE
+        st.dataframe(
+            leaderboard, 
+            use_container_width=True,
+            hide_index=True)
         
         # Aggregate stats including the average Net Score
         leaderboard = df.groupby('Player').agg({
@@ -138,8 +144,12 @@ with tab3:
     if not df.empty:
         # Reordering columns to put Net Score in view
         display_df = df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Birdies_Count', 'Pars_Count']]
-        st.dataframe(display_df.sort_values(by=['Week', 'Player'], ascending=[False, True]), use_container_width=True)
-
+        # ADD 'hide_index=True' HERE
+        st.dataframe(
+            display_df.sort_values(by=['Week', 'Player'], ascending=[False, True]), 
+            use_container_width=True,
+            hide_index=True
+        )
 with tab4:
     st.header("League Settings")
     st.write(current_handicaps)
