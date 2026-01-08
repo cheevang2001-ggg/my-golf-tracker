@@ -155,7 +155,7 @@ with tab2:
             hide_index=True # Now it hides the blank numbers, but keeps the 'Player' column
         )
         
-        st.subheader("Points Race")
+        st.subheader("Points Race Birdies: 2pt Pars: 1pt")
         st.bar_chart(data=leaderboard, x="Player", y="Points")
         
     else:
