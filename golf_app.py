@@ -6,8 +6,9 @@ import pandas as pd
 st.set_page_config(page_title="GGGolf League", page_icon="⛳") 
 
 DEFAULT_HANDICAPS = {
-    "Cory": 5, "Lex": 8, "John": 10, "Topdawg": 12,
-    "Carter": 7, "Dale": 15, "Long": 9, "Txv": 11
+    "Cory": 3, "Lex": 5, "John": 27, "Mike": 8,
+    "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3
+     "Matt": 1, "NomThai": 3, "VaMeng": 0
 }
 
 conn = st.connection("gsheets", type=GSheetsConnection)
