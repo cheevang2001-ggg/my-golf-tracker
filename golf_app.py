@@ -5,7 +5,7 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf League", page_icon="⛳") 
 
-# Initial handicaps - The app will use these if the "Handicaps" sheet is empty
+# Initial handicaps - used if no data exists yet
 DEFAULT_HANDICAPS = {
     "Cory": 5, "Lex": 8, "John": 10, "Topdawg": 12,
     "Carter": 7, "Dale": 15, "Long": 9, "Txv": 11
@@ -16,27 +16,26 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data():
     return conn.read(ttl=0)
 
-# --- NEW: FUNCTIONS TO MANAGE HANDICAPS VIA GOOGLE SHEETS ---
 def get_handicaps():
     df = load_data()
+    # If sheet has data and a Handicap column, get the latest for each player
     if not df.empty and 'Handicap' in df.columns:
-        # Get the most recent handicap assigned to each player
         latest = df.sort_values('Week').groupby('Player')['Handicap'].last().to_dict()
-        # Merge with defaults for any player not yet in the sheet
+        # Ensure all players are included
         for player in DEFAULT_HANDICAPS:
             if player not in latest:
                 latest[player] = DEFAULT_HANDICAPS[player]
         return latest
     return DEFAULT_HANDICAPS
 
-def save_data(week, player, pars, birdies, score, hcp_override):
+def save_data(week, player, pars, birdies, score, hcp_val):
     existing_data = load_data()
-    net_score = score - hcp_override
+    net_score = score - hcp_val
     
     new_entry = pd.DataFrame([{
         'Week': week, 'Player': player,
         'Pars_Count': pars, 'Birdies_Count': birdies,
-        'Total_Score': score, 'Handicap': hcp_override,
+        'Total_Score': score, 'Handicap': hcp_val,
         'Net_Score': net_score
     }])
     
@@ -48,7 +47,7 @@ def save_data(week, player, pars, birdies, score, hcp_override):
     
     conn.update(data=final_df)
 
-# --- LOGO SECTION ---
+# --- LOGO & TITLE SECTION ---
 col1, col2, col3 = st.columns([1,1,1])
 with col2:
     try:
@@ -57,10 +56,12 @@ with col2:
         st.write("⛳")
 
 st.markdown("<h1 style='text-align: center;'>GGGolf 2026 Winter League</h1>", unsafe_allow_html=True)
+st.divider()
 
 # --- STEP 2: APP LAYOUT ---
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Enter Stats", "🏆 Leaderboard", "📅 Weekly Log", "⚙️ Admin"])
 
+# Load current handicaps for the dropdowns
 current_handicaps = get_handicaps()
 PLAYERS = sorted(list(current_handicaps.keys()))
 
@@ -71,8 +72,9 @@ with tab1:
         player_select = col1.selectbox("Select Player", PLAYERS)
         week_select = col2.selectbox("Select Week", range(1, 13))
         
-        # Use the handicap from the system, but allow a manual override if needed
-        hcp_val = st.number_input(f"Handicap for {player_select}", value=int(current_handicaps[player_select]))
+        # We grab the current handicap for the selected player
+        default_hcp = int(current_handicaps.get(player_select, 0))
+        hcp_input = st.number_input(f"Handicap for {player_select}", value=default_hcp)
         
         st.divider()
         c1, c2, c3 = st.columns(3)
@@ -80,15 +82,18 @@ with tab1:
         birdies_input = c2.number_input("Total Birdies", min_value=0, max_value=18, value=0)
         score_input = c3.number_input("Gross Score", min_value=20, max_value=150, value=45)
         
-        if st.form_submit_button("Save to Google Sheets"):
-            save_data(week_select, player_select, pars_input, birdies_input, hcp_val)
-            st.success(f"Stats saved! Net Score: {score_input - hcp_val}")
+        submit_button = st.form_submit_button("Save to Google Sheets")
+        
+        if submit_button:
+            # FIX: We now pass hcp_input as the 6th argument
+            save_data(week_select, player_select, pars_input, birdies_input, score_input, hcp_input)
+            st.success(f"Stats saved! {player_select} Net Score: {score_input - hcp_input}")
 
 with tab2:
     st.header("Season Standings")
     df = load_data()
     if not df.empty:
-        # Calculation: Birdies = 2pts, Pars = 1pt
+        # Points: Birdie = 2, Par = 1
         df['Points'] = (df['Birdies_Count'] * 2) + (df['Pars_Count'] * 1)
         
         leaderboard = df.groupby('Player').agg({
@@ -99,14 +104,14 @@ with tab2:
         }).rename(columns={'Net_Score': 'Avg_Net'})
         
         leaderboard['Avg_Net'] = leaderboard['Avg_Net'].round(1)
-        leaderboard = leaderboard.sort_values(by='Points', ascending=False)
+        # Ranking by Points first (higher is better), then Avg Net (lower is better)
+        leaderboard = leaderboard.sort_values(by=['Points', 'Avg_Net'], ascending=[False, True])
         
         st.dataframe(leaderboard, use_container_width=True)
-        
-        st.subheader("Performance Race")
+        st.subheader("Points Leaderboard")
         st.bar_chart(leaderboard['Points'])
     else:
-        st.info("No data found.")
+        st.info("No data found in the spreadsheet.")
 
 with tab3:
     st.header("Full History")
@@ -116,6 +121,6 @@ with tab3:
 
 with tab4:
     st.header("League Settings")
-    st.write("Current Handicaps being used by the system:")
-    st.json(current_handicaps)
-    st.info("To change a handicap permanently for the next entry, simply adjust the 'Handicap' number in the 'Enter Stats' tab when saving a new week. The system will remember the most recent handicap used for each player.")
+    st.write("These are the handicaps currently stored in the system:")
+    st.write(current_handicaps)
+    st.info("To update a handicap, change the number in the 'Enter Stats' tab when saving a new round. The system always remembers the last handicap used for each player.")
