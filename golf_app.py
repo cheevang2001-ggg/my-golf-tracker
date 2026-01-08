@@ -31,7 +31,7 @@ def get_handicaps():
     return DEFAULT_HANDICAPS
 
 def save_data(week, player, pars, birdies, score, hcp_val):
-    existing_data = load_data()
+    existing_data = conn.read(ttl=0) # Read fresh to avoid overwriting
     net_score = score - hcp_val
     
     new_entry = pd.DataFrame([{
@@ -48,6 +48,9 @@ def save_data(week, player, pars, birdies, score, hcp_val):
         final_df = new_entry
     
     conn.update(data=final_df)
+    
+    # CRITICAL: This clears the memory so the Leaderboard updates immediately
+    st.cache_data.clear()
 
 # --- LOGO & TITLE ---
 col1, col2, col3 = st.columns([1,1,1])
