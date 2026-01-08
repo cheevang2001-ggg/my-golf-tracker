@@ -67,14 +67,21 @@ PLAYERS = sorted(list(current_handicaps.keys()))
 
 with tab1:
     st.header("Input Weekly Stats")
-    with st.form("stat_entry"):
+    
+    # We use a form to group the inputs
+    with st.form("stat_entry", clear_on_submit=True):
         col1, col2 = st.columns(2)
         player_select = col1.selectbox("Select Player", PLAYERS)
         week_select = col2.selectbox("Select Week", range(1, 13))
         
-        # We grab the current handicap for the selected player
+        # FIX: We tie the handicap value to the player_select using a dynamic 'key'
+        # This forces the box to refresh when the player changes
         default_hcp = int(current_handicaps.get(player_select, 0))
-        hcp_input = st.number_input(f"Handicap for {player_select}", value=default_hcp)
+        hcp_input = st.number_input(
+            f"Handicap for {player_select}", 
+            value=default_hcp, 
+            key=f"hcp_{player_select}"
+        )
         
         st.divider()
         c1, c2, c3 = st.columns(3)
@@ -85,9 +92,10 @@ with tab1:
         submit_button = st.form_submit_button("Save to Google Sheets")
         
         if submit_button:
-            # FIX: We now pass hcp_input as the 6th argument
             save_data(week_select, player_select, pars_input, birdies_input, score_input, hcp_input)
             st.success(f"Stats saved! {player_select} Net Score: {score_input - hcp_input}")
+            # This little line helps refresh the app so the Leaderboard updates immediately
+            st.rerun()
 
 with tab2:
     st.header("Season Standings")
