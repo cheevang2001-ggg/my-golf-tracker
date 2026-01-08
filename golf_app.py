@@ -112,16 +112,12 @@ with tab1:
 with tab2:
     st.header("Season Standings")
     df = load_data()
+    
     if not df.empty:
+        # 1. First, do the math
         df['Points'] = (df['Birdies_Count'] * 2) + (df['Pars_Count'] * 1)
 
-        # ADD 'hide_index=True' HERE
-        st.dataframe(
-            leaderboard, 
-            use_container_width=True,
-            hide_index=True)
-        
-        # Aggregate stats including the average Net Score
+        # 2. Build the leaderboard table
         leaderboard = df.groupby('Player').agg({
             'Birdies_Count': 'sum',
             'Pars_Count': 'sum',
@@ -130,11 +126,23 @@ with tab2:
             'Net_Score': 'mean'    # Net Avg
         }).rename(columns={'Total_Score': 'Avg Gross', 'Net_Score': 'Avg Net'})
         
+        # 3. Clean up the numbers
         leaderboard = leaderboard.round(1)
-        # Sort by Points (descending) and Net Score (ascending)
+        
+        # 4. Sort the players (Highest points first, then lowest net score)
         leaderboard = leaderboard.sort_values(by=['Points', 'Avg Net'], ascending=[False, True])
         
-        st.dataframe(leaderboard, use_container_width=True)
+        # 5. NOW display the table (with the blank index hidden)
+        st.dataframe(
+            leaderboard, 
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Optional: Keep your bar chart here if you want it
+        st.subheader("Points Race")
+        st.bar_chart(leaderboard['Points'])
+        
     else:
         st.info("No data found.")
 
