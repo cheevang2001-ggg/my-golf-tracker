@@ -176,4 +176,13 @@ with tab3:
         )
 with tab4:
     st.header("League Settings")
+    
+    # NEW: Manual Refresh Button
+    if st.button("🔄 Sync with Google Sheets Now"):
+        st.cache_data.clear()
+        st.success("Cache Cleared! Fetching latest data from Google...")
+        st.rerun()
+        
+    st.divider()
+    st.write("Current Handicaps in Memory:")
     st.write(current_handicaps)
