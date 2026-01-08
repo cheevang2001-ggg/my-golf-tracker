@@ -12,11 +12,16 @@ DEFAULT_HANDICAPS = {
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# This tells Streamlit to keep the data in memory for 2 minutes 
+# unless we manually tell it to refresh.
+@st.cache_data(ttl=120) 
 def load_data():
-    return conn.read(ttl=0)
+    return conn.read(ttl=120)
 
 def get_handicaps():
-    df = load_data()
+    # We use a 0-second TTL here specifically for the Admin/Handicap lookup
+    # so it stays snappy, but the main data is cached.
+    df = conn.read(ttl=0) 
     if not df.empty and 'Handicap' in df.columns:
         latest = df.sort_values('Week').groupby('Player')['Handicap'].last().to_dict()
         for player in DEFAULT_HANDICAPS:
