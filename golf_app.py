@@ -7,7 +7,7 @@ st.set_page_config(page_title="GGGolf League", page_icon="⛳")
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 5, "John": 27, "Mike": 8,
-    "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3
+    "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3,
      "Matt": 1, "NomThai": 3, "VaMeng": 0
 }
 
