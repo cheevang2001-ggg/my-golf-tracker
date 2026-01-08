@@ -5,7 +5,6 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf League", page_icon="⛳", layout="wide") 
 
-# Current league handicaps
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 5, "John": 27, "Mike": 8,
     "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3,
@@ -56,24 +55,50 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "�
 
 current_handicaps = get_handicaps()
 PLAYERS = sorted(list(current_handicaps.keys()))
+df_main = load_data()
 
 # --- TAB 1: LIVE SCORECARD ---
 with tab1:
+    # Initialize Session State
     if 'scorecard' not in st.session_state:
         st.session_state.scorecard = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0}
+    if 'current_user_week' not in st.session_state:
+        st.session_state.current_user_week = ""
 
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     
+    # NEW: Check if player or week changed to reset counters
+    selection_id = f"{player_select}_{week_select}"
+    if st.session_state.current_user_week != selection_id:
+        for k in st.session_state.scorecard:
+            st.session_state.scorecard[k] = 0
+        st.session_state.current_user_week = selection_id
+
     st.divider()
     
-    # LIVE POINTS PREVIEW
-    current_pts = (
+    # CALCULATE LIVE ROUND POINTS
+    live_pts = (
         (st.session_state.scorecard['Par'] * 1.85) + (st.session_state.scorecard['Birdie'] * 2.5) + (st.session_state.scorecard['Eagle'] * 3.0) +
         (st.session_state.scorecard['G_Par'] * 1.0) + (st.session_state.scorecard['G_Birdie'] * 1.75) + (st.session_state.scorecard['G_Eagle'] * 2.0)
     )
-    st.metric("Live Points Earned", f"{current_pts:.2f}")
+
+    # CALCULATE PREVIOUS WEEKS TOTAL
+    prev_pts = 0
+    if not df_main.empty:
+        df_main = df_main.fillna(0)
+        # Weighting logic for historical data
+        df_main['calc_pts'] = (
+            (df_main['Pars_Count'] * 1.85) + (df_main['Birdies_Count'] * 2.5) + (df_main['Eagle_Count'] * 3.0) +
+            (df_main['G_Par_Count'] * 1.0) + (df_main['G_Birdie_Count'] * 1.75) + (df_main['G_Eagle_Count'] * 2.0)
+        )
+        # Sum points for this player, excluding the week currently being entered
+        prev_pts = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]['calc_pts'].sum()
+
+    m_col1, m_col2 = st.columns(2)
+    m_col1.metric("Live Round Points", f"{live_pts:.2f}")
+    m_col2.metric("Total Season Standing (Projected)", f"{prev_pts + live_pts:.2f}", delta=f"+{live_pts:.2f}")
 
     # COUNTERS
     r1, r2 = st.columns(3), st.columns(3)
@@ -81,7 +106,7 @@ with tab1:
             ("Gimme Par", r2[0], 'G_Par'), ("Gimme Birdie", r2[1], 'G_Birdie'), ("Gimme Eagle", r2[2], 'G_Eagle')]
 
     for label, col, key in cats:
-        st.session_state.scorecard[key] = col.number_input(label, min_value=0, value=st.session_state.scorecard[key], key=f"in_{key}")
+        st.session_state.scorecard[key] = col.number_input(label, min_value=0, value=st.session_state.scorecard[key], key=f"in_{key}_{selection_id}")
 
     st.divider()
     m1, m2, m3 = st.columns(3)
@@ -93,35 +118,25 @@ with tab1:
         save_data(week_select, player_select, st.session_state.scorecard['Par'], st.session_state.scorecard['Birdie'], 
                   st.session_state.scorecard['Eagle'], st.session_state.scorecard['G_Par'], 
                   st.session_state.scorecard['G_Birdie'], st.session_state.scorecard['G_Eagle'], score_in, hcp_in)
-        for k in st.session_state.scorecard: st.session_state.scorecard[k] = 0
         st.success("Round Saved!")
         st.rerun()
 
 # --- TAB 2: LEADERBOARD & TRENDING ---
 with tab2:
     st.header("Season Standings")
-    df = load_data()
-    if not df.empty:
-        df = df.fillna(0)
-        df['Points'] = ((df['Pars_Count'] * 1.85) + (df['Birdies_Count'] * 2.5) + (df['Eagle_Count'] * 3.0) +
-                        (df['G_Par_Count'] * 1.0) + (df['G_Birdie_Count'] * 1.75) + (df['G_Eagle_Count'] * 2.0))
+    if not df_main.empty:
+        df_calc = df_main.copy().fillna(0)
+        df_calc['Points'] = ((df_calc['Pars_Count'] * 1.85) + (df_calc['Birdies_Count'] * 2.5) + (df_calc['Eagle_Count'] * 3.0) +
+                        (df_calc['G_Par_Count'] * 1.0) + (df_calc['G_Birdie_Count'] * 1.75) + (df_calc['G_Eagle_Count'] * 2.0))
 
-        leaderboard = df.groupby('Player').agg({'Points': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).reset_index()
+        leaderboard = df_calc.groupby('Player').agg({'Points': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).reset_index()
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Net_Score'], ascending=[False, True])
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
         
-        # --- FIXED TRENDING CHART (INTEGERS ONLY) ---
         st.divider()
         st.subheader("📉 Net Score Trending")
-        st.caption("Lower is better. Tracking improvement week by week.")
-        
-        # 1. Pivot data
-        trend_df = df.pivot_table(index='Week', columns='Player', values='Net_Score', aggfunc='mean')
-        
-        # 2. Fix X-axis: Convert index to strings "Week 1", "Week 2", etc.
-        # This prevents the chart from showing 1.5, 2.5 etc.
+        trend_df = df_calc.pivot_table(index='Week', columns='Player', values='Net_Score', aggfunc='mean')
         trend_df.index = [f"Week {int(i)}" for i in trend_df.index]
-        
         st.line_chart(trend_df)
         
         st.subheader("Season Points Total")
@@ -132,10 +147,9 @@ with tab2:
 # --- TAB 3: LOG ---
 with tab3:
     st.header("Full History")
-    df = load_data()
-    if not df.empty:
+    if not df_main.empty:
         cols = ['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
-        st.dataframe(df[cols].sort_values(['Week', 'Player'], ascending=[False, True]), hide_index=True)
+        st.dataframe(df_main[cols].sort_values(['Week', 'Player'], ascending=[False, True]), hide_index=True)
 
 # --- TAB 4: ADMIN ---
 with tab4:
