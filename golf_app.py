@@ -68,19 +68,21 @@ PLAYERS = sorted(list(current_handicaps.keys()))
 with tab1:
     st.header("Input Weekly Stats")
     
-    # We use a form to group the inputs
+    # STEP 1: Select Player OUTSIDE the form so the app reacts instantly
+    col1, col2 = st.columns(2)
+    player_select = col1.selectbox("Select Player", PLAYERS)
+    week_select = col2.selectbox("Select Week", range(1, 13))
+    
+    # STEP 2: Look up the handicap for the selected player
+    default_hcp = int(current_handicaps.get(player_select, 0))
+    
+    # STEP 3: The Form for the rest of the data
     with st.form("stat_entry", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        player_select = col1.selectbox("Select Player", PLAYERS)
-        week_select = col2.selectbox("Select Week", range(1, 13))
-        
-        # FIX: We tie the handicap value to the player_select using a dynamic 'key'
-        # This forces the box to refresh when the player changes
-        default_hcp = int(current_handicaps.get(player_select, 0))
+        # This input will now correctly update whenever the selectbox above changes
         hcp_input = st.number_input(
             f"Handicap for {player_select}", 
-            value=default_hcp, 
-            key=f"hcp_{player_select}"
+            value=default_hcp,
+            key=f"hcp_input_{player_select}" 
         )
         
         st.divider()
@@ -94,7 +96,7 @@ with tab1:
         if submit_button:
             save_data(week_select, player_select, pars_input, birdies_input, score_input, hcp_input)
             st.success(f"Stats saved! {player_select} Net Score: {score_input - hcp_input}")
-            # This little line helps refresh the app so the Leaderboard updates immediately
+            # This ensures the leaderboard and dropdowns refresh with the new data
             st.rerun()
 
 with tab2:
