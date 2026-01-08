@@ -64,25 +64,35 @@ PLAYERS = sorted(list(current_handicaps.keys()))
 with tab1:
     st.header("Input Weekly Stats")
     
-    # Selection outside form for instant reactivity
+    # STEP 1: These inputs are OUTSIDE the form to allow "Live Math"
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     
+    # Get the handicap and the Gross Score outside the form
     default_hcp = int(current_handicaps.get(player_select, 0))
     
+    # We move the Gross Score here so the app sees changes instantly
+    score_input = st.number_input("Gross Score", min_value=20, max_value=150, value=45)
+    
+    # STEP 2: The Form handles the rest
     with st.form("stat_entry", clear_on_submit=True):
-        hcp_input = st.number_input(f"Handicap for {player_select}", value=default_hcp, key=f"hcp_{player_select}")
+        # Handicap input (stays reactive to player_select)
+        hcp_input = st.number_input(
+            f"Handicap for {player_select}", 
+            value=default_hcp, 
+            key=f"hcp_box_{player_select}"
+        )
         
         st.divider()
-        c1, c2, c3 = st.columns(3)
-        pars_input = c1.number_input("Total Pars", min_value=0, max_value=18, value=0)
-        birdies_input = c2.number_input("Total Birdies", min_value=0, max_value=18, value=0)
-        score_input = c3.number_input("Gross Score", min_value=20, max_value=150, value=45)
         
-        # --- NEW: VISIBLE NET SCORE PREVIEW ---
+        # LIVE CALCULATION: This will now update instantly as you change the Gross Score above
         calculated_net = score_input - hcp_input
         st.metric(label="Calculated Net Score", value=calculated_net)
+        
+        c1, c2 = st.columns(2)
+        pars_input = c1.number_input("Total Pars", min_value=0, max_value=18, value=0)
+        birdies_input = c2.number_input("Total Birdies", min_value=0, max_value=18, value=0)
         
         submit_button = st.form_submit_button("Save to Google Sheets")
         
