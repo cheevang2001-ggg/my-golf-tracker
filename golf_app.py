@@ -59,72 +59,69 @@ df_main = load_data()
 
 # --- TAB 1: LIVE SCORECARD ---
 with tab1:
-    # Initialize Session State
+    # 1. Initialize Session State
     if 'scorecard' not in st.session_state:
         st.session_state.scorecard = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0}
     if 'current_selection' not in st.session_state:
         st.session_state.current_selection = ""
 
+    # 2. Player/Week Selection
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     
-    # NEW LOGIC: Load existing data from GSheets when selection changes
+    # FIX: Define default_hcp immediately after player selection
+    default_hcp = int(current_handicaps.get(player_select, 0))
+    
+    # 3. Handle Selection Changes (Load from GSheet)
     selection_id = f"{player_select}_{week_select}"
     
     if st.session_state.current_selection != selection_id:
-        # Check if this player/week already has a row in our data
         if not df_main.empty:
             match = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
             
             if not match.empty:
-                # If found, fill the scorecard with saved values
+                # Fill scorecard from sheet
                 st.session_state.scorecard['Par'] = int(match.iloc[0].get('Pars_Count', 0))
                 st.session_state.scorecard['Birdie'] = int(match.iloc[0].get('Birdies_Count', 0))
                 st.session_state.scorecard['Eagle'] = int(match.iloc[0].get('Eagle_Count', 0))
                 st.session_state.scorecard['G_Par'] = int(match.iloc[0].get('G_Par_Count', 0))
                 st.session_state.scorecard['G_Birdie'] = int(match.iloc[0].get('G_Birdie_Count', 0))
                 st.session_state.scorecard['G_Eagle'] = int(match.iloc[0].get('G_Eagle_Count', 0))
-                # Store the gross score and handicap for the inputs below
+                # Store gross and hcp
                 st.session_state['temp_score'] = int(match.iloc[0].get('Total_Score', 45))
-                st.session_state['temp_hcp'] = int(match.iloc[0].get('Handicap', current_handicaps.get(player_select, 0)))
+                st.session_state['temp_hcp'] = int(match.iloc[0].get('Handicap', default_hcp))
             else:
-                # If no data found, reset to zeros
+                # Reset to zero/defaults for new entries
                 for k in st.session_state.scorecard: st.session_state.scorecard[k] = 0
                 st.session_state['temp_score'] = 45
-                st.session_state['temp_hcp'] = int(current_handicaps.get(player_select, 0))
+                st.session_state['temp_hcp'] = default_hcp
         
         st.session_state.current_selection = selection_id
 
     st.divider()
     
-    # CALCULATE LIVE ROUND POINTS
+    # 4. Display Metrics
     live_pts = (
         (st.session_state.scorecard['Par'] * 1.85) + (st.session_state.scorecard['Birdie'] * 2.5) + (st.session_state.scorecard['Eagle'] * 3.0) +
         (st.session_state.scorecard['G_Par'] * 1.0) + (st.session_state.scorecard['G_Birdie'] * 1.75) + (st.session_state.scorecard['G_Eagle'] * 2.0)
     )
 
-    # PREVIOUS POINTS (Only weeks EARLIER than current selection)
     prev_pts = 0
     if not df_main.empty:
-        df_main = df_main.fillna(0)
-        df_main['calc_pts'] = (
-            (df_main['Pars_Count'] * 1.85) + (df_main['Birdies_Count'] * 2.5) + (df_main['Eagle_Count'] * 3.0) +
-            (df_main['G_Par_Count'] * 1.0) + (df_main['G_Birdie_Count'] * 1.75) + (df_main['G_Eagle_Count'] * 2.0)
-        )
+        # Note: Ensure df_main already has 'calc_pts' column created in the main script body
         prev_pts = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]['calc_pts'].sum()
 
     m_col1, m_col2 = st.columns(2)
     m_col1.metric("Selected Week Points", f"{live_pts:.2f}")
     m_col2.metric("Projected Season Total", f"{prev_pts + live_pts:.2f}", delta=f"Week {week_select}")
 
-    # COUNTERS
+    # 5. Category Counters
     r1, r2 = st.columns(3), st.columns(3)
     cats = [("Par", r1[0], 'Par'), ("Birdie", r1[1], 'Birdie'), ("Eagle", r1[2], 'Eagle'),
             ("Gimme Par", r2[0], 'G_Par'), ("Gimme Birdie", r2[1], 'G_Birdie'), ("Gimme Eagle", r2[2], 'G_Eagle')]
 
     for label, col, key in cats:
-        # Use st.session_state values directly
         st.session_state.scorecard[key] = col.number_input(
             label, min_value=0, 
             value=st.session_state.scorecard[key], 
@@ -132,9 +129,14 @@ with tab1:
         )
 
     st.divider()
+    
+    # 6. Final Score Inputs
     m1, m2, m3 = st.columns(3)
     score_in = m1.number_input("Gross Score", min_value=20, value=st.session_state.get('temp_score', 45), key=f"gross_{selection_id}")
+    
+    # This was the line causing the error; default_hcp is now defined above
     hcp_in = m2.number_input(f"Handicap", value=st.session_state.get('temp_hcp', default_hcp), key=f"hcp_{selection_id}")
+    
     m3.metric("Net Score", score_in - hcp_in)
 
     if st.button("🚀 Update / Submit Final Round"):
@@ -143,7 +145,7 @@ with tab1:
                   st.session_state.scorecard['G_Birdie'], st.session_state.scorecard['G_Eagle'], score_in, hcp_in)
         st.success(f"Scorecard updated for {player_select} - Week {week_select}")
         st.rerun()
-
+        
 # --- TAB 2: LEADERBOARD & TRENDING ---
 with tab2:
     st.header("Season Standings")
