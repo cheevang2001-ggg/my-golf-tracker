@@ -47,33 +47,41 @@ def save_data(week, player, pars, birdies, eagles, g_pars, g_birdies, g_eagles, 
     conn.update(data=final_df)
     st.cache_data.clear()
 
+# --- STEP 2: LOAD & PREPARE DATA ---
+current_handicaps = get_handicaps()
+PLAYERS = sorted(list(current_handicaps.keys()))
+df_main = load_data()
+
+# FIX: Create 'calc_pts' column immediately so it's available for all tabs
+if not df_main.empty:
+    df_main = df_main.fillna(0)
+    df_main['calc_pts'] = (
+        (df_main['Pars_Count'] * 1.85) + 
+        (df_main['Birdies_Count'] * 2.5) + 
+        (df_main['Eagle_Count'] * 3.0) +
+        (df_main['G_Par_Count'] * 1.0) + 
+        (df_main['G_Birdie_Count'] * 1.75) + 
+        (df_main['G_Eagle_Count'] * 2.0)
+    )
+
 # --- LOGO & TITLE ---
 st.markdown("<h1 style='text-align: center;'>⛳ GGGolf 2026 Winter League</h1>", unsafe_allow_html=True)
 st.divider()
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "📅 Weekly Log", "⚙️ Admin"])
 
-current_handicaps = get_handicaps()
-PLAYERS = sorted(list(current_handicaps.keys()))
-df_main = load_data()
-
 # --- TAB 1: LIVE SCORECARD ---
 with tab1:
-    # 1. Initialize Session State
     if 'scorecard' not in st.session_state:
         st.session_state.scorecard = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0}
     if 'current_selection' not in st.session_state:
         st.session_state.current_selection = ""
 
-    # 2. Player/Week Selection
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     
-    # FIX: Define default_hcp immediately after player selection
     default_hcp = int(current_handicaps.get(player_select, 0))
-    
-    # 3. Handle Selection Changes (Load from GSheet)
     selection_id = f"{player_select}_{week_select}"
     
     if st.session_state.current_selection != selection_id:
@@ -81,18 +89,15 @@ with tab1:
             match = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
             
             if not match.empty:
-                # Fill scorecard from sheet
                 st.session_state.scorecard['Par'] = int(match.iloc[0].get('Pars_Count', 0))
                 st.session_state.scorecard['Birdie'] = int(match.iloc[0].get('Birdies_Count', 0))
                 st.session_state.scorecard['Eagle'] = int(match.iloc[0].get('Eagle_Count', 0))
                 st.session_state.scorecard['G_Par'] = int(match.iloc[0].get('G_Par_Count', 0))
                 st.session_state.scorecard['G_Birdie'] = int(match.iloc[0].get('G_Birdie_Count', 0))
                 st.session_state.scorecard['G_Eagle'] = int(match.iloc[0].get('G_Eagle_Count', 0))
-                # Store gross and hcp
                 st.session_state['temp_score'] = int(match.iloc[0].get('Total_Score', 45))
                 st.session_state['temp_hcp'] = int(match.iloc[0].get('Handicap', default_hcp))
             else:
-                # Reset to zero/defaults for new entries
                 for k in st.session_state.scorecard: st.session_state.scorecard[k] = 0
                 st.session_state['temp_score'] = 45
                 st.session_state['temp_hcp'] = default_hcp
@@ -101,7 +106,6 @@ with tab1:
 
     st.divider()
     
-    # 4. Display Metrics
     live_pts = (
         (st.session_state.scorecard['Par'] * 1.85) + (st.session_state.scorecard['Birdie'] * 2.5) + (st.session_state.scorecard['Eagle'] * 3.0) +
         (st.session_state.scorecard['G_Par'] * 1.0) + (st.session_state.scorecard['G_Birdie'] * 1.75) + (st.session_state.scorecard['G_Eagle'] * 2.0)
@@ -109,14 +113,12 @@ with tab1:
 
     prev_pts = 0
     if not df_main.empty:
-        # Note: Ensure df_main already has 'calc_pts' column created in the main script body
         prev_pts = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]['calc_pts'].sum()
 
     m_col1, m_col2 = st.columns(2)
     m_col1.metric("Selected Week Points", f"{live_pts:.2f}")
     m_col2.metric("Projected Season Total", f"{prev_pts + live_pts:.2f}", delta=f"Week {week_select}")
 
-    # 5. Category Counters
     r1, r2 = st.columns(3), st.columns(3)
     cats = [("Par", r1[0], 'Par'), ("Birdie", r1[1], 'Birdie'), ("Eagle", r1[2], 'Eagle'),
             ("Gimme Par", r2[0], 'G_Par'), ("Gimme Birdie", r2[1], 'G_Birdie'), ("Gimme Eagle", r2[2], 'G_Eagle')]
@@ -129,14 +131,9 @@ with tab1:
         )
 
     st.divider()
-    
-    # 6. Final Score Inputs
     m1, m2, m3 = st.columns(3)
     score_in = m1.number_input("Gross Score", min_value=20, value=st.session_state.get('temp_score', 45), key=f"gross_{selection_id}")
-    
-    # This was the line causing the error; default_hcp is now defined above
     hcp_in = m2.number_input(f"Handicap", value=st.session_state.get('temp_hcp', default_hcp), key=f"hcp_{selection_id}")
-    
     m3.metric("Net Score", score_in - hcp_in)
 
     if st.button("🚀 Update / Submit Final Round"):
@@ -150,17 +147,13 @@ with tab1:
 with tab2:
     st.header("Season Standings")
     if not df_main.empty:
-        df_calc = df_main.copy().fillna(0)
-        df_calc['Points'] = ((df_calc['Pars_Count'] * 1.85) + (df_calc['Birdies_Count'] * 2.5) + (df_calc['Eagle_Count'] * 3.0) +
-                        (df_calc['G_Par_Count'] * 1.0) + (df_calc['G_Birdie_Count'] * 1.75) + (df_calc['G_Eagle_Count'] * 2.0))
-
-        leaderboard = df_calc.groupby('Player').agg({'Points': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).reset_index()
+        leaderboard = df_main.groupby('Player').agg({'calc_pts': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).rename(columns={'calc_pts': 'Points'}).reset_index()
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Net_Score'], ascending=[False, True])
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
         
         st.divider()
         st.subheader("📉 Net Score Trending")
-        trend_df = df_calc.pivot_table(index='Week', columns='Player', values='Net_Score', aggfunc='mean')
+        trend_df = df_main.pivot_table(index='Week', columns='Player', values='Net_Score', aggfunc='mean')
         trend_df.index = [f"Week {int(i)}" for i in trend_df.index]
         st.line_chart(trend_df)
         
