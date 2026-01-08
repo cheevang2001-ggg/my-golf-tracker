@@ -114,7 +114,7 @@ with tab2:
     df = load_data()
     
     if not df.empty:
-        # 1. First, do the math
+        # 1. Do the math
         df['Points'] = (df['Birdies_Count'] * 2) + (df['Pars_Count'] * 1)
 
         # 2. Build the leaderboard table
@@ -122,26 +122,28 @@ with tab2:
             'Birdies_Count': 'sum',
             'Pars_Count': 'sum',
             'Points': 'sum',
-            'Total_Score': 'mean', # Gross Avg
-            'Net_Score': 'mean'    # Net Avg
+            'Total_Score': 'mean', 
+            'Net_Score': 'mean'   
         }).rename(columns={'Total_Score': 'Avg Gross', 'Net_Score': 'Avg Net'})
         
-        # 3. Clean up the numbers
+        # 3. FIX: Move 'Player' from the hidden index back into a visible column
+        leaderboard = leaderboard.reset_index()
+        
+        # 4. Clean up the numbers
         leaderboard = leaderboard.round(1)
         
-        # 4. Sort the players (Highest points first, then lowest net score)
+        # 5. Sort the players
         leaderboard = leaderboard.sort_values(by=['Points', 'Avg Net'], ascending=[False, True])
         
-        # 5. NOW display the table (with the blank index hidden)
+        # 6. Display the table
         st.dataframe(
             leaderboard, 
             use_container_width=True,
-            hide_index=True
+            hide_index=True # Now it hides the blank numbers, but keeps the 'Player' column
         )
         
-        # Optional: Keep your bar chart here if you want it
         st.subheader("Points Race")
-        st.bar_chart(leaderboard['Points'])
+        st.bar_chart(data=leaderboard, x="Player", y="Points")
         
     else:
         st.info("No data found.")
