@@ -5,6 +5,7 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf League", page_icon="⛳", layout="wide") 
 
+# Current league handicaps
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 5, "John": 27, "Mike": 8,
     "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3,
@@ -109,13 +110,18 @@ with tab2:
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Net_Score'], ascending=[False, True])
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
         
-        # --- MODIFIED TRENDING CHART (NET SCORE) ---
+        # --- FIXED TRENDING CHART (INTEGERS ONLY) ---
         st.divider()
         st.subheader("📉 Net Score Trending")
-        st.caption("Lower is better. Track who is improving their game each week.")
+        st.caption("Lower is better. Tracking improvement week by week.")
         
-        # Pivot by Net_Score instead of Points
+        # 1. Pivot data
         trend_df = df.pivot_table(index='Week', columns='Player', values='Net_Score', aggfunc='mean')
+        
+        # 2. Fix X-axis: Convert index to strings "Week 1", "Week 2", etc.
+        # This prevents the chart from showing 1.5, 2.5 etc.
+        trend_df.index = [f"Week {int(i)}" for i in trend_df.index]
+        
         st.line_chart(trend_df)
         
         st.subheader("Season Points Total")
