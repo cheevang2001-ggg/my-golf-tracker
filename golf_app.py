@@ -1,3 +1,4 @@
+df_main = load_data()
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
