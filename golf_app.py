@@ -14,11 +14,11 @@ DEFAULT_HANDICAPS = {
 # UPDATED: Static Point Values (Gimme Par changed to 1.30)
 POINT_VALUES = {
     "Par": 1.85, 
-    "Birdie": 2.5, 
+    "Birdie": 2.0, 
     "Eagle": 3.0,
     "Gimme Par": 1.30,  # Changed from 1.0 to 1.30
     "Gimme Birdie": 1.75, 
-    "Gimme Eagle": 2.0
+    "Gimme Eagle": 2.5
 }
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -212,3 +212,4 @@ with tab4:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
