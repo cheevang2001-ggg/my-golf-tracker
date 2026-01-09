@@ -13,9 +13,9 @@ DEFAULT_HANDICAPS = {
 
 # UPDATED: Static Point Values (Gimme Par changed to 1.30)
 POINT_VALUES = {
-    "In-Hole Par": 1.85, 
-    "In-Hole Birdie": 2.0, 
-    "In-Hole Eagle": 3.5,
+    "Par": 1.85, 
+    "Birdie": 2.0, 
+    "Eagle": 3.5,
     "Gimme Par": 1.30,  # Changed from 1.0 to 1.30
     "Gimme Birdie": 1.75, 
     "Gimme Eagle": 2.5
@@ -212,6 +212,7 @@ with tab4:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
