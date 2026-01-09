@@ -82,7 +82,7 @@ with col_l2:
     except:
         st.write("⛳ (Logo File 'GGGOLF-2.png' Not Found)")
 
-st.markdown("<h1 style='text-align: center;'>GGGolf 2026 Winter League</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>GGGolf No Animals Winter League</h1>", unsafe_allow_html=True)
 st.divider()
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "📅 Weekly Log", "⚙️ Admin"])
@@ -212,6 +212,7 @@ with tab4:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
