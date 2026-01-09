@@ -52,20 +52,24 @@ current_handicaps = get_handicaps()
 PLAYERS = sorted(list(current_handicaps.keys()))
 df_main = load_data()
 
-# FIX: Create 'calc_pts' column immediately so it's available for all tabs
+# Calculate points globally
 if not df_main.empty:
     df_main = df_main.fillna(0)
     df_main['calc_pts'] = (
-        (df_main['Pars_Count'] * 1.85) + 
-        (df_main['Birdies_Count'] * 2.5) + 
-        (df_main['Eagle_Count'] * 3.0) +
-        (df_main['G_Par_Count'] * 1.0) + 
-        (df_main['G_Birdie_Count'] * 1.75) + 
-        (df_main['G_Eagle_Count'] * 2.0)
+        (df_main['Pars_Count'] * 1.85) + (df_main['Birdies_Count'] * 2.5) + (df_main['Eagle_Count'] * 3.0) +
+        (df_main['G_Par_Count'] * 1.0) + (df_main['G_Birdie_Count'] * 1.75) + (df_main['G_Eagle_Count'] * 2.0)
     )
 
 # --- LOGO & TITLE ---
-st.markdown("<h1 style='text-align: center;'>⛳ GGGolf 2026 Winter League</h1>", unsafe_allow_html=True)
+# This ensures the logo is centered at the top
+col_l1, col_l2, col_l3 = st.columns([1,1,1])
+with col_l2:
+    try:
+        st.image("GGGOLF-2.png", width=200)
+    except:
+        st.write("⛳ (Logo File 'GGGOLF-2.png' Not Found)")
+
+st.markdown("<h1 style='text-align: center;'>GGGolf 2026 Winter League</h1>", unsafe_allow_html=True)
 st.divider()
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "📅 Weekly Log", "⚙️ Admin"])
@@ -87,7 +91,6 @@ with tab1:
     if st.session_state.current_selection != selection_id:
         if not df_main.empty:
             match = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
-            
             if not match.empty:
                 st.session_state.scorecard['Par'] = int(match.iloc[0].get('Pars_Count', 0))
                 st.session_state.scorecard['Birdie'] = int(match.iloc[0].get('Birdies_Count', 0))
@@ -101,7 +104,6 @@ with tab1:
                 for k in st.session_state.scorecard: st.session_state.scorecard[k] = 0
                 st.session_state['temp_score'] = 45
                 st.session_state['temp_hcp'] = default_hcp
-        
         st.session_state.current_selection = selection_id
 
     st.divider()
@@ -124,11 +126,7 @@ with tab1:
             ("Gimme Par", r2[0], 'G_Par'), ("Gimme Birdie", r2[1], 'G_Birdie'), ("Gimme Eagle", r2[2], 'G_Eagle')]
 
     for label, col, key in cats:
-        st.session_state.scorecard[key] = col.number_input(
-            label, min_value=0, 
-            value=st.session_state.scorecard[key], 
-            key=f"in_{key}_{selection_id}"
-        )
+        st.session_state.scorecard[key] = col.number_input(label, min_value=0, value=st.session_state.scorecard[key], key=f"in_{key}_{selection_id}")
 
     st.divider()
     m1, m2, m3 = st.columns(3)
@@ -142,13 +140,18 @@ with tab1:
                   st.session_state.scorecard['G_Birdie'], st.session_state.scorecard['G_Eagle'], score_in, hcp_in)
         st.success(f"Scorecard updated for {player_select} - Week {week_select}")
         st.rerun()
-        
-# --- TAB 2: LEADERBOARD & TRENDING ---
+
+# --- TAB 2: LEADERBOARD ---
 with tab2:
-    st.header("Season Standings")
     if not df_main.empty:
         leaderboard = df_main.groupby('Player').agg({'calc_pts': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).rename(columns={'calc_pts': 'Points'}).reset_index()
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Net_Score'], ascending=[False, True])
+
+        # NEW: First Place Highlight Feature
+        leader_name = leaderboard.iloc[0]['Player']
+        leader_pts = leaderboard.iloc[0]['Points']
+        st.success(f"🏆 Current League Leader: **{leader_name}** with **{leader_pts}** points!")
+
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
         
         st.divider()
