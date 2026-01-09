@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 # --- STEP 1: CONFIGURATION & SETUP ---
-st.set_page_config(page_title="GGGolf League", page_icon="⛳", layout="wide") 
+st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "John": 20, "Mike": 9,
@@ -168,7 +168,7 @@ with tab1:
     hcp_in = m2.number_input(f"Handicap", value=st.session_state.get('temp_hcp', default_hcp), key=f"hcp_{selection_id}")
     m3.metric("Net Score", score_in - hcp_in)
 
-    if st.button("🚀 Sync Cumulative Totals"):
+    if st.button("Submit Score"):
         prev_history = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         
         tw_pars = st.session_state.scorecard['Par'] - prev_history['Pars_Count'].sum()
@@ -212,6 +212,7 @@ with tab4:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
