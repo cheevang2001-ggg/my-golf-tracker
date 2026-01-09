@@ -209,6 +209,7 @@ Drawings will be at 5:45pm. If you are late someone will draw for you and you wi
 Bay 1= A
 Bay 2= K
 Bay 3= Q
+
         2. **Scoring**: All scorecards must be submitted via the app by the end of each round.
         3. **Gimmes**: Gimmes are allowed within a designated range.
         4. **Season**: Total points across 12 weeks determines the champion.
@@ -225,4 +226,5 @@ with tab5:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
