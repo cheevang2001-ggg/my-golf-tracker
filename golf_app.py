@@ -194,37 +194,61 @@ with tab3:
 
 # --- TAB 4: LEAGUE INFO ---
 with tab4:
-    st.header("📜 League Information")
-    info_subtab = st.radio("Select Category", ["Rules & Regulations", "FAQs"], horizontal=True)
+    st.header("📜 GGGolf League Info & Rules")
+    info_choice = st.radio("Select Section", ["Rules & Format", "Don't Be An Animal"], horizontal=True)
     st.divider()
+
+    if info_choice == "Rules & Format":
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.subheader("📅 Weekly Logistics")
+            st.markdown("""
+            **Who are my playing partners?**
+            Randomized each week via playing cards.
+            * Drawings at **5:45pm**.
+            * Late? Someone draws for you.
+            * **Bays:** Bay 1=A, Bay 2=K, Bay 3=Q.
+
+            **What if I'm Late?**
+            Round starts at **6:00pm**. If arriving after 6:00pm:
+            * You are paused until the group finishes the hole.
+            * You will be picked up/moved to the next hole with the group.
+            * **Late Limit:** Not arrived by Hole 4 = DNF for the week (no makeup).
+            """)
+        with col_b:
+            st.subheader("⛳ Format & Guests")
+            st.markdown("""
+            **Format:** Gross stroke with handicap for Net Score. 
+            * Most points after 12 weeks wins.
+            * Trackman for live play; App for centralized tracking.
+
+            **Guest Players:**
+            * Yes, $30 guest fee to PHGC.
+            * Max 4 guests total (5 per bay max).
+
+            **Make-up Rounds:**
+            * Must schedule yourself with PHGC. Missed/No make-up = DNF.
+            """)
     
-    if info_subtab == "Rules & Regulations":
-        st.subheader("📍 Rules and Regulations")
-        st.markdown("""
-        Who are my playing partners each week?
-Each week playing partners will be randomized by picking playing cards.
-
-Drawings will be at 5:45pm. If you are late someone will draw for you and you will play with the partners drawn
-
-Bay 1= A
-Bay 2= K
-Bay 3= Q
-
-        2. **Scoring**: All scorecards must be submitted via the app by the end of each round.
-        3. **Gimmes**: Gimmes are allowed within a designated range.
-        4. **Season**: Total points across 12 weeks determines the champion.
-        """)
     else:
-        st.subheader("❓ Frequently Asked Questions")
-        with st.expander("How do I update my score?"):
-            st.write("Go to the Live Scorecard tab, select your name and the current week, and adjust your counts.")
-        with st.expander("Is the point total cumulative?"):
-            st.write("Yes, the app displays your season-long totals in the Live Scorecard to help you track your standing.")
+        st.subheader("🦁 What is 'Don't Be An Animal'?")
+        st.info("'From John Wick: Exactly. Rules. Without them, we'd live with the animals.'")
+        st.markdown("""
+        **Penalty:** Owe a drink, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).
+        
+        * **Hitting Zone:** Step off mat without returning ball = 1/4 drink.
+        * **Mulligan:** Owe 1 round of beer.
+        * **In-Hole First Putt:** Everyone else drinks a sip.
+        * **In-Hole Chip:** Everyone else drinks 1/4.
+        * **Bets:** Bet as you want, drink your bets.
+        * **The Law:** Slam a beer to make or cancel a rule.
+        """)
 
 # --- TAB 5: ADMIN ---
 with tab5:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
