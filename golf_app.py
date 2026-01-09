@@ -77,7 +77,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "�
 # --- TAB 1: LIVE SCORECARD ---
 with tab1:
     if 'scorecard' not in st.session_state:
-        st.session_state.scorecard = {'Par: 1.85': 0, 'Birdie: 2.5': 0, 'Eagle: 3.0': 0, 'G_Par: 1.0': 0, 'G_Birdie: 1.75': 0, 'G_Eagle: 2.0': 0}
+        st.session_state.scorecard = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0}
     if 'current_selection' not in st.session_state:
         st.session_state.current_selection = ""
 
