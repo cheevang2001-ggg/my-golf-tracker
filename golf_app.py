@@ -210,24 +210,29 @@ with tab4:
             * **Bays:** Bay 1=A, Bay 2=K, Bay 3=Q.
 
             **What if I'm Late?**
-            Round starts at **6:00pm**. If arriving after 6:00pm:
-            * You are paused until the group finishes the hole.
+            
+            * Let someone know that you will be joining but running a bit late
+            * You will be paused until all players have completed the hole. 
+            * If you have not arrived before all players finished the hole.
             * You will be picked up/moved to the next hole with the group.
-            * **Late Limit:** Not arrived by Hole 4 = DNF for the week (no makeup).
+            * **Late Limit:** Not arrived by Hole 4 = Receive DNF (Makeup Possible)
             """)
         with col_b:
             st.subheader("⛳ Format & Guests")
             st.markdown("""
             **Format:** Gross stroke with handicap for Net Score. 
             * Most points after 12 weeks wins.
-            * Trackman for live play; App for centralized tracking.
+            * Trackman for live play; GGG No Animal App for centralized tracking.
 
             **Guest Players:**
             * Yes, $30 guest fee to PHGC.
             * Max 4 guests total (5 per bay max).
+            * **Days Illan are there we can play and have more guest**
 
             **Make-up Rounds:**
             * Must schedule yourself with PHGC. Missed/No make-up = DNF.
+            * Make-up round to be completed by the following Friday 12AM
+            * **Example:** Mike miss week 1 1-9-2026 Mike has until the next Friday 1-16-2026 at 12AM. Trackman will move to the next week
             """)
     
     else:
@@ -249,6 +254,7 @@ with tab5:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
