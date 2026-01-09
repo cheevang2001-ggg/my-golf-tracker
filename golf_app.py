@@ -6,15 +6,19 @@ import pandas as pd
 st.set_page_config(page_title="GGGolf League", page_icon="⛳", layout="wide") 
 
 DEFAULT_HANDICAPS = {
-    "Cory": 3, "Lex": 5, "John": 27, "Mike": 8,
-    "Carter": 5, "Dale": 3, "Long": 5, "Txv": 3,
-    "Matt": 1, "NomThai": 3, "VaMeng": 0
+    "Cory": 3, "Lex": 7, "John": 20, "Mike": 9,
+    "Carter": 5, "Dale": 4, "Long": 6, "Txv": 4,
+    "Matt": 2, "NomThai": 4, "VaMeng": 0
 }
 
-# Static Point Values
+# UPDATED: Static Point Values (Gimme Par changed to 1.30)
 POINT_VALUES = {
-    "Par": 1.85, "Birdie": 2.5, "Eagle": 3.0,
-    "Gimme Par": 1.0, "Gimme Birdie": 1.75, "Gimme Eagle": 2.0
+    "Par": 1.85, 
+    "Birdie": 2.5, 
+    "Eagle": 3.0,
+    "Gimme Par": 1.30,  # Changed from 1.0 to 1.30
+    "Gimme Birdie": 1.75, 
+    "Gimme Eagle": 2.0
 }
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -58,7 +62,7 @@ current_handicaps = get_handicaps()
 PLAYERS = sorted(list(current_handicaps.keys()))
 df_main = load_data()
 
-# Pre-calculate global points for leaderboard
+# Pre-calculate global points with the new 1.30 value
 if not df_main.empty:
     df_main = df_main.fillna(0)
     df_main['calc_pts'] = (
@@ -85,18 +89,17 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Live Scorecard", "🏆 Leaderboard", "�
 
 # --- TAB 1: LIVE SCORECARD ---
 with tab1:
-    # 1. Static Legend
+    # 1. UPDATED LEGEND (Static Display)
     st.subheader("📊 Points Legend")
     l_col1, l_col2, l_col3, l_col4, l_col5, l_col6 = st.columns(6)
     l_col1.caption(f"**Par:** {POINT_VALUES['Par']}")
     l_col2.caption(f"**Birdie:** {POINT_VALUES['Birdie']}")
     l_col3.caption(f"**Eagle:** {POINT_VALUES['Eagle']}")
-    l_col4.caption(f"**G-Par:** {POINT_VALUES['Gimme Par']}")
+    l_col4.caption(f"**G-Par:** {POINT_VALUES['Gimme Par']}") # Shows 1.3
     l_col5.caption(f"**G-Birdie:** {POINT_VALUES['Gimme Birdie']}")
     l_col6.caption(f"**G-Eagle:** {POINT_VALUES['Gimme Eagle']}")
     st.divider()
 
-    # 2. Session State Initialization
     if 'current_selection' not in st.session_state:
         st.session_state.current_selection = ""
 
@@ -107,16 +110,13 @@ with tab1:
     selection_id = f"{player_select}_{week_select}"
     default_hcp = int(current_handicaps.get(player_select, 0))
 
-    # 3. Cumulative Data Fetching
-    # Logic: Load data from Week 1 through the selected week
+    # 2. Cumulative Data Fetching
     if st.session_state.current_selection != selection_id:
-        # Defaults
         st.session_state.scorecard = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'G_Par': 0, 'G_Birdie': 0, 'G_Eagle': 0}
         st.session_state['temp_score'] = 45
         st.session_state['temp_hcp'] = default_hcp
 
         if not df_main.empty:
-            # Get cumulative stats up to the selected week
             history = df_main[(df_main['Player'] == player_select) & (df_main['Week'] <= week_select)]
             st.session_state.scorecard['Par'] = int(history['Pars_Count'].sum())
             st.session_state.scorecard['Birdie'] = int(history['Birdies_Count'].sum())
@@ -125,7 +125,6 @@ with tab1:
             st.session_state.scorecard['G_Birdie'] = int(history['G_Birdie_Count'].sum())
             st.session_state.scorecard['G_Eagle'] = int(history['G_Eagle_Count'].sum())
             
-            # Get this specific week's Score/HCP
             this_week = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
             if not this_week.empty:
                 st.session_state['temp_score'] = int(this_week.iloc[0]['Total_Score'])
@@ -133,8 +132,8 @@ with tab1:
         
         st.session_state.current_selection = selection_id
 
-    # 4. Input Counters
-    # We use a placeholder for the Live Points to display AFTER the inputs are read
+    # 3. Dynamic Calculation Area
+    # We define the metrics here so they update AFTER inputs are read
     points_placeholder = st.empty()
 
     r1, r2 = st.columns(3), st.columns(3)
@@ -142,15 +141,13 @@ with tab1:
             ("Total Gimme Pars", r2[0], 'G_Par'), ("Total Gimme Birdies", r2[1], 'G_Birdie'), ("Total Gimme Eagles", r2[2], 'G_Eagle')]
 
     for label, col, key in cats:
-        # Every time a user clicks +, the value in session_state updates
         st.session_state.scorecard[key] = col.number_input(
             label, min_value=0, 
             value=st.session_state.scorecard[key], 
             key=f"val_{key}_{selection_id}"
         )
 
-    # 5. FIXED: The Calculation Logic
-    # This must happen AFTER the number_inputs above to reflect the "+" click immediately
+    # RE-CALCULATE LIVE
     live_cumulative_pts = (
         (st.session_state.scorecard['Par'] * POINT_VALUES["Par"]) + 
         (st.session_state.scorecard['Birdie'] * POINT_VALUES["Birdie"]) + 
@@ -160,24 +157,20 @@ with tab1:
         (st.session_state.scorecard['G_Eagle'] * POINT_VALUES["Gimme Eagle"])
     )
 
-    # Update the placeholder at the top of the inputs
     with points_placeholder:
         m1, m2 = st.columns(2)
         m1.metric("Cumulative Season Points", f"{live_cumulative_pts:.2f}")
-        m2.metric("Week Selection", f"Week {week_select}")
+        m2.metric("Week Detail", f"Week {week_select}")
 
     st.divider()
     m1, m2, m3 = st.columns(3)
-    score_in = m1.number_input("Gross Score (This Week)", min_value=20, value=st.session_state.get('temp_score', 45), key=f"score_{selection_id}")
+    score_in = m1.number_input("Gross Score", min_value=20, value=st.session_state.get('temp_score', 45), key=f"score_{selection_id}")
     hcp_in = m2.number_input(f"Handicap", value=st.session_state.get('temp_hcp', default_hcp), key=f"hcp_{selection_id}")
-    m3.metric("Net Score (This Week)", score_in - hcp_in)
+    m3.metric("Net Score", score_in - hcp_in)
 
-    # 6. Submission (Isolated Saving)
     if st.button("🚀 Sync Cumulative Totals"):
-        # We calculate "This Week's Entry" by subtracting all PREVIOUS history
         prev_history = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         
-        # This Week = Current Counter - Sum of All Previous Weeks
         tw_pars = st.session_state.scorecard['Par'] - prev_history['Pars_Count'].sum()
         tw_birdies = st.session_state.scorecard['Birdie'] - prev_history['Birdies_Count'].sum()
         tw_eagles = st.session_state.scorecard['Eagle'] - prev_history['Eagle_Count'].sum()
@@ -186,17 +179,15 @@ with tab1:
         tw_ge = st.session_state.scorecard['G_Eagle'] - prev_history['G_Eagle_Count'].sum()
 
         save_data(week_select, player_select, tw_pars, tw_birdies, tw_eagles, tw_gp, tw_gb, tw_ge, score_in, hcp_in)
-        st.success(f"Scores Synced! Total Points for {player_select}: {live_cumulative_pts:.2f}")
+        st.success(f"Updated! Season Total for {player_select}: {live_cumulative_pts:.2f}")
         st.rerun()
 
 # --- TAB 2: LEADERBOARD ---
 with tab2:
     if not df_main.empty:
-        # Use calc_pts from global pre-calculation
         leaderboard = df_main.groupby('Player').agg({'calc_pts': 'sum', 'Total_Score': 'mean', 'Net_Score': 'mean'}).rename(columns={'calc_pts': 'Points', 'Total_Score': 'Avg Gross', 'Net_Score': 'Avg Net'}).reset_index()
         leaderboard = leaderboard.round(2).sort_values(by=['Points', 'Avg Net'], ascending=[False, True])
 
-        # Leaderboard Highlight
         winner = leaderboard.iloc[0]
         st.success(f"🏆 **Current Leader:** {winner['Player']} with **{winner['Points']} Points**")
         st.dataframe(leaderboard, use_container_width=True, hide_index=True)
@@ -207,7 +198,7 @@ with tab2:
         trend_df.index = [f"Week {int(i)}" for i in trend_df.index]
         st.line_chart(trend_df)
     else:
-        st.info("No league data found.")
+        st.info("No data found.")
 
 # --- TAB 3: HISTORY ---
 with tab3:
