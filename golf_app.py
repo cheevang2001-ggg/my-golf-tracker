@@ -239,14 +239,16 @@ with tab4:
         st.subheader("🦁 What is 'Don't Be An Animal'?")
         st.info("'From John Wick: Exactly. Rules. Without them, we'd live with the animals.'")
         st.markdown("""
-        **Penalty:** Owe a drink, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).
         
-        * **Hitting Zone:** Step off mat without returning ball = 1/4 drink.
-        * **Mulligan:** Owe 1 round of beer.
-        * **In-Hole First Putt:** Everyone else drinks a sip.
-        * **In-Hole Chip:** Everyone else drinks 1/4.
-        * **Bets:** Bet as you want, drink your bets.
-        * **The Law:** Slam a beer to make or cancel a rule.
+        **No Animals Penalty:** Drink Alcohol, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).
+        
+        * **Hitting Zone:** Step off mat without returning ball = 1/4, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).        
+        * **In-Hole First Putt:** Everyone else drinks a 1/4, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).
+        * **In-Hole Chip:** Everyone else drinks 1/2, 5 Diamond Pushups, or 15 Jumping Jacks (No 'Deng' style).
+        * **Mulligan:** 1 round of beer
+        * **Bets:** Bet as you want, drink your bets (Bets can be individual speecific)
+        * **Make Rule** Slam 1  (Rules can not be individual sepcific)
+        * **Cancel Rule** Slam 2
         """)
 
 # --- TAB 5: ADMIN ---
@@ -254,6 +256,7 @@ with tab5:
     if st.button("🔄 Force Refresh Database"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
