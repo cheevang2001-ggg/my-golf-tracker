@@ -47,7 +47,7 @@ def save_data(week, player, pars, birdies, eagles, score, hcp_val):
     else:
         final_df = new_entry
     cols_to_keep = ['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score']
-    final_df = final_df[cols_to_keep]
+    final_df = final_df[cols_to_keep][cols_to_keep]
     conn.update(data=final_df)
     st.cache_data.clear()
 
@@ -67,13 +67,14 @@ st.divider()
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly History", "📜 League Info", "⚙️ Admin"])
 
-# --- TAB 1: SCORECARD (Logic remains the same) ---
+# --- TAB 1: SCORECARD ---
 with tab1:
     st.subheader("🔢 Track Your Round Counts")
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
     selection_id = f"{player_select}_{week_select}"
+    
     if 'counts' not in st.session_state or st.session_state.get('current_selection') != selection_id:
         st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0}
         if not df_main.empty:
@@ -83,34 +84,38 @@ with tab1:
             st.session_state['temp_score'] = int(this_wk.iloc[0]['Total_Score']) if not this_wk.empty else 45
             st.session_state['temp_hcp'] = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else int(current_handicaps.get(player_select, 0))
         st.session_state.current_selection = selection_id
+    
     r1 = st.columns(3)
     st.session_state.counts['Par'] = r1[0].number_input("Season Total Pars", min_value=0, value=st.session_state.counts['Par'])
     st.session_state.counts['Birdie'] = r1[1].number_input("Season Total Birdies", min_value=0, value=st.session_state.counts['Birdie'])
     st.session_state.counts['Eagle'] = r1[2].number_input("Season Total Eagles", min_value=0, value=st.session_state.counts['Eagle'])
+    
     m1, m2, m3 = st.columns(3)
     score_in = m1.number_input("Gross Score", min_value=20, value=st.session_state.get('temp_score', 45))
     hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', 0))
     m3.metric("Net Score", score_in - hcp_in)
+    
     if st.button("🚀 Submit & Sync Data"):
         prev = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         save_data(week_select, player_select, st.session_state.counts['Par'] - prev['Pars_Count'].sum(), st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(), st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(), score_in, hcp_in)
         st.success("Score Updated!")
         st.rerun()
 
-# --- TAB 2: NO ANIMALS STANDING (RESIZED) ---
+# --- TAB 2: NO ANIMALS STANDING ---
 with tab2:
     if not df_main.empty:
+        # SECTION 1: MAIN LEADERBOARD
         st.header("🏁 No Animals Standing")
-        standings = df_main.groupby('Player').agg({'animal_pts': 'sum', 'Net_Score': 'mean', 'Pars_Count': 'sum', 'Birdies_Count': 'sum', 'Eagle_Count': 'sum'}).rename(columns={'animal_pts': 'Animal Pts', 'Net_Score': 'Avg Net', 'Pars_Count': 'Pars', 'Birdies_Count': 'Birdies', 'Eagle_Count': 'Eagles'}).reset_index()
+        standings = df_main.groupby('Player').agg({
+            'animal_pts': 'sum', 
+            'Net_Score': 'mean'
+        }).rename(columns={'animal_pts': 'Animal Pts', 'Net_Score': 'Avg Net'}).reset_index()
+        
         standings['Total Points'] = standings['Animal Pts']
         standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
         
-        # Reorder and filter
-        display_standings = standings[['Player', 'Animal Pts', 'Total Points', 'Avg Net', 'Pars', 'Birdies', 'Eagles']]
-
-        # Resize logic: Set column widths small to fit without scrolling
         st.dataframe(
-            display_standings,
+            standings[['Player', 'Animal Pts', 'Total Points', 'Avg Net']],
             use_container_width=True,
             hide_index=True,
             column_config={
@@ -118,6 +123,40 @@ with tab2:
                 "Animal Pts": st.column_config.NumberColumn("Pts", width="small"),
                 "Total Points": st.column_config.NumberColumn("Total", width="small"),
                 "Avg Net": st.column_config.NumberColumn("Net", width="small"),
+            }
+        )
+
+        st.divider()
+
+        # SECTION 2: SEASON FEAT TOTALS
+        st.header("🦅 Season Feat Totals")
+        feats = df_main.groupby('Player').agg({
+            'Pars_Count': 'sum', 
+            'Birdies_Count': 'sum', 
+            'Eagle_Count': 'sum'
+        }).rename(columns={
+            'Pars_Count': 'Pars', 
+            'Birdies_Count': 'Birdies', 
+            'Eagle_Count': 'Eagles'
+        }).reset_index()
+        
+        # Calculate League Totals
+        league_row = pd.DataFrame([{
+            'Player': '⛳ LEAGUE TOTAL',
+            'Pars': feats['Pars'].sum(),
+            'Birdies': feats['Birdies'].sum(),
+            'Eagles': feats['Eagles'].sum()
+        }])
+        
+        # Combine Feats table with League Total row
+        feats_display = pd.concat([feats.sort_values('Pars', ascending=False), league_row], ignore_index=True)
+
+        st.dataframe(
+            feats_display,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Player": st.column_config.TextColumn("Player", width="medium"),
                 "Pars": st.column_config.NumberColumn("P", width="small"),
                 "Birdies": st.column_config.NumberColumn("B", width="small"),
                 "Eagles": st.column_config.NumberColumn("E", width="small"),
@@ -126,13 +165,11 @@ with tab2:
     else:
         st.info("No data found.")
 
-# --- TAB 3: WEEKLY HISTORY (RESIZED) ---
+# --- TAB 3: WEEKLY HISTORY ---
 with tab3:
     st.header("📅 Weekly History")
     if not df_main.empty:
         history_df = df_main[['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score']].sort_values(['Week', 'Player'], ascending=[False, True])
-        
-        # Resize logic for History
         st.dataframe(
             history_df,
             use_container_width=True,
@@ -148,5 +185,4 @@ with tab3:
                 "Net_Score": st.column_config.NumberColumn("Net", width="small"),
             }
         )
-
-# --- TABS 4 & 5 (Admin & Info) remain the same ---
+# --- TABS 4 & 5 RETAINED ---
