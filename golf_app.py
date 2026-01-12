@@ -47,7 +47,7 @@ def save_data(week, player, pars, birdies, eagles, score, hcp_val):
     else:
         final_df = new_entry
     cols_to_keep = ['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score']
-    final_df = final_df[cols_to_keep][cols_to_keep]
+    final_df = final_df[cols_to_keep]
     conn.update(data=final_df)
     st.cache_data.clear()
 
@@ -128,28 +128,20 @@ with tab2:
 
         st.divider()
 
-        # SECTION 2: SEASON FEAT TOTALS
-        st.header("🦅 Season Feat Totals")
+        # SECTION 2: PARS, BIRDIES, EAGLES
+        st.header("🦅 Pars, Birdies, Eagles")
         feats = df_main.groupby('Player').agg({
             'Pars_Count': 'sum', 
             'Birdies_Count': 'sum', 
             'Eagle_Count': 'sum'
         }).rename(columns={
-            'Pars_Count': 'Pars', 
-            'Birdies_Count': 'Birdies', 
-            'Eagle_Count': 'Eagles'
+            'Pars_Count': 'Par', 
+            'Birdies_Count': 'Birdie', 
+            'Eagle_Count': 'Eagle'
         }).reset_index()
         
-        # Calculate League Totals
-        league_row = pd.DataFrame([{
-            'Player': '⛳ LEAGUE TOTAL',
-            'Pars': feats['Pars'].sum(),
-            'Birdies': feats['Birdies'].sum(),
-            'Eagles': feats['Eagles'].sum()
-        }])
-        
-        # Combine Feats table with League Total row
-        feats_display = pd.concat([feats.sort_values('Pars', ascending=False), league_row], ignore_index=True)
+        # Sort by Par count descending
+        feats_display = feats.sort_values('Par', ascending=False)
 
         st.dataframe(
             feats_display,
@@ -157,9 +149,9 @@ with tab2:
             hide_index=True,
             column_config={
                 "Player": st.column_config.TextColumn("Player", width="medium"),
-                "Pars": st.column_config.NumberColumn("P", width="small"),
-                "Birdies": st.column_config.NumberColumn("B", width="small"),
-                "Eagles": st.column_config.NumberColumn("E", width="small"),
+                "Par": st.column_config.NumberColumn("Par", width="small"),
+                "Birdie": st.column_config.NumberColumn("Birdie", width="small"),
+                "Eagle": st.column_config.NumberColumn("Eagle", width="small"),
             }
         )
     else:
@@ -185,4 +177,4 @@ with tab3:
                 "Net_Score": st.column_config.NumberColumn("Net", width="small"),
             }
         )
-# --- TABS 4 & 5 RETAINED ---
+# --- TABS 4 & 5 (Admin & Info) remain the same ---
