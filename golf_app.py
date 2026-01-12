@@ -5,7 +5,7 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
-# UPDATED ROSTER: Removed John, Added Xuka (0) and Beef (9)
+# UPDATED ROSTER
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
     "Carter": 5, "Dale": 4, "Long": 6, "Txv": 4,
@@ -35,14 +35,16 @@ def get_handicaps():
         return latest
     return DEFAULT_HANDICAPS
 
-def save_data(week, player, pars, birdies, eagles, g_pars, g_birdies, g_eagles, score, hcp_val):
+def save_data(week, player, pars, birdies, eagles, score, hcp_val):
     st.cache_data.clear()
     existing_data = conn.read(ttl=0)
     
+    # Gimme columns are kept as 0 in the background to prevent GSheet structure errors, 
+    # but are removed from UI and calculations.
     new_entry = pd.DataFrame([{
         'Week': week, 'Player': player,
         'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles,
-        'G_Par_Count': g_pars, 'G_Birdie_Count': g_birdies, 'G_Eagle_Count': g_eagles,
+        'G_Par_Count': 0, 'G_Birdie_Count': 0, 'G_Eagle_Count': 0,
         'Total_Score': score, 'Handicap': hcp_val, 'Net_Score': score - hcp_val
     }])
     
@@ -63,6 +65,7 @@ df_main = load_data()
 if not df_main.empty:
     df_main = df_main.fillna(0)
     # Award Animal Points based on Weekly Net Score Rank
+    # method='min' handles ties (e.g., two tied for 1st both get 100 points)
     df_main['week_rank'] = df_main.groupby('Week')['Net_Score'].rank(ascending=True, method='min')
     df_main['animal_pts'] = df_main['week_rank'].map(FEDEX_POINTS).fillna(0)
 
@@ -89,9 +92,8 @@ with tab1:
     selection_id = f"{player_select}_{week_select}"
     default_hcp = int(current_handicaps.get(player_select, 0))
 
-    # Fix: Correctly initialize session state for counts
     if 'counts' not in st.session_state or st.session_state.get('current_selection') != selection_id:
-        st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'GP': 0, 'GB': 0, 'GE': 0}
+        st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0}
         st.session_state['temp_score'] = 45
         st.session_state['temp_hcp'] = default_hcp
 
@@ -100,10 +102,7 @@ with tab1:
             st.session_state.counts = {
                 'Par': int(hist['Pars_Count'].sum()), 
                 'Birdie': int(hist['Birdies_Count'].sum()),
-                'Eagle': int(hist['Eagle_Count'].sum()), 
-                'GP': int(hist['G_Par_Count'].sum()),
-                'GB': int(hist['G_Birdie_Count'].sum()), 
-                'GE': int(hist['G_Eagle_Count'].sum())
+                'Eagle': int(hist['Eagle_Count'].sum())
             }
             this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
             if not this_wk.empty:
@@ -111,19 +110,16 @@ with tab1:
                 st.session_state['temp_hcp'] = int(this_wk.iloc[0]['Handicap'])
         st.session_state.current_selection = selection_id
 
-    r1, r2 = st.columns(3), st.columns(3)
-    # Read/Write directly from the initialized session_state
+    # UI simplified to Pars, Birdies, and Eagles only
+    r1 = st.columns(3)
     st.session_state.counts['Par'] = r1[0].number_input("Season Total Pars", min_value=0, value=st.session_state.counts['Par'])
     st.session_state.counts['Birdie'] = r1[1].number_input("Season Total Birdies", min_value=0, value=st.session_state.counts['Birdie'])
     st.session_state.counts['Eagle'] = r1[2].number_input("Season Total Eagles", min_value=0, value=st.session_state.counts['Eagle'])
-    st.session_state.counts['GP'] = r2[0].number_input("Season Total G-Pars", min_value=0, value=st.session_state.counts['GP'])
-    st.session_state.counts['GB'] = r2[1].number_input("Season Total G-Birdies", min_value=0, value=st.session_state.counts['GB'])
-    st.session_state.counts['GE'] = r2[2].number_input("Season Total G-Eagles", min_value=0, value=st.session_state.counts['GE'])
 
     st.divider()
     m1, m2, m3 = st.columns(3)
     score_in = m1.number_input("Gross Score (This Week)", min_value=20, value=st.session_state.get('temp_score', 45))
-    hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', default_hcp))
+    hcp_in = m2.number_input("Current Handicap", value=st.session_state.get('temp_hcp', default_hcp))
     m3.metric("Net Score", score_in - hcp_in)
 
     if st.button("🚀 Submit & Sync Data"):
@@ -132,9 +128,6 @@ with tab1:
                   st.session_state.counts['Par'] - prev['Pars_Count'].sum(),
                   st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(),
                   st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(),
-                  st.session_state.counts['GP'] - prev['G_Par_Count'].sum(),
-                  st.session_state.counts['GB'] - prev['G_Birdie_Count'].sum(),
-                  st.session_state.counts['GE'] - prev['G_Eagle_Count'].sum(),
                   score_in, hcp_in)
         st.success("Score Updated!")
         st.rerun()
@@ -181,7 +174,7 @@ with tab4:
         st.markdown("""
         **Drawing:** 5:45pm | **Tee Time:** 6:00pm
         * **Partners:** Randomized by picking playing cards.
-        * **Lateness:** Round starts at 6:00pm. If not arrived by Hole 4, you receive a DNF.
+        * **Lateness:** If not arrived by Hole 4, you receive a DNF.
         * **Makeups:** Completed by the following Friday at 12AM.
         """)
     else:
