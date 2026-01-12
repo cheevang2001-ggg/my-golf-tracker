@@ -65,11 +65,11 @@ if not df_main.empty:
 st.markdown("<h1 style='text-align: center;'>GGGolf - No Animals - Winter League</h1>", unsafe_allow_html=True)
 st.divider()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly Scores", "📜 League Info", "⚙️ Admin"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly History", "📜 League Info", "⚙️ Admin"])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("Track Your Round Counts")
+    st.subheader("🔢 Track Your Round Counts")
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
@@ -95,7 +95,7 @@ with tab1:
     hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', 0))
     m3.metric("Net Score", score_in - hcp_in)
     
-    if st.button("Submit"):
+    if st.button("🚀 Submit & Sync Data"):
         prev = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         save_data(week_select, player_select, st.session_state.counts['Par'] - prev['Pars_Count'].sum(), st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(), st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(), score_in, hcp_in)
         st.success("Score Updated!")
@@ -104,8 +104,7 @@ with tab1:
 # --- TAB 2: NO ANIMALS STANDING ---
 with tab2:
     if not df_main.empty:
-        # SECTION 1: MAIN LEADERBOARD
-        st.header("No Animals Standing")
+        st.header("🏁 No Animals Standing")
         standings = df_main.groupby('Player').agg({
             'animal_pts': 'sum', 
             'Net_Score': 'mean'
@@ -125,26 +124,16 @@ with tab2:
                 "Avg Net": st.column_config.NumberColumn("Net", width="small"),
             }
         )
-
         st.divider()
-
-        # SECTION 2: PARS, BIRDIES, EAGLES
-        st.header("Pars, Birdies, Eagles")
+        st.header("🦅 Pars, Birdies, Eagles")
         feats = df_main.groupby('Player').agg({
             'Pars_Count': 'sum', 
             'Birdies_Count': 'sum', 
             'Eagle_Count': 'sum'
-        }).rename(columns={
-            'Pars_Count': 'Par', 
-            'Birdies_Count': 'Birdie', 
-            'Eagle_Count': 'Eagle'
-        }).reset_index()
+        }).rename(columns={'Pars_Count': 'Par', 'Birdies_Count': 'Birdie', 'Eagle_Count': 'Eagle'}).reset_index()
         
-        # Sort by Par count descending
-        feats_display = feats.sort_values('Par', ascending=False)
-
         st.dataframe(
-            feats_display,
+            feats.sort_values('Par', ascending=False),
             use_container_width=True,
             hide_index=True,
             column_config={
@@ -157,11 +146,26 @@ with tab2:
     else:
         st.info("No data found.")
 
-# --- TAB 3: WEEKLY HISTORY ---
+# --- TAB 3: WEEKLY HISTORY (WITH FILTERS) ---
 with tab3:
     st.header("📅 Weekly History")
     if not df_main.empty:
-        history_df = df_main[['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score']].sort_values(['Week', 'Player'], ascending=[False, True])
+        # Create a layout for filtering
+        f1, f2 = st.columns([1, 2])
+        filter_player = f1.multiselect("Filter by Player", options=PLAYERS)
+        filter_week = f2.multiselect("Filter by Week", options=sorted(df_main['Week'].unique(), reverse=True))
+
+        history_df = df_main[['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score']]
+        
+        # Apply filters if selected
+        if filter_player:
+            history_df = history_df[history_df['Player'].isin(filter_player)]
+        if filter_week:
+            history_df = history_df[history_df['Week'].isin(filter_week)]
+            
+        history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
+
+        # We use st.dataframe (not st.table) to keep the native search and sort functionality
         st.dataframe(
             history_df,
             use_container_width=True,
@@ -177,7 +181,10 @@ with tab3:
                 "Net_Score": st.column_config.NumberColumn("Net", width="small"),
             }
         )
-# --- TAB 4: LEAGUE INFO ---
+    else:
+        st.info("No history available yet.")
+
+# --- TABS 4 & 5 REMAIN THE SAME ---# --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
     info_choice = st.radio("Category", ["Rules & Format", "No Animal Rules"], horizontal=True)
@@ -203,4 +210,5 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
