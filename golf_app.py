@@ -13,7 +13,7 @@ DEFAULT_HANDICAPS = {
     "Xuka": 0, "Beef": 9
 }
 
-# Rank-based points (1st = 100, 2nd = 85, etc.) based on Net Score
+# FedEx Style Point Distribution (Ties handle via method='min')
 FEDEX_POINTS = {
     1: 100, 2: 85, 3: 75, 4: 70, 5: 65, 6: 60,
     7: 55, 8: 50, 9: 45, 10: 40, 11: 35, 12: 30
@@ -47,7 +47,6 @@ def save_data(week, player, pars, birdies, eagles, g_pars, g_birdies, g_eagles, 
     }])
     
     if not existing_data.empty:
-        # Avoid duplicates for same player/week
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
@@ -64,7 +63,6 @@ df_main = load_data()
 if not df_main.empty:
     df_main = df_main.fillna(0)
     # Award Animal Points based on Weekly Net Score Rank
-    # method='min' handles ties (e.g., two tied for 1st both get 100 points)
     df_main['week_rank'] = df_main.groupby('Week')['Net_Score'].rank(ascending=True, method='min')
     df_main['animal_pts'] = df_main['week_rank'].map(FEDEX_POINTS).fillna(0)
 
@@ -91,22 +89,30 @@ with tab1:
     selection_id = f"{player_select}_{week_select}"
     default_hcp = int(current_handicaps.get(player_select, 0))
 
-    # Load existing counts from GSheets to show cumulative totals
-    if 'current_selection' not in st.session_state or st.session_state.current_selection != selection_id:
+    # Fix: Correctly initialize session state for counts
+    if 'counts' not in st.session_state or st.session_state.get('current_selection') != selection_id:
         st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0, 'GP': 0, 'GB': 0, 'GE': 0}
+        st.session_state['temp_score'] = 45
+        st.session_state['temp_hcp'] = default_hcp
+
         if not df_main.empty:
             hist = df_main[(df_main['Player'] == player_select) & (df_main['Week'] <= week_select)]
             st.session_state.counts = {
-                'Par': int(hist['Pars_Count'].sum()), 'Birdie': int(hist['Birdies_Count'].sum()),
-                'Eagle': int(hist['Eagle_Count'].sum()), 'GP': int(hist['G_Par_Count'].sum()),
-                'GB': int(hist['G_Birdie_Count'].sum()), 'GE': int(hist['G_Eagle_Count'].sum())
+                'Par': int(hist['Pars_Count'].sum()), 
+                'Birdie': int(hist['Birdies_Count'].sum()),
+                'Eagle': int(hist['Eagle_Count'].sum()), 
+                'GP': int(hist['G_Par_Count'].sum()),
+                'GB': int(hist['G_Birdie_Count'].sum()), 
+                'GE': int(hist['G_Eagle_Count'].sum())
             }
             this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
-            st.session_state['temp_score'] = int(this_wk.iloc[0]['Total_Score']) if not this_wk.empty else 45
-            st.session_state['temp_hcp'] = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else default_hcp
+            if not this_wk.empty:
+                st.session_state['temp_score'] = int(this_wk.iloc[0]['Total_Score'])
+                st.session_state['temp_hcp'] = int(this_wk.iloc[0]['Handicap'])
         st.session_state.current_selection = selection_id
 
     r1, r2 = st.columns(3), st.columns(3)
+    # Read/Write directly from the initialized session_state
     st.session_state.counts['Par'] = r1[0].number_input("Season Total Pars", min_value=0, value=st.session_state.counts['Par'])
     st.session_state.counts['Birdie'] = r1[1].number_input("Season Total Birdies", min_value=0, value=st.session_state.counts['Birdie'])
     st.session_state.counts['Eagle'] = r1[2].number_input("Season Total Eagles", min_value=0, value=st.session_state.counts['Eagle'])
@@ -138,7 +144,6 @@ with tab2:
     if not df_main.empty:
         st.header("🏁 No Animals Standing")
         
-        # Aggregate Season Totals
         standings = df_main.groupby('Player').agg({
             'animal_pts': 'sum', 
             'Net_Score': 'mean',
@@ -153,17 +158,13 @@ with tab2:
             'Eagle_Count': 'Total Eagles'
         }).reset_index()
         
-        # 'Total Animal Points' is strictly the accumulated weekly rank points
         standings['Total Animal Points'] = standings['Animal Points']
-        
-        # Sort by Animal Points (Highest) then Avg Net Score (Lowest)
         standings = standings.round(2).sort_values(by=['Animal Points', 'Avg Net'], ascending=[False, True])
         
-        # Reorder columns as requested
         display_cols = ['Player', 'Animal Points', 'Total Animal Points', 'Avg Net', 'Total Pars', 'Total Birdies', 'Total Eagles']
         st.dataframe(standings[display_cols], use_container_width=True, hide_index=True)
     else:
-        st.info("No data found. Submit scores to generate standings.")
+        st.info("No data found.")
 
 # --- TAB 3: WEEKLY LOG ---
 with tab3:
@@ -180,7 +181,7 @@ with tab4:
         st.markdown("""
         **Drawing:** 5:45pm | **Tee Time:** 6:00pm
         * **Partners:** Randomized by picking playing cards.
-        * **Lateness:** Round starts at 6:00pm. If arriving after 6PM, you are paused until the hole is finished. If not arrived by Hole 4, you receive a DNF.
+        * **Lateness:** Round starts at 6:00pm. If not arrived by Hole 4, you receive a DNF.
         * **Makeups:** Completed by the following Friday at 12AM.
         """)
     else:
