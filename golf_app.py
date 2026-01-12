@@ -65,11 +65,11 @@ if not df_main.empty:
 st.markdown("<h1 style='text-align: center;'>GGGolf - No Animals - Winter League</h1>", unsafe_allow_html=True)
 st.divider()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly History", "📜 League Info", "⚙️ Admin"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly Scores", "📜 League Info", "⚙️ Admin"])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("🔢 Track Your Round Counts")
+    st.subheader("Track Your Round Counts")
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
@@ -95,7 +95,7 @@ with tab1:
     hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', 0))
     m3.metric("Net Score", score_in - hcp_in)
     
-    if st.button("🚀 Submit & Sync Data"):
+    if st.button("Submit"):
         prev = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         save_data(week_select, player_select, st.session_state.counts['Par'] - prev['Pars_Count'].sum(), st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(), st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(), score_in, hcp_in)
         st.success("Score Updated!")
@@ -105,7 +105,7 @@ with tab1:
 with tab2:
     if not df_main.empty:
         # SECTION 1: MAIN LEADERBOARD
-        st.header("🏁 No Animals Standing")
+        st.header("No Animals Standing")
         standings = df_main.groupby('Player').agg({
             'animal_pts': 'sum', 
             'Net_Score': 'mean'
@@ -129,7 +129,7 @@ with tab2:
         st.divider()
 
         # SECTION 2: PARS, BIRDIES, EAGLES
-        st.header("🦅 Pars, Birdies, Eagles")
+        st.header("Pars, Birdies, Eagles")
         feats = df_main.groupby('Player').agg({
             'Pars_Count': 'sum', 
             'Birdies_Count': 'sum', 
@@ -177,4 +177,30 @@ with tab3:
                 "Net_Score": st.column_config.NumberColumn("Net", width="small"),
             }
         )
-# --- TABS 4 & 5 (Admin & Info) remain the same ---
+# --- TAB 4: LEAGUE INFO ---
+with tab4:
+    st.header("📜 League Information")
+    info_choice = st.radio("Category", ["Rules & Format", "No Animal Rules"], horizontal=True)
+    st.divider()
+    if info_choice == "Rules & Format":
+        st.markdown("""
+        **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+        * **Partners:** Randomized by picking playing cards.
+        * **Lateness:** If not arrived by Hole 4, you receive a DNF.
+        * **Makeups:** Completed by the following Friday at 12AM.
+        """)
+    else:
+        st.markdown("""
+        **Penalty:** Drink Alcohol, 5 Diamond Pushups, or 15 Jumping Jacks.
+        * **Mats:** Stepping off mat without returning the ball = Penalty.
+        * **First Putt:** Player makes first putt in-hole = Everyone else drinks.
+        * **Chips:** Player chips in-hole = Everyone else drinks 1/2.
+        * **Mulligans:** Owe 1 round of beer.
+        """)
+
+# --- TAB 5: ADMIN ---
+with tab5:
+    if st.button("🔄 Force Refresh Sync"):
+        st.cache_data.clear()
+        st.rerun()
+
