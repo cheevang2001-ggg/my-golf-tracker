@@ -165,7 +165,7 @@ with tab1:
 # --- TAB 2: LEADERBOARD ---
 with tab2:
     if not df_main.empty:
-        st.header("🏆 FedEx Cup Standings")
+        st.header("🏆 No Animals Standings")
         standings = df_main.groupby('Player').agg({'fedex_pts': 'sum', 'calc_pts': 'sum', 'Net_Score': 'mean'}).rename(columns={'fedex_pts': 'Season FedEx Points', 'calc_pts': 'Total Feat Points', 'Net_Score': 'Avg Net'}).reset_index()
         standings = standings.round(2).sort_values(by=['Season FedEx Points', 'Total Feat Points'], ascending=False)
         st.dataframe(standings, use_container_width=True, hide_index=True)
@@ -206,3 +206,4 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
