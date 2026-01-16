@@ -37,16 +37,15 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
     st.cache_data.clear()
     existing_data = conn.read(ttl=0)
     
-    # Logic to handle DNF vs Numeric Score from dropdown
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
     final_net = 0 if is_dnf else (final_gross - hcp_val)
 
     new_entry = pd.DataFrame([{
         'Week': week, 'Player': player,
-        'Pars_Count': pars if not is_dnf else 0,
-        'Birdies_Count': birdies if not is_dnf else 0,
-        'Eagle_Count': eagles if not is_dnf else 0,
+        'Pars_Count': pars,
+        'Birdies_Count': birdies,
+        'Eagle_Count': eagles,
         'Total_Score': final_gross,
         'Handicap': hcp_val, 
         'Net_Score': final_net,
@@ -71,8 +70,6 @@ df_main = load_data()
 
 if not df_main.empty:
     df_main = df_main.fillna(0)
-    
-    # Safety check for DNF column
     if 'DNF' not in df_main.columns:
         df_main['DNF'] = False
     else:
@@ -86,7 +83,6 @@ if not df_main.empty:
             df_main.loc[week_mask, 'animal_pts'] = ranks.map(FEDEX_POINTS).fillna(0)
 
 # --- UI ---
-# Mobile-optimized Header (Centered)
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
 st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League Tracker</p>", unsafe_allow_html=True)
@@ -102,26 +98,34 @@ with tab1:
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
-    selection_id = f"{player_select}_{week_select}"
-
-    if 'counts' not in st.session_state or st.session_state.get('current_selection') != selection_id:
-        st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0}
-        if not df_main.empty:
-            hist = df_main[(df_main['Player'] == player_select) & (df_main['Week'] <= week_select)]
-            st.session_state.counts = {
-                'Par': int(hist['Pars_Count'].sum()), 
-                'Birdie': int(hist['Birdies_Count'].sum()), 
-                'Eagle': int(hist['Eagle_Count'].sum())
-            }
-            this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
-            st.session_state['temp_score'] = int(this_wk.iloc[0]['Total_Score']) if (not this_wk.empty and this_wk.iloc[0]['Total_Score'] != 0) else 45
-            st.session_state['temp_hcp'] = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else int(current_handicaps.get(player_select, 0))
-        st.session_state.current_selection = selection_id
     
+    # Calculate Season Totals (Excluding current week for the "So Far" display)
+    if not df_main.empty:
+        history_prior = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
+        season_pars_sofar = int(history_prior['Pars_Count'].sum())
+        season_birdies_sofar = int(history_prior['Birdies_Count'].sum())
+        season_eagles_sofar = int(history_prior['Eagle_Count'].sum())
+        
+        # Get data for current selected week if it exists
+        this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
+        wk_pars = int(this_wk.iloc[0]['Pars_Count']) if not this_wk.empty else 0
+        wk_birdies = int(this_wk.iloc[0]['Birdies_Count']) if not this_wk.empty else 0
+        wk_eagles = int(this_wk.iloc[0]['Eagle_Count']) if not this_wk.empty else 0
+        wk_score = int(this_wk.iloc[0]['Total_Score']) if (not this_wk.empty and this_wk.iloc[0]['Total_Score'] != 0) else 45
+        wk_hcp = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else int(current_handicaps.get(player_select, 0))
+    else:
+        season_pars_sofar = season_birdies_sofar = season_eagles_sofar = 0
+        wk_pars = wk_birdies = wk_eagles = 0
+        wk_score = 45
+        wk_hcp = int(current_handicaps.get(player_select, 0))
+
+    # Input for current week counts
     r1 = st.columns(3)
-    st.session_state.counts['Par'] = r1[0].number_input("Season Total Pars", min_value=0, value=st.session_state.counts['Par'])
-    st.session_state.counts['Birdie'] = r1[1].number_input("Season Total Birdies", min_value=0, value=st.session_state.counts['Birdie'])
-    st.session_state.counts['Eagle'] = r1[2].number_input("Season Total Eagles", min_value=0, value=st.session_state.counts['Eagle'])
+    count_options = list(range(10))
+    
+    sel_pars = r1[0].selectbox(f"Pars this Week (Total: {season_pars_sofar + wk_pars})", options=count_options, index=wk_pars)
+    sel_birdies = r1[1].selectbox(f"Birdies this Week (Total: {season_birdies_sofar + wk_birdies})", options=count_options, index=wk_birdies)
+    sel_eagles = r1[2].selectbox(f"Eagles this Week (Total: {season_eagles_sofar + wk_eagles})", options=count_options, index=wk_eagles)
     
     st.divider()
 
@@ -129,32 +133,28 @@ with tab1:
     score_options = ["DNF"] + list(range(30, 73))
     
     try:
-        current_val = st.session_state.get('temp_score', 45)
-        default_idx = 0 if current_val == 0 else score_options.index(current_val)
+        default_idx = 0 if wk_score == 0 else score_options.index(wk_score)
     except ValueError:
         default_idx = score_options.index(45)
 
     score_select = m1.selectbox("Gross Score", options=score_options, index=default_idx)
-    hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', 0))
+    hcp_in = m2.number_input("Handicap", value=wk_hcp)
     
     if score_select == "DNF":
         m3.metric("Net Score", "0 (DNF)")
     else:
         m3.metric("Net Score", int(score_select) - hcp_in)
 
-    if st.button("Submit Score"):
-        prev = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
+    if st.button("Submit Score", use_container_width=True):
         save_data(
             week_select, player_select, 
-            st.session_state.counts['Par'] - prev['Pars_Count'].sum(), 
-            st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(), 
-            st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(), 
+            sel_pars, sel_birdies, sel_eagles, 
             score_select, hcp_in
         )
         st.success("Round Recorded!")
         st.rerun()
 
-# --- TAB 2: NO ANIMALS STANDING ---
+# --- TAB 2: STANDINGS ---
 with tab2:
     if not df_main.empty:
         st.header("No Animals Standings")
@@ -196,8 +196,7 @@ with tab4:
     st.divider()
     st.markdown("""
     **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** 
-    * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
     * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket at the start of the next week.
     * **Missed Week:** When you miss a week, once you return at the start of the round you buy a bucket.
     * **No Animal Bets:** Bet your Bets, Drink your bets.
@@ -209,10 +208,6 @@ with tab4:
 
 # --- TAB 5: ADMIN ---
 with tab5:
-    if st.button("🔄 Force Refresh Sync"):
+    if st.button("🔄 Force Refresh Sync", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-
-
-
-
