@@ -196,7 +196,8 @@ with tab4:
     st.divider()
     st.markdown("""
     **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** 
+    * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
     * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket at the start of the next week.
     * **Missed Week:** When you miss a week, once you return at the start of the round you buy a bucket.
     * **No Animal Bets:** Bet your Bets, Drink your bets.
@@ -211,3 +212,4 @@ with tab5:
     if st.button("🔄 Force Refresh Sync", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
+
