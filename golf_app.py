@@ -15,8 +15,8 @@ DEFAULT_HANDICAPS = {
 }
 
 FEDEX_POINTS = {
-    1: 100, 2: 85, 3: 75, 4: 70, 5: 65, 6: 60,
-    7: 55, 8: 50, 9: 45, 10: 40, 11: 35, 12: 30
+    1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
+    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18
 }
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -228,6 +228,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
