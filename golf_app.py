@@ -94,7 +94,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Scorecard", "🏆 Standings", "�
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("Round Tracker")
+    st.subheader("Scores")
     c1, c2 = st.columns(2)
     player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
     week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
@@ -132,7 +132,7 @@ with tab1:
     sel_eagles = r1[2].selectbox("Eagles (Week)", options=range(10), index=wk_e, key=f"e_in_{player_select}_{week_select}")
 
     # SEASON TOTAL METRICS (Calculated: Prior Weeks + Current Dropdown Selection)
-    st.markdown("### Updated Season Totals")
+    st.markdown("### Total Pars, Birdies, Eagles")
     met1, met2, met3 = st.columns(3)
     met1.metric("Total Pars", season_pars_prior + sel_pars)
     met2.metric("Total Birdies", season_birdies_prior + sel_birdies)
@@ -203,4 +203,5 @@ with tab5:
     if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
 
