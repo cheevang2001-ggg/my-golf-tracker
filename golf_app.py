@@ -177,7 +177,7 @@ with tab3:
     if not df_main.empty:
         st.dataframe(df_main.sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tab4:
+# --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
     st.divider()
@@ -194,6 +194,7 @@ with tab4:
     * **Mulligans:** Owe 1 a bucket right away.
     """)
 
+# --- TAB 5: ADMIN ---
 with tab5:
     st.subheader("Admin")
     pwd = st.text_input("Password", type="password", key="ap_admin")
@@ -202,3 +203,4 @@ with tab5:
     if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
