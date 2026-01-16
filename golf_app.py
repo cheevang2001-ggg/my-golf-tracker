@@ -191,7 +191,8 @@ with tab4:
     # No radio button, markdown displays directly
     st.markdown("""
     **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** * **Makeups:** Set your own time with PH and completed before week close the following Friday at 12AM.
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.***
+    * **Makeups:** Set your own time with Pin High and complete the week before Trackman close the week by the following Friday at 12AM.
     * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket the following week.
     * **Missed Week:** When you miss a week, when you return you buy a bucket.
     * **No Animal Bets:** Bet your Bets, Drink your bets.
@@ -206,6 +207,7 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
