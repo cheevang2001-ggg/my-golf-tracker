@@ -69,7 +69,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals 
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("🔢 Track Your Round Counts")
+    st.subheader("Round Tracker")
     col1, col2 = st.columns(2)
     player_select = col1.selectbox("Select Player", PLAYERS)
     week_select = col2.selectbox("Select Week", range(1, 13))
@@ -95,7 +95,7 @@ with tab1:
     hcp_in = m2.number_input("Handicap", value=st.session_state.get('temp_hcp', 0))
     m3.metric("Net Score", score_in - hcp_in)
     
-    if st.button("🚀 Submit & Sync Data"):
+    if st.button("Submit"):
         prev = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
         save_data(week_select, player_select, st.session_state.counts['Par'] - prev['Pars_Count'].sum(), st.session_state.counts['Birdie'] - prev['Birdies_Count'].sum(), st.session_state.counts['Eagle'] - prev['Eagle_Count'].sum(), score_in, hcp_in)
         st.success("Score Updated!")
@@ -207,6 +207,7 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
