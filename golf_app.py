@@ -194,16 +194,40 @@ with tab4:
     * **Mulligans:** Owe 1 a bucket right away.
     """)
 
+
 # --- TAB 5: ADMIN ---
 with tab5:
-    st.subheader("Admin")
-    pwd = st.text_input("Password", type="password", key="ap_admin")
-    if pwd == ADMIN_PASSWORD:
-        st.session_state["authenticated"] = True
-    if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
-        st.cache_data.clear()
-        st.rerun()
+    st.subheader("Admin Access")
+    
+    # Logic to handle the password check
+    def check_password():
+        if st.session_state["admin_pwd_input"] == "InsigniaSeahawks6145":
+            st.session_state["authenticated"] = True
+            st.success("Admin Access Granted!")
+        else:
+            st.session_state["authenticated"] = False
+            if st.session_state["admin_pwd_input"] != "":
+                st.error("Incorrect Password")
 
+    # Use a specific key and callback to ensure it triggers immediately
+    st.text_input(
+        "Enter Admin Password", 
+        type="password", 
+        key="admin_pwd_input", 
+        on_change=check_password
+    )
+
+    if st.session_state["authenticated"]:
+        st.write("✅ **You are currently logged in as Admin.**")
+        if st.button("🔄 Sync/Refresh Data", key="syn_admin"):
+            st.cache_data.clear()
+            st.rerun()
+        
+        if st.button("🚪 Logout"):
+            st.session_state["authenticated"] = False
+            st.rerun()
+    else:
+        st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
 
 
 
