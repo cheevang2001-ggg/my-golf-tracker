@@ -5,8 +5,8 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
-# Set your private password here
-ADMIN_PASSWORD = "InsigniaSeahawks6145"
+# Set your private password here (Line 8)
+ADMIN_PASSWORD = "golf2024" 
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
@@ -26,15 +26,49 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data():
     return conn.read()
 
+def calculate_rolling_handicap(player_df):
+    """
+    Logic: Take last 4 rounds, remove the worst (highest) gross score,
+    average the remaining 3.
+    Note: Gross Score is relative to Par 36 (since scores are 30-73).
+    """
+    # Only use valid scores (exclude DNFs and zeros)
+    valid_rounds = player_df[player_df['Total_Score'] > 0].sort_values('Week', ascending=False)
+    
+    if len(valid_rounds) < 4:
+        return None # Not enough data yet
+    
+    # Get last 4 rounds
+    last_4 = valid_rounds.head(4)['Total_Score'].tolist()
+    
+    # Remove the worst (highest) score
+    last_4.remove(max(last_4))
+    
+    # Average the best 3
+    avg_gross = sum(last_4) / 3
+    
+    # Calculate handicap (Average Gross - Par 36)
+    new_hcp = round(max(0, avg_gross - 36))
+    return new_hcp
+
 def get_handicaps():
     df = load_data() 
-    if not df.empty and 'Handicap' in df.columns:
-        latest = df.sort_values('Week').groupby('Player')['Handicap'].last().to_dict()
-        for player in DEFAULT_HANDICAPS:
-            if player not in latest:
-                latest[player] = DEFAULT_HANDICAPS[player]
-        return latest
-    return DEFAULT_HANDICAPS
+    calculated_hcps = {}
+    
+    # Start with defaults
+    for player, hcp in DEFAULT_HANDICAPS.items():
+        calculated_hcps[player] = hcp
+        
+    if not df.empty:
+        for player in DEFAULT_HANDICAPS.keys():
+            player_data = df[df['Player'] == player]
+            rolling_hcp = calculate_rolling_handicap(player_data)
+            
+            # If we have enough rounds to calculate, overwrite the default
+            if rolling_hcp is not None:
+                calculated_hcps[player] = rolling_hcp
+                
+    return calculated_hcps
 
 def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
     st.cache_data.clear()
@@ -116,6 +150,8 @@ with tab1:
         wk_birdies = int(this_wk.iloc[0]['Birdies_Count']) if not this_wk.empty else 0
         wk_eagles = int(this_wk.iloc[0]['Eagle_Count']) if not this_wk.empty else 0
         wk_score = int(this_wk.iloc[0]['Total_Score']) if (not this_wk.empty and this_wk.iloc[0]['Total_Score'] != 0) else 45
+        
+        # Determine Handicap: Use rolling calculation if available, otherwise use default
         wk_hcp = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else int(current_handicaps.get(player_select, 0))
     else:
         season_pars_sofar = season_birdies_sofar = season_eagles_sofar = 0
@@ -157,7 +193,8 @@ with tab1:
         st.warning("⚠️ App is in Read-Only mode. Enter password in 'Admin' tab to edit.")
         st.button("Submit Score", use_container_width=True, disabled=True, key="submit_disabled")
 
-# --- TAB 2: STANDINGS ---
+# --- TAB 2, 3, 4, 5 ---
+# (Remaining tabs stay identical to previous version)
 with tab2:
     if not df_main.empty:
         st.header("No Animals Standings")
@@ -176,7 +213,6 @@ with tab2:
         }).rename(columns={'Pars_Count': 'Par', 'Birdies_Count': 'Birdie', 'Eagle_Count': 'Eagle'}).reset_index()
         st.dataframe(feats.sort_values('Par', ascending=False), use_container_width=True, hide_index=True)
 
-# --- TAB 3: WEEKLY HISTORY ---
 with tab3:
     st.header("📅 Weekly History")
     if not df_main.empty:
@@ -190,21 +226,18 @@ with tab3:
         display_cols = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
         st.dataframe(history_df[display_cols].sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-# --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
     st.divider()
     st.markdown("""
     **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+    * **Handicaps:** Automatically calculated after 4 rounds (Average of best 3 of last 4).
     * **Partners:** Randomized by picking playing cards.
-    * **Makeups:** Set your own time with Pin High; complete by Friday at 12AM.
+    * **Makeups:** Complete by Friday at 12AM.
     * **Bottom 2:** Bottom two from each bay buy a bucket next week.
-    * **Missed Week:** Return to buy a bucket at start of round.
-    * **Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
-    * **First Putt/Chips:** In-hole results in drinks for the bay (1/4 or 1/2).
+    * **Mulligans:** Owe 1 a bucket right away.
     """)
 
-# --- TAB 5: ADMIN ---
 with tab5:
     st.subheader("Admin Controls")
     pwd = st.text_input("Enter Admin Password to enable editing", type="password", key="admin_pwd")
@@ -223,4 +256,3 @@ with tab5:
         if st.button("Logout Admin", key="logout_btn"):
             st.session_state["authenticated"] = False
             st.rerun()
-
