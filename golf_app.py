@@ -423,7 +423,7 @@ with tab4:
 
 # --- TAB 5: ADMIN ---
 with tab5:
-st.subheader("Admin Controls")
+    st.subheader("Admin Controls")
     
     # Password Input with a unique key
     pwd = st.text_input("Enter Admin Password to enable editing", type="password", key="admin_pwd_input") [cite: 1]
@@ -444,5 +444,6 @@ st.subheader("Admin Controls")
         if st.button("Logout Admin", key="admin_logout_btn"): [cite: 1]
             st.session_state["authenticated"] = False
             st.rerun() [cite: 1]
+
 
 
