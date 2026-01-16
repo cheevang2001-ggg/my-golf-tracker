@@ -187,27 +187,26 @@ with tab3:
 # --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
-    info_choice = st.radio("Category", ["Animal Rules"], horizontal=True)
     st.divider()
-    if info_choice == "Rules & Format":
-        st.markdown("""
-        **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-        * **Partners:** Randomized by picking playing cards. ***Unless players agree to play verus eachother.*** 
-        * **Makeups:** Set your own time with PH and completed before week close the following Friday at 12AM.
-        * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket the following week
-        * **Missed Week:** When you miss a week, when you return you buy a bucket.
-        * **No Animal Bets:** Bet your Bets, Drink your bets
-        * **No Animal bay etiquette :** After hitting, return bay to hitting area for next player. Failure to do so results in 1/4 drink.
-        * **First Putt:** Player makes first putt in-hole = Everyone else drinks 1/4.
-        * **Chips:** Player chips in-hole = Everyone else drinks 1/2.
-        * **Mulligans:** Owe 1 a bucket right away.
-        """)
-
+    # No radio button, markdown displays directly
+    st.markdown("""
+    **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** * **Makeups:** Set your own time with PH and completed before week close the following Friday at 12AM.
+    * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket the following week.
+    * **Missed Week:** When you miss a week, when you return you buy a bucket.
+    * **No Animal Bets:** Bet your Bets, Drink your bets.
+    * **No Animal bay etiquette:** After hitting, return bay to hitting area for next player. Failure to do so results in 1/4 drink.
+    * **First Putt:** Player makes first putt in-hole = Everyone else drinks 1/4.
+    * **Chips:** Player chips in-hole = Everyone else drinks 1/2.
+    * **Mulligans:** Owe 1 a bucket right away.
+    """)
+    
 # --- TAB 5: ADMIN ---
 with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
