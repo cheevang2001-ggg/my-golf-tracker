@@ -163,6 +163,7 @@ with tab1:
         st.button("Submit Score", use_container_width=True, disabled=True, key="sub_dis")
 
 # --- STANDINGS, HISTORY, INFO, ADMIN (Maintained from previous) ---
+# --- TAB 2: STANDINGS ---
 with tab2:
     if not df_main.empty:
         st.markdown("<h2 style='text-align: center;'>League Standings</h2>", unsafe_allow_html=True)
@@ -173,21 +174,24 @@ with tab2:
         avg_nets = valid_scores.groupby('Player').agg({'Net_Score': 'mean'}).rename(columns={'Net_Score': 'Avg Net'}).reset_index()
         standings = standings.merge(avg_nets, on='Player', how='left').fillna(0)
         
-        # Sort by points (High to Low) then by Avg Net (Low to High)
         final_standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
 
-        # 2. Center the table using columns
-        # The [1, 3, 1] ratio means the table takes up the middle 60% of the screen
-        left_spacer, center_content, right_spacer = st.columns([1, 3, 1])
+        # 2. Calculate height to show all 12 players without scrolling
+        # Formula: (Number of Rows + 1 for Header) * 35 pixels + 3 pixels for border
+        dynamic_height = (len(final_standings) + 1) * 35 + 3
+
+        # 3. Center the table using columns
+        left_spacer, center_content, right_spacer = st.columns([1, 4, 1])
         
         with center_content:
             st.dataframe(
                 final_standings, 
                 use_container_width=True, 
-                hide_index=True
+                hide_index=True,
+                height=dynamic_height  # This removes the scrollbar
             )
     else:
-        st.info("No scores recorded yet. Standings will appear after the first submission.")
+        st.info("No scores recorded yet.")
 
 with tab3:
     st.header("📅 Weekly History")
@@ -245,6 +249,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
