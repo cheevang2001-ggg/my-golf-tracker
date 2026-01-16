@@ -6,7 +6,7 @@ import pandas as pd
 st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
 # Set your private password here (Line 8)
-ADMIN_PASSWORD = "golf2024" 
+ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
@@ -256,3 +256,4 @@ with tab5:
         if st.button("Logout Admin", key="logout_btn"):
             st.session_state["authenticated"] = False
             st.rerun()
+
