@@ -94,7 +94,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Scorecard", "🏆 Standings", "�
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("Player and Week")
+    #st.subheader("Player and Week")
     c1, c2 = st.columns(2)
     player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
     week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
@@ -126,7 +126,7 @@ with tab1:
     st.divider()
 
     # INPUT DROPDOWNS (Using unique keys to force reset on player/week change)
-    st.markdown("### Pars, Birdies, Eagles")
+    #st.markdown("### Pars, Birdies, Eagles")
     r1 = st.columns(3)
     sel_pars = r1[0].selectbox("Pars (Week)", options=range(10), index=wk_p, key=f"p_in_{player_select}_{week_select}")
     sel_birdies = r1[1].selectbox("Birdies (Week)", options=range(10), index=wk_b, key=f"b_in_{player_select}_{week_select}")
@@ -203,6 +203,7 @@ with tab5:
     if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
