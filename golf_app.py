@@ -6,7 +6,7 @@ import pandas as pd
 st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
 # Admin Password
-ADMIN_PASSWORD = "golf2024" 
+ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
@@ -179,8 +179,19 @@ with tab3:
 # --- TAB 4: INFO ---
 with tab4:
     st.header("📜 League Information")
-    st.markdown("* **Handicap Calculation:** After 4 rounds, takes last 4, drops highest, averages 3 (Relative to Par 36).")
-
+    st.divider()
+    st.markdown("""
+    **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** 
+    * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
+    * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket at the start of the next week.
+    * **Missed Week:** When you miss a week, once you return at the start of the round you buy a bucket.
+    * **No Animal Bets:** Bet your Bets, Drink your bets.
+    * **No Animal Bay Etiquette:** After hitting, return ball to hitting area for next player. Failure to do so results in 1/4 drink.
+    * **First Putt:** Player makes first putt in-hole = Everyone on that bay drinks 1/4. Players from different bays can drink also if they choose
+    * **Chips:** Player chips in-hole = Everyone on that bay drinks drinks 1/2. Players from different bays can drink also if they choose
+    * **Mulligans:** Owe 1 a bucket right away.
+    """)
 # --- TAB 5: ADMIN ---
 with tab5:
     st.subheader("Admin")
@@ -190,3 +201,4 @@ with tab5:
     if st.button("🔄 Sync", key="syn", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
