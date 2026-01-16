@@ -5,7 +5,6 @@ import pandas as pd
 # --- STEP 1: CONFIGURATION & SETUP ---
 st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
 
-# Admin Password
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 
 DEFAULT_HANDICAPS = {
@@ -27,16 +26,10 @@ def load_data():
     return conn.read()
 
 def calculate_rolling_handicap(player_df, current_week):
-    """
-    Logic: Take the 4 most recent rounds PRIOR to current week, 
-    remove the highest, average the remaining 3 relative to Par 36.
-    """
     valid_rounds = player_df[(player_df['Total_Score'] > 0) & (player_df['Week'] < current_week)]
     valid_rounds = valid_rounds.sort_values('Week', ascending=False)
-    
     if len(valid_rounds) < 4:
         return None 
-    
     last_4 = valid_rounds.head(4)['Total_Score'].tolist()
     last_4.remove(max(last_4))
     avg_gross = sum(last_4) / 3
@@ -60,20 +53,17 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
     final_net = 0 if is_dnf else (final_gross - hcp_val)
-
     new_entry = pd.DataFrame([{
         'Week': week, 'Player': player,
         'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles,
         'Total_Score': final_gross, 'Handicap': hcp_val, 
         'Net_Score': final_net, 'DNF': is_dnf
     }])
-    
     if not existing_data.empty:
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
         final_df = new_entry
-        
     conn.update(data=final_df)
     st.cache_data.clear()
 
@@ -105,20 +95,23 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Scorecard", "🏆 Standings", "�
 # --- TAB 1: SCORECARD ---
 with tab1:
     st.subheader("Round Tracker")
-    col1, col2 = st.columns(2)
-    player_select = col1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
-    week_select = col2.selectbox("Select Week", range(1, 13), key="w_sel")
+    c1, c2 = st.columns(2)
+    player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
+    week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
     
     # Calculate rolling handicap
     current_hcps_map = get_handicaps(week_select)
     suggested_hcp = current_hcps_map.get(player_select)
     
+    # Fetch existing data for current player across ALL previous weeks
     if not df_main.empty:
+        # 1. Historical data strictly BEFORE the selected week
         hist_prior = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
-        s_pars = int(hist_prior['Pars_Count'].sum())
-        s_birdies = int(hist_prior['Birdies_Count'].sum())
-        s_eagles = int(hist_prior['Eagle_Count'].sum())
+        season_pars_prior = int(hist_prior['Pars_Count'].sum())
+        season_birdies_prior = int(hist_prior['Birdies_Count'].sum())
+        season_eagles_prior = int(hist_prior['Eagle_Count'].sum())
         
+        # 2. Existing data for the SELECTED week (if already saved)
         this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
         wk_p = int(this_wk.iloc[0]['Pars_Count']) if not this_wk.empty else 0
         wk_b = int(this_wk.iloc[0]['Birdies_Count']) if not this_wk.empty else 0
@@ -126,24 +119,33 @@ with tab1:
         wk_s = int(this_wk.iloc[0]['Total_Score']) if (not this_wk.empty and this_wk.iloc[0]['Total_Score'] != 0) else 45
         wk_h = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else suggested_hcp
     else:
-        s_pars = s_birdies = s_eagles = wk_p = wk_b = wk_e = 0
+        season_pars_prior = season_birdies_prior = season_eagles_prior = 0
+        wk_p = wk_b = wk_e = 0
         wk_s, wk_h = 45, suggested_hcp
 
+    st.divider()
+
+    # INPUT DROPDOWNS (Using unique keys to force reset on player/week change)
     r1 = st.columns(3)
-    sel_pars = r1[0].selectbox(f"Pars (Total: {s_pars + wk_p})", options=range(10), index=wk_p, key="p_in")
-    sel_birdies = r1[1].selectbox(f"Birdies (Total: {s_birdies + wk_b})", options=range(10), index=wk_b, key="b_in")
-    sel_eagles = r1[2].selectbox(f"Eagles (Total: {s_eagles + wk_e})", options=range(10), index=wk_e, key="e_in")
+    sel_pars = r1[0].selectbox("Pars (Week)", options=range(10), index=wk_p, key=f"p_in_{player_select}_{week_select}")
+    sel_birdies = r1[1].selectbox("Birdies (Week)", options=range(10), index=wk_b, key=f"b_in_{player_select}_{week_select}")
+    sel_eagles = r1[2].selectbox("Eagles (Week)", options=range(10), index=wk_e, key=f"e_in_{player_select}_{week_select}")
+
+    # SEASON TOTAL METRICS (Calculated: Prior Weeks + Current Dropdown Selection)
+    st.markdown("### Updated Season Totals")
+    met1, met2, met3 = st.columns(3)
+    met1.metric("Total Pars", season_pars_prior + sel_pars)
+    met2.metric("Total Birdies", season_birdies_prior + sel_birdies)
+    met3.metric("Total Eagles", season_eagles_prior + sel_eagles)
     
     st.divider()
 
-    m1, m2, m3, m4 = st.columns([2, 2, 2, 2]) # 4 columns for balanced metrics
+    # SCORE & HANDICAP
+    m1, m2, m3, m4 = st.columns([2, 2, 2, 2])
     score_options = ["DNF"] + list(range(30, 73))
-    score_select = m1.selectbox("Gross Score", options=score_options, index=(0 if wk_s==0 else score_options.index(wk_s)), key="gs_in")
+    score_select = m1.selectbox("Gross Score", options=score_options, index=(0 if wk_s==0 else score_options.index(wk_s)), key=f"gs_in_{player_select}_{week_select}")
+    hcp_in = m2.number_input("Enter Handicap", value=wk_h, key=f"h_in_{player_select}_{week_select}")
     
-    # Input for Handicap
-    hcp_in = m2.number_input("Enter Handicap", value=wk_h, key="h_in")
-    
-    # BIG BOLD DISPLAYS
     m3.metric("Suggested HCP", suggested_hcp)
     
     if score_select == "DNF":
@@ -152,15 +154,15 @@ with tab1:
         m4.metric("Net Score", int(score_select) - hcp_in)
 
     if st.session_state["authenticated"]:
-        if st.button("Submit Score", use_container_width=True, key="sub"):
+        if st.button("Submit Score", use_container_width=True, key="sub_btn"):
             save_data(week_select, player_select, sel_pars, sel_birdies, sel_eagles, score_select, hcp_in)
-            st.success("Round Recorded!")
+            st.success(f"Scores updated for {player_select}!")
             st.rerun()
     else:
         st.warning("Read-Only Mode. Login in Admin tab to edit.")
         st.button("Submit Score", use_container_width=True, disabled=True, key="sub_dis")
 
-# --- TAB 2: STANDINGS ---
+# --- STANDINGS, HISTORY, INFO, ADMIN (Maintained from previous) ---
 with tab2:
     if not df_main.empty:
         st.header("Standings")
@@ -170,13 +172,12 @@ with tab2:
         standings = standings.merge(avg_nets, on='Player', how='left').fillna(0)
         st.dataframe(standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-# --- TAB 3: HISTORY ---
 with tab3:
     st.header("📅 Weekly History")
     if not df_main.empty:
         st.dataframe(df_main.sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-# --- TAB 4: INFO ---
+with tab4:
 with tab4:
     st.header("📜 League Information")
     st.divider()
@@ -192,13 +193,12 @@ with tab4:
     * **Chips:** Player chips in-hole = Everyone on that bay drinks drinks 1/2. Players from different bays can drink also if they choose
     * **Mulligans:** Owe 1 a bucket right away.
     """)
-# --- TAB 5: ADMIN ---
+
 with tab5:
     st.subheader("Admin")
-    pwd = st.text_input("Password", type="password", key="ap")
+    pwd = st.text_input("Password", type="password", key="ap_admin")
     if pwd == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-    if st.button("🔄 Sync", key="syn", disabled=not st.session_state["authenticated"]):
+    if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
-
