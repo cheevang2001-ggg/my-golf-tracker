@@ -215,7 +215,7 @@ with tab3:
         history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
         history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
         
-        display_cols = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
+        display_cols = ['Week', 'Player', 'Status', 'Gross_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
         final_history = history_df[display_cols]
 
         # 4. Calculate Dynamic Height
@@ -286,6 +286,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
