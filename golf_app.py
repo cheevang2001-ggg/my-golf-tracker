@@ -183,12 +183,15 @@ with tab4:
     st.divider()
     st.markdown("""
     **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-    * **DNFs:** Players who miss a week/makeup receive a **DNF** (0 points).
-    * **Bottom 2 each bay:** Buy a bucket the following week.
-    * **Missed Week:** Buy a bucket upon return.
+    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** 
+    * **Makeups:** Set your own time with Pin High and complete the round before it expires by Trackman; the following Friday at 12AM.
+    * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket at the start of the next week.
+    * **Missed Week:** When you miss a week, once you return at the start of the round you buy a bucket.
     * **No Animal Bets:** Bet your Bets, Drink your bets.
-    * **Etiquette:** Return bay to hitting area or 1/4 drink.
-    * **First Putt/Chips:** In-hole results in drinks for others.
+    * **No Animal Bay Etiquette:** After hitting, return ball to hitting area for next player. Failure to do so results in 1/4 drink.
+    * **First Putt:** Player makes first putt in-hole = Everyone on that bay drinks 1/4. Players from different bays can drink also if they choose
+    * **Chips:** Player chips in-hole = Everyone on that bay drinks drinks 1/2. Players from different bays can drink also if they choose
+    * **Mulligans:** Owe 1 a bucket right away.
     """)
 
 # --- TAB 5: ADMIN ---
@@ -196,3 +199,4 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
