@@ -126,8 +126,8 @@ with tab1:
     st.divider()
 
     # INPUT DROPDOWNS (Using unique keys to force reset on player/week change)
-    r1 = st.columns(3)
     st.markdown("### Pars, Birdies, Eagles")
+    r1 = st.columns(3)
     sel_pars = r1[0].selectbox("Pars (Week)", options=range(10), index=wk_p, key=f"p_in_{player_select}_{week_select}")
     sel_birdies = r1[1].selectbox("Birdies (Week)", options=range(10), index=wk_b, key=f"b_in_{player_select}_{week_select}")
     sel_eagles = r1[2].selectbox("Eagles (Week)", options=range(10), index=wk_e, key=f"e_in_{player_select}_{week_select}")
@@ -203,6 +203,7 @@ with tab5:
     if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
