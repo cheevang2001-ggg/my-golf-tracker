@@ -12,7 +12,6 @@ DEFAULT_HANDICAPS = {
     "Xuka": 0, "Beef": 9
 }
 
-# Adjusted Point Distribution: DNFs will be handled separately to ensure 0 points
 FEDEX_POINTS = {
     1: 100, 2: 85, 3: 75, 4: 70, 5: 65, 6: 60,
     7: 55, 8: 50, 9: 45, 10: 40, 11: 35, 12: 30
@@ -38,7 +37,6 @@ def save_data(week, player, pars, birdies, eagles, score, hcp_val, is_dnf=False)
     st.cache_data.clear()
     existing_data = conn.read(ttl=0)
     
-    # If DNF, we store 0 for score and net score, and a flag for DNF 
     net_score = 0 if is_dnf else (score - hcp_val)
     final_score = 0 if is_dnf else score
 
@@ -60,6 +58,7 @@ def save_data(week, player, pars, birdies, eagles, score, hcp_val, is_dnf=False)
         final_df = new_entry
         
     cols_to_keep = ['Week', 'Player', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF']
+    # Filter only columns that we actually want to save
     final_df = final_df[[c for c in cols_to_keep if c in final_df.columns]]
     conn.update(data=final_df)
     st.cache_data.clear()
@@ -71,12 +70,19 @@ df_main = load_data()
 
 if not df_main.empty:
     df_main = df_main.fillna(0)
-    # Rank only non-DNF players for points [cite: 36]
+    
+    # SAFETY FIX: Ensure 'DNF' column exists in the dataframe
+    if 'DNF' not in df_main.columns:
+        df_main['DNF'] = False
+    else:
+        # Ensure it is treated as boolean
+        df_main['DNF'] = df_main['DNF'].astype(bool)
+
     df_main['animal_pts'] = 0.0
     for week in df_main['Week'].unique():
+        # Points are only awarded to players who are NOT DNF
         week_mask = (df_main['Week'] == week) & (df_main['DNF'] == False)
         if week_mask.any():
-            # Standard ranking: Lower Net Score is better [cite: 36]
             ranks = df_main.loc[week_mask, 'Net_Score'].rank(ascending=True, method='min')
             df_main.loc[week_mask, 'animal_pts'] = ranks.map(FEDEX_POINTS).fillna(0)
 
@@ -94,8 +100,7 @@ with tab1:
     week_select = col2.selectbox("Select Week", range(1, 13))
     selection_id = f"{player_select}_{week_select}"
     
-    # DNF Toggle 
-    is_dnf = st.checkbox("Mark as DNF (Did Not Finish)", help="Selecting this will award 0 points and a 0 Net Score for the week.")
+    is_dnf = st.checkbox("Mark as DNF (Did Not Finish)", help="Selecting this awards 0 points.")
 
     if 'counts' not in st.session_state or st.session_state.get('current_selection') != selection_id:
         st.session_state.counts = {'Par': 0, 'Birdie': 0, 'Eagle': 0}
@@ -134,11 +139,11 @@ with tab1:
         st.success("Score Updated!")
         st.rerun()
 
-# --- TAB 2: NO ANIMALS STANDING ---
+# --- TAB 2: STANDING ---
 with tab2:
     if not df_main.empty:
         st.header("No Animals League Standing")
-        # Filter out 0 Net Scores (DNFs) from average calculation [cite: 36]
+        # Filter out DNFs for average net calculation
         valid_scores = df_main[df_main['DNF'] == False]
         
         standings = df_main.groupby('Player').agg({'animal_pts': 'sum'}).rename(columns={'animal_pts': 'Animal Pts'}).reset_index()
@@ -148,26 +153,14 @@ with tab2:
         standings['Total Points'] = standings['Animal Pts']
         standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
         
-        st.dataframe(
-            standings[['Player', 'Animal Pts', 'Total Points', 'Avg Net']],
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Player": st.column_config.TextColumn("Player", width="medium"),
-                "Animal Pts": st.column_config.NumberColumn("Pts", width="small"),
-                "Total Points": st.column_config.NumberColumn("Total", width="small"),
-                "Avg Net": st.column_config.NumberColumn("Net", width="small"),
-            }
-        )
+        st.dataframe(standings[['Player', 'Animal Pts', 'Total Points', 'Avg Net']], use_container_width=True, hide_index=True)
         
         st.divider()
         st.header("Pars, Birdies, Eagles")
         feats = df_main.groupby('Player').agg({'Pars_Count': 'sum', 'Birdies_Count': 'sum', 'Eagle_Count': 'sum'}).rename(columns={'Pars_Count': 'Par', 'Birdies_Count': 'Birdie', 'Eagle_Count': 'Eagle'}).reset_index()
         st.dataframe(feats.sort_values('Par', ascending=False), use_container_width=True, hide_index=True)
-    else:
-        st.info("No data found.")
 
-# --- TAB 3: WEEKLY HISTORY ---
+# --- TAB 3: HISTORY ---
 with tab3:
     st.header("📅 Weekly History")
     if not df_main.empty:
@@ -179,28 +172,23 @@ with tab3:
         if filter_player: history_df = history_df[history_df['Player'].isin(filter_player)]
         if filter_week: history_df = history_df[history_df['Week'].isin(filter_week)]
         
-        # Display "DNF" in the Total_Score column for clarity 
-        history_df['Status'] = history_df.apply(lambda x: "DNF" if x['DNF'] else "Active", axis=1)
+        history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
         
-        cols_to_show = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
-        st.dataframe(history_df[cols_to_show].sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
+        cols = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
+        st.dataframe(history_df[cols].sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
 # --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
     st.divider()
     st.markdown("""
-    **Drawing:** 5:45pm | **Tee Time:** 6:00pm [cite: 45, 46]
-    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** [cite: 47]
-    * **Makeups:** Set your own time with Pin High and complete the week before Trackman close the week by the following Friday at 12AM. [cite: 47]
-    * **DNFs:** Players who miss a week and do not complete a makeup receive a **DNF**. DNFs result in **0 points** and a **0 Net Score** for that week. [cite: 21, 54]
-    * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket the following week. [cite: 48]
-    * **Missed Week:** When you miss a week, when you return you buy a bucket. [cite: 49]
-    * **No Animal Bets:** Bet your Bets, Drink your bets. [cite: 50]
-    * **No Animal bay etiquette:** After hitting, return bay to hitting area for next player. Failure to do so results in 1/4 drink. [cite: 51, 52]
-    * **First Putt:** Player makes first putt in-hole = Everyone else drinks 1/4. [cite: 52]
-    * **Chips:** Player chips in-hole = Everyone else drinks 1/2. [cite: 53]
-    * **Mulligans:** Owe 1 a bucket right away. [cite: 53]
+    **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+    * **DNFs:** Players who miss a week/makeup receive a **DNF** (0 points).
+    * **Bottom 2 each bay:** Buy a bucket the following week.
+    * **Missed Week:** Buy a bucket upon return.
+    * **No Animal Bets:** Bet your Bets, Drink your bets.
+    * **Etiquette:** Return bay to hitting area or 1/4 drink.
+    * **First Putt/Chips:** In-hole results in drinks for others.
     """)
 
 # --- TAB 5: ADMIN ---
