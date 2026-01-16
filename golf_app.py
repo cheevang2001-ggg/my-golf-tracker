@@ -193,10 +193,47 @@ with tab2:
     else:
         st.info("No scores recorded yet.")
 
+
+# --- TAB 3: WEEKLY HISTORY ---
 with tab3:
-    st.header("📅 Weekly History")
+    st.markdown("<h2 style='text-align: center;'>📅 Weekly History</h2>", unsafe_allow_html=True)
+    
     if not df_main.empty:
-        st.dataframe(df_main.sort_values(['Week', 'Player'], ascending=[False, True]), use_container_width=True, hide_index=True)
+        # 1. Filters (Top row)
+        f1, f2 = st.columns([1, 2])
+        filter_player = f1.multiselect("Filter Player", options=sorted(df_main['Player'].unique()), key="hist_p")
+        filter_week = f2.multiselect("Filter Week", options=sorted(df_main['Week'].unique(), reverse=True), key="hist_w")
+        
+        # 2. Apply Filtering Logic
+        history_df = df_main.copy()
+        if filter_player:
+            history_df = history_df[history_df['Player'].isin(filter_player)]
+        if filter_week:
+            history_df = history_df[history_df['Week'].isin(filter_week)]
+            
+        # 3. Clean up display
+        history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
+        history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
+        
+        display_cols = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
+        final_history = history_df[display_cols]
+
+        # 4. Calculate Dynamic Height
+        # (Number of rows + 1 for header) * 35 pixels + 3 for borders
+        # We cap the minimum height at 200 so it doesn't look squished if empty
+        dynamic_height_hist = max(200, (len(final_history) + 1) * 35 + 3)
+
+        # 5. Display centered
+        l_sp, center_hist, r_sp = st.columns([0.2, 9.6, 0.2]) # Use wider center for history
+        with center_hist:
+            st.dataframe(
+                final_history,
+                use_container_width=True,
+                hide_index=True,
+                height=dynamic_height_hist
+            )
+    else:
+        st.info("No history found. Scores will appear here once submitted.")
 
 # --- TAB 4: LEAGUE INFO ---
 with tab4:
@@ -249,6 +286,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
