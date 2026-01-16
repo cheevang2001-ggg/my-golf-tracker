@@ -104,7 +104,7 @@ with tab1:
 # --- TAB 2: NO ANIMALS STANDING ---
 with tab2:
     if not df_main.empty:
-        st.header("🏁 No Animals Standing")
+        st.header("No Animals League Standing")
         standings = df_main.groupby('Player').agg({
             'animal_pts': 'sum', 
             'Net_Score': 'mean'
@@ -125,7 +125,7 @@ with tab2:
             }
         )
         st.divider()
-        st.header("🦅 Pars, Birdies, Eagles")
+        st.header("Pars, Birdies, Eagles")
         feats = df_main.groupby('Player').agg({
             'Pars_Count': 'sum', 
             'Birdies_Count': 'sum', 
@@ -184,7 +184,7 @@ with tab3:
     else:
         st.info("No history available yet.")
 
-# --- TABS 4 & 5 REMAIN THE SAME ---# --- TAB 4: LEAGUE INFO ---
+# --- TAB 4: LEAGUE INFO ---
 with tab4:
     st.header("📜 League Information")
     info_choice = st.radio("Category", ["Rules & Format", "No Animal Rules"], horizontal=True)
@@ -192,17 +192,15 @@ with tab4:
     if info_choice == "Rules & Format":
         st.markdown("""
         **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-        * **Partners:** Randomized by picking playing cards.
-        * **Lateness:** If not arrived by Hole 4, you receive a DNF.
-        * **Makeups:** Completed by the following Friday at 12AM.
-        """)
-    else:
-        st.markdown("""
-        **Penalty:** Drink Alcohol, 5 Diamond Pushups, or 15 Jumping Jacks.
-        * **Mats:** Stepping off mat without returning the ball = Penalty.
-        * **First Putt:** Player makes first putt in-hole = Everyone else drinks.
+        * **Partners:** Randomized by picking playing cards. 
+        * **Makeups:** Set your own time with PH and completed before week close the following Friday at 12AM.
+        * **Bottom 2 each bay:** Each week the bottom two from each bay will buy a bucket the following week
+        * **Missed Week:** When you miss a week, when you return you buy a bucket.
+        * ***No Animal Bets:*** Bet your Bets, Drink your bets
+        * **No Animal bay etiquette :** After hitting, return bay to hitting area for next player. Failure to do so results in 1/4 drink.
+        * **First Putt:** Player makes first putt in-hole = Everyone else drinks 1/4.
         * **Chips:** Player chips in-hole = Everyone else drinks 1/2.
-        * **Mulligans:** Owe 1 round of beer.
+        * **Mulligans:** Owe 1 a bucket right away.
         """)
 
 # --- TAB 5: ADMIN ---
@@ -210,5 +208,6 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
 
