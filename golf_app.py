@@ -165,12 +165,29 @@ with tab1:
 # --- STANDINGS, HISTORY, INFO, ADMIN (Maintained from previous) ---
 with tab2:
     if not df_main.empty:
-        st.header("Standings")
+        st.markdown("<h2 style='text-align: center;'>League Standings</h2>", unsafe_allow_html=True)
+        
+        # 1. Prepare the data
         valid_scores = df_main[df_main['DNF'] == False]
         standings = df_main.groupby('Player').agg({'animal_pts': 'sum'}).rename(columns={'animal_pts': 'Animal Pts'}).reset_index()
         avg_nets = valid_scores.groupby('Player').agg({'Net_Score': 'mean'}).rename(columns={'Net_Score': 'Avg Net'}).reset_index()
         standings = standings.merge(avg_nets, on='Player', how='left').fillna(0)
-        st.dataframe(standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
+        
+        # Sort by points (High to Low) then by Avg Net (Low to High)
+        final_standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
+
+        # 2. Center the table using columns
+        # The [1, 3, 1] ratio means the table takes up the middle 60% of the screen
+        left_spacer, center_content, right_spacer = st.columns([1, 3, 1])
+        
+        with center_content:
+            st.dataframe(
+                final_standings, 
+                use_container_width=True, 
+                hide_index=True
+            )
+    else:
+        st.info("No scores recorded yet. Standings will appear after the first submission.")
 
 with tab3:
     st.header("📅 Weekly History")
@@ -228,6 +245,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
