@@ -145,7 +145,7 @@ with tab1:
     else:
         m3.metric("Net Score", int(score_select) - hcp_in)
 
-    if st.button("Submit Score", use_container_width=True):
+    if st.button("Submit", key="submit_scorecard"):
         save_data(
             week_select, player_select, 
             sel_pars, sel_birdies, sel_eagles, 
@@ -423,23 +423,26 @@ with tab4:
 
 # --- TAB 5: ADMIN ---
 with tab5:
-    st.subheader("Admin Controls")
+st.subheader("Admin Controls")
     
-    # Password Input
-    pwd = st.text_input("Enter Admin Password to enable editing", type="password")
+    # Password Input with a unique key
+    pwd = st.text_input("Enter Admin Password to enable editing", type="password", key="admin_pwd_input") [cite: 1]
+    
     if pwd == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        st.success("Admin mode active! You can now submit and refresh scores.")
+        st.success("Admin mode active! You can now submit and refresh scores.") [cite: 1]
     elif pwd != "":
-        st.error("Incorrect Password")
+        st.error("Incorrect Password") [cite: 1]
         st.session_state["authenticated"] = False
 
-    if st.button("🔄 Force Refresh Sync", use_container_width=True, disabled=not st.session_state["authenticated"]):
-        st.cache_data.clear()
-        st.rerun()
+    # Force Refresh button with a unique key and disabled state
+    if st.button("🔄 Force Refresh Sync", use_container_width=True, key="admin_refresh_sync", disabled=not st.session_state.get("authenticated", False)): [cite: 1, 26]
+        st.cache_data.clear() [cite: 26]
+        st.rerun() [cite: 26]
 
-    if st.session_state["authenticated"]:
-        if st.button("Logout Admin"):
+    if st.session_state.get("authenticated", False):
+        if st.button("Logout Admin", key="admin_logout_btn"): [cite: 1]
             st.session_state["authenticated"] = False
-            st.rerun()
+            st.rerun() [cite: 1]
+
 
