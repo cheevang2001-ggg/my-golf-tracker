@@ -88,7 +88,7 @@ if not df_main.empty:
 # --- UI ---
 # Mobile-optimized Header (Centered)
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-st.image("logo.png", width=120) 
+st.image("GGGOLF-2.png", width=120) 
 st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League Tracker</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -212,6 +212,7 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
