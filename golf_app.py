@@ -86,7 +86,14 @@ if not df_main.empty:
             df_main.loc[week_mask, 'animal_pts'] = ranks.map(FEDEX_POINTS).fillna(0)
 
 # --- UI ---
-st.markdown("<h1 style='text-align: center;'>GGGolf - No Animals - Winter League</h1>", unsafe_allow_html=True)
+# Added logo and title layout
+col_logo, col_title = st.columns([1, 4])
+with col_logo:
+    # Replace "GGGOLF-2.png" with your actual file path or URL
+    st.image("GGGOLF-2.png", width=120) 
+with col_title:
+    st.markdown("<h1 style='padding-top: 10px;'>GGGolf - No Animals - Winter League</h1>", unsafe_allow_html=True)
+
 st.divider()
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Live Scorecard", "🏆 No Animals Standing", "📅 Weekly History", "📜 League Info", "⚙️ Admin"])
@@ -207,4 +214,5 @@ with tab5:
     if st.button("🔄 Force Refresh Sync"):
         st.cache_data.clear()
         st.rerun()
+
 
