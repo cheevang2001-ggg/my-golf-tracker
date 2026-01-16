@@ -82,7 +82,7 @@ if not df_main.empty:
 # --- UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League Tracker</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League 2026</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.divider()
@@ -203,6 +203,7 @@ with tab5:
     if st.button("🔄 Sync", key="syn_admin", disabled=not st.session_state["authenticated"]):
         st.cache_data.clear()
         st.rerun()
+
 
 
 
