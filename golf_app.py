@@ -160,7 +160,7 @@ with tab2:
     if not df_main.empty:
         st.markdown("<h2 style='text-align: center;'>League Standings</h2>", unsafe_allow_html=True)
         valid_scores = df_main[df_main['DNF'] == False]
-        standings = df_main.groupby('Player').agg({'animal_pts': 'sum'}).rename(columns={'animal_pts': 'Animal Pts'}).reset_index()
+        standings = df_main.groupby('Player').agg({'animal_pts': 'sum'}).rename(columns={'animal_pts': 'Animal Pts Total'}).reset_index()
         avg_nets = valid_scores.groupby('Player').agg({'Net_Score': 'mean'}).rename(columns={'Net_Score': 'Avg Net'}).reset_index()
         standings = standings.merge(avg_nets, on='Player', how='left').fillna(0)
         final_standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
@@ -276,6 +276,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
 
 
