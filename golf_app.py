@@ -3,15 +3,16 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 # --- STEP 1: CONFIGURATION & SETUP ---
-st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
+st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") [cite: 1]
 
-ADMIN_PASSWORD = "InsigniaSeahawks6145" 
+ADMIN_PASSWORD = "InsigniaSeahawks6145" [cite: 1]
 
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
     "Carter": 5, "Dale": 4, "Long": 6, "Txv": 4,
     "Matt": 2, "NomThai": 4, "VaMeng": 0,
-    "Xuka": 0, "Beef": 9
+    "Xuka": 0, "Beef": 9,
+    "Lefty": 5  # Added new player with requested handicap
 }
 
 FEDEX_POINTS = {
@@ -286,6 +287,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Please enter the password and press Enter to enable editing on the Scorecard.")
+
 
 
 
