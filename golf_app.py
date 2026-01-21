@@ -197,20 +197,28 @@ with tab3:
         history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
         history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
         
-        # RENAME the calculated column to your preferred league name
+        # RENAME the calculated column
         history_df = history_df.rename(columns={'animal_pts': 'Animal Points'})
         
-        # 3. Define columns to display (Including Animal Points)
+        # 3. Define columns in the specific order requested
         display_cols = [
-            'Week', 'Player', 'Status', 'Animal Points', 'Total_Score', 
-            'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count'
+            'Week', 
+            'Player', 
+            'Status', 
+            'Total_Score', 
+            'Handicap', 
+            'Net_Score', 
+            'Animal Points',  # Moved after Net_Score
+            'Pars_Count', 
+            'Birdies_Count', 
+            'Eagle_Count'
         ]
         final_history = history_df[display_cols]
 
-        # 4. Calculate Dynamic Height (Removes scrollbar)
+        # 4. Calculate Dynamic Height
         dynamic_height_hist = max(200, (len(final_history) + 1) * 35 + 3)
 
-        # 5. Display centered and wide
+        # 5. Display centered
         l_sp, center_hist, r_sp = st.columns([0.1, 9.8, 0.1])
         with center_hist:
             st.dataframe(
@@ -268,5 +276,6 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
 
