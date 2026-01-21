@@ -20,7 +20,7 @@ DEFAULT_HANDICAPS = {
 
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
-    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18
+    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -276,6 +276,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
 
 
