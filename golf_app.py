@@ -182,10 +182,12 @@ with tab2:
 with tab3:
     st.markdown("<h2 style='text-align: center;'>📅 Weekly History</h2>", unsafe_allow_html=True)
     if not df_main.empty:
+        # 1. Filters
         f1, f2 = st.columns([1, 2])
         filter_player = f1.multiselect("Filter Player", options=sorted(DEFAULT_HANDICAPS.keys()), key="hist_p")
         filter_week = f2.multiselect("Filter Week", options=sorted(df_main['Week'].unique(), reverse=True), key="hist_w")
         
+        # 2. Filtering Logic
         history_df = df_main.copy()
         if filter_player:
             history_df = history_df[history_df['Player'].isin(filter_player)]
@@ -195,12 +197,21 @@ with tab3:
         history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
         history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
         
-        display_cols = ['Week', 'Player', 'Status', 'Total_Score', 'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
+        # RENAME the calculated column to your preferred league name
+        history_df = history_df.rename(columns={'animal_pts': 'Animal Points'})
+        
+        # 3. Define columns to display (Including Animal Points)
+        display_cols = [
+            'Week', 'Player', 'Status', 'Animal Points', 'Total_Score', 
+            'Handicap', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count'
+        ]
         final_history = history_df[display_cols]
 
+        # 4. Calculate Dynamic Height (Removes scrollbar)
         dynamic_height_hist = max(200, (len(final_history) + 1) * 35 + 3)
 
-        l_sp, center_hist, r_sp = st.columns([0.2, 9.6, 0.2])
+        # 5. Display centered and wide
+        l_sp, center_hist, r_sp = st.columns([0.1, 9.8, 0.1])
         with center_hist:
             st.dataframe(
                 final_history,
@@ -209,7 +220,7 @@ with tab3:
                 height=dynamic_height_hist
             )
     else:
-        st.info("No history found.")
+        st.info("No history found. Once scores are submitted, they will appear here.")
 
 # --- TAB 4: LEAGUE INFO ---
 with tab4:
@@ -257,4 +268,5 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
