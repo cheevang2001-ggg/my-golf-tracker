@@ -325,7 +325,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings"
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
     st.header("🏆 13-Man Championship Bracket")
-    st.info("Tournament starts Week 8. Top 3 players by Animal Points receive a bye into Round 2.")
+    st.info("Tournament starts Week 9. Top 3 players by Animal Points receive a bye into Round 2.")
     
     # Define rounds and their layout
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -360,6 +360,7 @@ with tab6:
         st.caption("FINALS")
         st.write("Player vs Player")
         
+
 
 
 
