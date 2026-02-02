@@ -230,21 +230,63 @@ with tab3:
     else:
         st.info("No history found. Once scores are submitted, they will appear here.")
 
-# --- TAB 4: LEAGUE INFO ---
+# --- TAB 4: LEAGUE INFO & PRIZES ---
 with tab4:
-    st.header("📜 League Information")
+    # Sub-navigation within the Info Tab
+    info_page = st.radio(
+        "Select Information Page:",
+        ["General Info", "Prizes"],
+        horizontal=True,
+        key="info_sub_nav"
+    )
+    
     st.divider()
-    st.markdown("""
-    **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-    * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.*** 
-    * **Makeups:** Set your own time with Pin High and complete the round before it expires; the following Friday at 12AM.
-    * **Bottom 2 each bay:** Bottom two from each bay buy a bucket next week.
-    * **Missed Week:** Return to buy a bucket at start of round.
-    * **No Animal Bets:** Bet your Bets, Drink your bets.
-    * **No Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
-    * **First Putt/Chips:** In-hole results in drinks for the bay (1/4 or 1/2).
-    * **Mulligans:** Owe 1 a bucket right away.
-    """)
+
+    if info_page == "General Info":
+        st.header("📜 League Information")
+        st.markdown("""
+        **Drawing:** 5:45pm | **Tee Time:** 6:00pm
+        * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.***
+        * **Makeups:** Set your own time with Pin High and complete the round before it expires; the following Friday at 12AM.
+        * **Bottom 2 each bay:** Bottom two from each bay buy a bucket next week.
+        * **Missed Week:** Return to buy a bucket at start of round.
+        * **No Animal Bets:** Bet your Bets, Drink your bets.
+        * **No Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
+        * **First Putt/Chips:** In-hole results in drinks for the bay (1/4 or 1/2).
+        * **Mulligans:** Owe 1 a bucket right away.
+        """)
+
+    elif info_page == "Prizes":
+        st.header("🏆 Season Prize & Expense Breakdown")
+        st.write("Total Pot: **$780** (13 Players x $60)")
+        
+        # 1. Cash Payout Table
+        st.subheader("💰 Cash Payouts")
+        payout_data = {
+            "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash"],
+            "Amount": ["$200.00", "$140.00", "$100.00", "$60.00", "$500.00"],
+            "Note": ["+ Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Cash Prize Pool"]
+        }
+        st.table(pd.DataFrame(payout_data))
+
+        # 2. Expenses Table
+        st.subheader("📦 League Expenses")
+        expense_data = {
+            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance"],
+            "Cost": ["$80.00", "$100.00", "$100.00"],
+            "Total": ["", "", "$280.00"]
+        }
+        st.table(pd.DataFrame(expense_data))
+
+        # Final Summary
+        st.divider()
+        st.markdown(f"""
+        **Total Accounting:**
+        * Total Cash Payouts: **$500**
+        * Total League Expenses: **$280**
+        * **Grand Total: $780**
+        """)
+        st.info("💡 The $100 remaining balance can be used for end-of-season festivities or special prizes.")
 
 # --- TAB 5: ADMIN ---
 with tab5:
@@ -276,6 +318,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
 
 
