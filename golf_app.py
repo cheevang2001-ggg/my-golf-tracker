@@ -319,6 +319,48 @@ with tab5:
     else:
         st.info("Enter the password and press Enter to enable editing.")
 
+# Update your tabs line to include the new one
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
+
+# --- TAB 6: TOURNAMENT BRACKET ---
+with tab6:
+    st.header("🏆 13-Man Championship Bracket")
+    st.info("Tournament starts Week 8. Top 3 players by Animal Points receive a bye into Round 2.")
+    
+    # Define rounds and their layout
+    c1, c2, c3, c4, c5 = st.columns(5)
+    
+    with c1:
+        st.subheader("Week 8")
+        st.caption("Round 1")
+        # Example Matchup
+        st.write("Match 1: Seed 4 vs Seed 13")
+        st.write("Match 2: Seed 5 vs Seed 12")
+        st.write("Match 3: Seed 6 vs Seed 11")
+        st.write("Match 4: Seed 7 vs Seed 10")
+        st.write("Match 5: Seed 8 vs Seed 9")
+        
+    with c2:
+        st.subheader("Week 9")
+        st.caption("Round 2")
+        st.write("Seed 1 (Bye)")
+        st.write("Seed 2 (Bye)")
+        st.write("Seed 3 (Bye)")
+        st.write("Winner Match 1 vs Winner Match 5")
+        # Add logic to pull winners here...
+
+    with c3:
+        st.subheader("Week 10")
+        st.caption("Quarter-Finals")
+        
+    with c4:
+        st.subheader("Week 11")
+        st.caption("Semi-Finals")
+        
+    with c5:
+        st.subheader("Week 12")
+        st.caption("FINALS")
+
 
 
 
