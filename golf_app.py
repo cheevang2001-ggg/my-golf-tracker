@@ -324,7 +324,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings"
 
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
-    st.header("🏆 GGGOLF in Season Tournament Bracket")
+    st.header("In Season Tournament Bracket")
     st.info("Tournament starts Week 9. Top 3 players by Animal Points receive a bye into Round 2.")
     
     # Define rounds and their layout
@@ -360,6 +360,7 @@ with tab6:
         st.caption("FINALS")
         st.write("Player vs Player")
         
+
 
 
 
