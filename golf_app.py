@@ -257,11 +257,11 @@ with tab4:
         """)
 
     elif info_page == "Prizes":
-        st.header("🏆 Season Prize & Expense Breakdown")
+        st.header("Season Prize & Expense Breakdown")
         st.write("Total Pot: **$780** (13 Players x $60)")
         
         # 1. Cash Payout Table
-        st.subheader("💰 Cash Payouts")
+        st.subheader("Cash Payouts")
         payout_data = {
             "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash"],
             "Amount": ["$200.00", "$140.00", "$100.00", "$60.00", "$500.00"],
@@ -270,7 +270,7 @@ with tab4:
         st.table(pd.DataFrame(payout_data))
 
         # 2. Expenses Table
-        st.subheader("📦 League Expenses")
+        st.subheader("League Expenses")
         expense_data = {
             "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance"],
             "Cost": ["$80.00", "$100.00", "$100.00"],
@@ -286,7 +286,7 @@ with tab4:
         * Total League Expenses: **$280**
         * **Grand Total: $780**
         """)
-        st.info("💡 The $100 remaining balance can be used for end-of-season festivities or special prizes.")
+        st.info("$100 remaining will be used for in season tournament.")
 
 # --- TAB 5: ADMIN ---
 with tab5:
@@ -318,6 +318,7 @@ with tab5:
             st.rerun()
     else:
         st.info("Enter the password and press Enter to enable editing.")
+
 
 
 
