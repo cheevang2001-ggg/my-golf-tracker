@@ -343,23 +343,24 @@ with tab6:
     with c2:
         st.subheader("Week 10")
         st.caption("Round 2")
-        st.write("Seed 1 (Bye)")
-        st.write("Seed 2 (Bye)")
-        st.write("Seed 3 (Bye)")
-        st.write("Winner Match 1 vs Winner Match 5")
+        st.write("Seed 1 vs Highest Seed")
+        st.write("Seed 2 vs Second Highest Seed")
+        st.write("Seed 3 vs Third Highest Seed")
+        st.write("Seed x vs Seed y")
         # Add logic to pull winners here...
 
     with c3:
         st.subheader("Week 11")
-        st.caption("Sem\i-Finals")
-        st.write("Player vs Player")
-        st.write("Player vs Player")
+        st.caption("Semi-Finals")
+        st.write("Lowest Seed vs Highest Seed")
+        st.write("Second Lowest Seed vs Second Highest Seed")
         
     with c4:
         st.subheader("Week 12")
         st.caption("FINALS")
-        st.write("Player vs Player")
+        st.write("Player x vs Player y")
         
+
 
 
 
