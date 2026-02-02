@@ -331,7 +331,7 @@ with tab6:
     c1, c2, c3, c4, c5 = st.columns(5)
     
     with c1:
-        st.subheader("Week 8")
+        st.subheader("Week 9")
         st.caption("Round 1")
         # Example Matchup
         st.write("Match 1: Seed 4 vs Seed 13")
@@ -341,7 +341,7 @@ with tab6:
         st.write("Match 5: Seed 8 vs Seed 9")
         
     with c2:
-        st.subheader("Week 9")
+        st.subheader("Week 10")
         st.caption("Round 2")
         st.write("Seed 1 (Bye)")
         st.write("Seed 2 (Bye)")
@@ -350,16 +350,18 @@ with tab6:
         # Add logic to pull winners here...
 
     with c3:
-        st.subheader("Week 10")
-        st.caption("Quarter-Finals")
+        st.subheader("Week 11")
+        st.caption("Sem\i-Finals")
+        st.write("Player vs Player")
+        st.write("Player vs Player")
         
     with c4:
-        st.subheader("Week 11")
-        st.caption("Semi-Finals")
-        
-    with c5:
         st.subheader("Week 12")
         st.caption("FINALS")
+        st.write("Player vs Player")
+        
+
+
 
 
 
