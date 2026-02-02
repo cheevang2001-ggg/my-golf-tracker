@@ -320,7 +320,7 @@ with tab5:
         st.info("Enter the password and press Enter to enable editing.")
 
 # Update your tabs line to include the new one
-tab6 = st.tabs(["🏆 Bracket"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "🏆 Bracket", "⚙️ Admin"])
 
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
@@ -360,6 +360,7 @@ with tab6:
         st.caption("FINALS")
         st.write("Player vs Player")
         
+
 
 
 
