@@ -248,10 +248,10 @@ with tab4:
     if info_page == "General Info":
         st.header("📜 League Information")
         st.markdown("""
-        **Drawing:** 5:45pm | **Tee Time:** 6:00pm
-        * **Partners:** Randomized by picking playing cards. ***Unless players agree to play versus each other.***
-        * **Makeups:** Set your own time with Pin High and complete the round before it expires; the following Friday at 12AM.
-        * **Bottom 2 each bay:** Bottom two from each bay buy a bucket next week.
+        **Tee Time:**About 2:00pm
+        * **Partners:** Randomized. Preferably choose someone you have not played with much. ***Unless players agree to play versus each other.***
+        * **Makeups:** There are no makeup, you will receive a DNF for the round.
+        * **Handicap system:** Your average of the best 3 rounds will be used as your handicap. 
         * **Missed Week:** Return to buy a bucket at start of round.
         * **No Animal Bets:** Bet your Bets, Drink your bets.
         * **No Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
@@ -260,14 +260,14 @@ with tab4:
         """)
 
     elif info_page == "Prizes":
-        st.header("Season Prize & Expense Breakdown")
-        st.write("Total Pot: **$780** (13 Players x $60)")
+        st.header("Season Prize - TBD")
+        st.write("Total Pot: TBD (Players x fee)")
         
         # 1. Cash Payout Table
         st.subheader("Cash Payouts")
         payout_data = {
             "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash"],
-            "Amount": ["$200.00", "$140.00", "$100.00", "$60.00", "$500.00"],
+            "Amount": ["TBD", "TBD", "TBD", "TBD", "TBD"],
             "Note": ["+ Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Cash Prize Pool"]
         }
         st.table(pd.DataFrame(payout_data))
@@ -275,7 +275,7 @@ with tab4:
         # 2. Expenses Table
         st.subheader("League Expenses")
         expense_data = {
-            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance"],
+            "Item": ["Championship Trophy - TBD", "TBD", "Remaining Balanc - TBD"],
             "Cost": ["$80.00", "$100.00", "$100.00"],
             "Total": ["", "", "$280.00"]
         }
@@ -357,6 +357,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
