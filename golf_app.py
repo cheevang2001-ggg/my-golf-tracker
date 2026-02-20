@@ -251,9 +251,10 @@ with tab4:
         **Tee Time:**About 2:00pm
         * **Partners:** Randomized. Preferably choose someone you have not played with much. ***Unless players agree to play versus each other.***
         * **Makeups:** There are no makeup, you will receive a DNF for the round.
-        * **Handicap system:** Your average of the best 3 rounds will be used as your handicap. Example: Week 1;40 week2;45 week3;50 week4;41 - Week3 will be removed and average of week1,2,3 will be used for handicap. 
-        Week5;60 - Weeks 2,3,4 will be used to average your handicap.
-        * **Handicap Continue:**
+        * **Handicap system:** Your average of the best 3 rounds will be used as your handicap. 
+        * **Handicap Example:** Week 1;40 Week2;45 Week3;50 Week4;41 - Week3 will be removed and average of week1,2,4 will be used for handicap for a par 36. 
+        * **Handicap Example Continue:**Week5;60 - Weeks 2,3,4 will be used to average your handicap.
+        
         * **Missed Week:** Return to buy a bucket at start of round.
         * **No Animal Bets:** Bet your Bets, Drink your bets.
         * **No Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
@@ -359,6 +360,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
