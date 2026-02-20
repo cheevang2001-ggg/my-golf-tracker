@@ -92,9 +92,15 @@ st.markdown("</div>", unsafe_allow_html=True)
 # --- UI: HEADER SECTION (Keep your logo and title here) ---
 st.divider()
 
-# DEFINING TABS ONCE: This replaces the old tab1...tab5 line
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"
+# --- DEFINE TABS ONCE ---
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📝 Scorecard", 
+    "🏆 Standings", 
+    "📅 History", 
+    "📜 Info", 
+    "⚖️ Rules",   # New Tab
+    "⚙️ Admin", 
+    "🏆 Bracket"
 ])
 
 # --- TAB 1: SCORECARD ---
@@ -294,7 +300,33 @@ with tab4:
         """)
         st.info("$100 remaining will be used for in season tournament.")
 
-# --- TAB 5: ADMIN ---
+# --- TAB 5: RULES ---
+with tab5:
+    st.header("⚖️ League Rules & Etiquette")
+    st.divider()
+    
+    col_r1, col_r2 = st.columns(2)
+    
+    with col_r1:
+        st.subheader("Gameplay Rules")
+        st.markdown("""
+        * **Format:** Net stroke play based on calculated rolling handicap.
+        * **Mulligans:** Strictly prohibited. Any mulligan taken results in an immediate 1-bucket penalty.
+        * **Gimmies:** Must be agreed upon by the group (standard is 'inside the leather').
+        * **Out of Bounds:** Follow standard course/simulator local rules.
+        """)
+
+    with col_r2:
+        st.subheader("Animal & Bay Etiquette")
+        st.markdown("""
+        * **Bay Cleanliness:** Always return the ball to the hitting area for the next player. 
+        * **Penalty:** Failure to reset the hitting area results in a 1/4 drink penalty.
+        * **Pace of Play:** Be ready to hit when it is your turn to keep the league on schedule.
+        """)
+    
+    st.info("💡 For any disputes, the League Commissioner has the final say.")
+
+# --- TAB 6: ADMIN ---
 with tab5:
     st.subheader("Admin Access")
     
@@ -325,7 +357,7 @@ with tab5:
     else:
         st.info("Enter the password and press Enter to enable editing.")
 
-# --- TAB 6: TOURNAMENT BRACKET ---
+# --- TAB 7: TOURNAMENT BRACKET ---
 with tab6:
     st.header("In Season Tournament - STAY TUNE TBD")
     st.info("Tournament TBD")
@@ -360,6 +392,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
