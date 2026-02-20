@@ -324,7 +324,7 @@ with tab5:
 
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
-    st.header("In Season Tournament Bracket")
+    st.header("In Season Tournament - STAY TUNE TBD")
     st.info("Tournament TBD")
     
     # Define rounds and their layout using columns
@@ -357,6 +357,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
