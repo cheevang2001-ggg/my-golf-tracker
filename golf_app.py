@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 # --- STEP 1: CONFIGURATION & SETUP ---
-st.set_page_config(page_title="GGGolf No Animals Winter League", layout="wide") 
+st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -13,9 +13,8 @@ ADMIN_PASSWORD = "InsigniaSeahawks6145"
 # Added Lefty with Handicap 5
 DEFAULT_HANDICAPS = {
     "Cory": 3, "Lex": 7, "Mike": 9,
-    "Carter": 5, "Dale": 4, "Long": 6, "Txv": 4,
-    "Matt": 2, "NomThai": 4, "VaMeng": 0,
-    "Xuka": 0, "Beef": 9, "Lefty": 5
+    "Carter": 5, "Dale": 4, "Long Lee": 6, "Txv": 4,
+    "Matt": 2, "Beef": 9
 }
 
 FEDEX_POINTS = {
@@ -360,6 +359,7 @@ with tab6:
         st.caption("FINALS")
         st.write("Player x vs Player y")
         
+
 
 
 
