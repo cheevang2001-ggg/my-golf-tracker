@@ -86,7 +86,7 @@ if not df_main.empty:
 # --- UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League 2026</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='margin-top: -10px;'>GGGolf 2026</h1><p style='margin-top: -20px; color: gray;'>Summer League 2026</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --- UI: HEADER SECTION (Keep your logo and title here) ---
@@ -357,6 +357,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
