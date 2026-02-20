@@ -325,7 +325,7 @@ with tab5:
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
     st.header("In Season Tournament Bracket")
-    st.info("Tournament starts Week 9. Top 3 players by Animal Points receive a bye into Round 2.")
+    st.info("Tournament TBD")
     
     # Define rounds and their layout using columns
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -357,6 +357,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
