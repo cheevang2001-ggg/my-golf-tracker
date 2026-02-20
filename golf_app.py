@@ -89,9 +89,13 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1 style='margin-top: -10px;'>GGGolf - No Animals</h1><p style='margin-top: -20px; color: gray;'>Winter League 2026</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
+# --- UI: HEADER SECTION (Keep your logo and title here) ---
 st.divider()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin"])
+# DEFINING TABS ONCE: This replaces the old tab1...tab5 line
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"
+])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
@@ -318,21 +322,17 @@ with tab5:
     else:
         st.info("Enter the password and press Enter to enable editing.")
 
-# Update your tabs line to include the new one
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
-
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
     st.header("In Season Tournament Bracket")
     st.info("Tournament starts Week 9. Top 3 players by Animal Points receive a bye into Round 2.")
     
-    # Define rounds and their layout
+    # Define rounds and their layout using columns
     c1, c2, c3, c4, c5 = st.columns(5)
     
     with c1:
         st.subheader("Week 9")
         st.caption("Round 1")
-        # Example Matchup
         st.write("Match 1: Seed 4 vs Seed 13")
         st.write("Match 2: Seed 5 vs Seed 12")
         st.write("Match 3: Seed 6 vs Seed 11")
@@ -345,20 +345,18 @@ with tab6:
         st.write("Seed 1 vs Highest Seed")
         st.write("Seed 2 vs Second Highest Seed")
         st.write("Seed 3 vs Third Highest Seed")
-        st.write("Seed x vs Seed y")
-        # Add logic to pull winners here...
+        st.write("Winner M1 vs Winner M5")
 
     with c3:
         st.subheader("Week 11")
         st.caption("Semi-Finals")
-        st.write("Lowest Seed vs Highest Seed")
-        st.write("Second Lowest Seed vs Second Highest Seed")
+        st.write("Matchup A")
+        st.write("Matchup B")
         
     with c4:
         st.subheader("Week 12")
         st.caption("FINALS")
-        st.write("Player x vs Player y")
-        
+        st.markdown("**🏆 Championship Match**")
 
 
 
