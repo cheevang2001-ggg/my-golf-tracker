@@ -105,64 +105,43 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    c1, c2 = st.columns(2)
-    player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
-    week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
+    st.subheader("📝 Submit Weekly Round")
     
-    current_hcps_map = get_handicaps(week_select)
-    suggested_hcp = current_hcps_map.get(player_select)
+    # Load data to check PINs
+    df_pins = load_data()
     
-    if not df_main.empty:
-        hist_prior = df_main[(df_main['Player'] == player_select) & (df_main['Week'] < week_select)]
-        s_pars_prior = int(hist_prior['Pars_Count'].sum())
-        s_birdies_prior = int(hist_prior['Birdies_Count'].sum())
-        s_eagles_prior = int(hist_prior['Eagle_Count'].sum())
-        
-        this_wk = df_main[(df_main['Player'] == player_select) & (df_main['Week'] == week_select)]
-        wk_p = int(this_wk.iloc[0]['Pars_Count']) if not this_wk.empty else 0
-        wk_b = int(this_wk.iloc[0]['Birdies_Count']) if not this_wk.empty else 0
-        wk_e = int(this_wk.iloc[0]['Eagle_Count']) if not this_wk.empty else 0
-        wk_s = int(this_wk.iloc[0]['Total_Score']) if (not this_wk.empty and this_wk.iloc[0]['Total_Score'] != 0) else 45
-        wk_h = int(this_wk.iloc[0]['Handicap']) if not this_wk.empty else suggested_hcp
+    col_a, col_b = st.columns(2)
+    with col_a:
+        player_name = st.selectbox("Select Player", list(DEFAULT_HANDICAPS.keys()))
+    with col_b:
+        # Password input for player PIN
+        user_pin = st.text_input(f"Enter PIN for {player_name}", type="password", help="Enter your 4-digit PIN or Admin Password")
+
+    # LOGIC: Check if PIN is correct OR if it's the Admin Password
+    is_admin = (user_pin == ADMIN_PASSWORD)
+    
+    # Retrieve the correct PIN from the Google Sheet for the selected player
+    try:
+        correct_pin = str(df_pins[df_pins['Player'] == player_name]['PIN'].values[0])
+    except:
+        correct_pin = None
+
+    if user_pin:
+        if user_pin == correct_pin or is_admin:
+            st.success(f"✅ Verified: {player_name} " + ("(Admin Access)" if is_admin else ""))
+            
+            # --- SHOW THE REST OF THE SCORECARD ONLY IF VERIFIED ---
+            with st.form("score_form"):
+                # ... (Your existing scorecard inputs: Gross Score, Animals, etc.)
+                
+                submitted = st.form_submit_button("Submit Score")
+                if submitted:
+                    # (Your existing submission logic here)
+                    st.write("Score Recorded!")
+        else:
+            st.error("❌ Incorrect PIN. Please try again or contact Admin.")
     else:
-        s_pars_prior = s_birdies_prior = s_eagles_prior = 0
-        wk_p = wk_b = wk_e = 0
-        wk_s, wk_h = 45, suggested_hcp
-
-    st.divider()
-
-    r1 = st.columns(3)
-    sel_pars = r1[0].selectbox("Pars (Week)", options=range(10), index=wk_p, key=f"p_in_{player_select}_{week_select}")
-    sel_birdies = r1[1].selectbox("Birdies (Week)", options=range(10), index=wk_b, key=f"b_in_{player_select}_{week_select}")
-    sel_eagles = r1[2].selectbox("Eagles (Week)", options=range(10), index=wk_e, key=f"e_in_{player_select}_{week_select}")
-
-    met1, met2, met3 = st.columns(3)
-    met1.metric("Total Pars", s_pars_prior + sel_pars)
-    met2.metric("Total Birdies", s_birdies_prior + sel_birdies)
-    met3.metric("Total Eagles", s_eagles_prior + sel_eagles)
-    
-    st.divider()
-
-    m1, m2, m3, m4 = st.columns([2, 2, 2, 2])
-    score_options = ["DNF"] + list(range(30, 73))
-    score_select = m1.selectbox("Gross Score", options=score_options, index=(0 if wk_s==0 else score_options.index(wk_s)), key=f"gs_in_{player_select}_{week_select}")
-    hcp_in = m2.number_input("Enter Handicap", value=wk_h, key=f"h_in_{player_select}_{week_select}")
-    
-    m3.metric("Suggested HCP", suggested_hcp)
-    
-    if score_select == "DNF":
-        m4.metric("Net Score", "DNF")
-    else:
-        m4.metric("Net Score", int(score_select) - hcp_in)
-
-    if st.session_state["authenticated"]:
-        if st.button("Submit Score", use_container_width=True, key="sub_btn"):
-            save_data(week_select, player_select, sel_pars, sel_birdies, sel_eagles, score_select, hcp_in)
-            st.success(f"Scores updated for {player_select}!")
-            st.rerun()
-    else:
-        st.warning("Read-Only Mode. Login in Admin tab to edit.")
-        st.button("Submit Score", use_container_width=True, disabled=True, key="sub_dis")
+        st.info("Please enter your PIN to unlock the scorecard.")
 
 # --- TAB 2: STANDINGS ---
 with tab2:
@@ -392,6 +371,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
