@@ -105,44 +105,39 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    st.subheader("📝 Submit Weekly Round")
+    c1, c2 = st.columns(2)
+    player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
+    week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
     
-    # Load data to check PINs
-    df_pins = load_data()
-    
-    col_a, col_b = st.columns(2)
-    with col_a:
-        player_name = st.selectbox("Select Player", list(DEFAULT_HANDICAPS.keys()))
-    with col_b:
-        # Password input for player PIN
-        user_pin = st.text_input(f"Enter PIN for {player_name}", type="password", help="Enter your 4-digit PIN or Admin Password")
+    # 1. Ask for PIN
+    user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password")
 
-    # LOGIC: Check if PIN is correct OR if it's the Admin Password
-    is_admin = (user_pin == ADMIN_PASSWORD)
-    
-    # Retrieve the correct PIN from the Google Sheet for the selected player
-    try:
-        correct_pin = str(df_pins[df_pins['Player'] == player_name]['PIN'].values[0])
-    except:
-        correct_pin = None
+    # 2. Logic to verify PIN
+    is_verified = False
+    is_admin = (user_pin_input == ADMIN_PASSWORD)
 
-    if user_pin:
-        if user_pin == correct_pin or is_admin:
-            st.success(f"✅ Verified: {player_name} " + ("(Admin Access)" if is_admin else ""))
-            
-            # --- SHOW THE REST OF THE SCORECARD ONLY IF VERIFIED ---
-            with st.form("score_form"):
-                # ... (Your existing scorecard inputs: Gross Score, Animals, etc.)
+    if not df_main.empty and user_pin_input:
+        try:
+            # Get the PIN from the sheet for the selected player
+            # We use .astype(str) to ensure we are comparing text to text
+            player_row = df_main[df_main['Player'] == player_select]
+            if not player_row.empty:
+                # Get the PIN, convert to string, remove decimals (if 1214.0), and strip spaces
+                stored_pin = str(player_row.iloc[0]['PIN']).split('.')[0].strip()
                 
-                submitted = st.form_submit_button("Submit Score")
-                if submitted:
-                    # (Your existing submission logic here)
-                    st.write("Score Recorded!")
-        else:
-            st.error("❌ Incorrect PIN. Please try again or contact Admin.")
-    else:
-        st.info("Please enter your PIN to unlock the scorecard.")
+                if user_pin_input.strip() == stored_pin or is_admin:
+                    is_verified = True
+        except Exception as e:
+            st.error(f"Error reading PIN: {e}")
 
+    # 3. Only show the scorecard if verified
+    if is_verified:
+        st.success(f"✅ Verified: {player_select}")
+        # --- INSERT EXISTING SCORECARD FORM HERE ---
+        # Move all your existing metric and selectbox code inside this 'if' block
+    elif user_pin_input:
+        st.error("❌ Incorrect PIN. Please try again.")
+        
 # --- TAB 2: STANDINGS ---
 with tab2:
     if not df_main.empty:
@@ -371,6 +366,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
