@@ -92,7 +92,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 st.divider()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
@@ -320,7 +320,7 @@ with tab5:
         st.info("Enter the password and press Enter to enable editing.")
 
 # Update your tabs line to include the new one
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
+# tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
         
 # --- TAB 6: TOURNAMENT BRACKET (12-Man Re-seeding) ---
 with tab6:
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
