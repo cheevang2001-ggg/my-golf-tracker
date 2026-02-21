@@ -346,16 +346,16 @@ with tab6:
     with c2:
         st.subheader("Week 10")
         st.caption("Round 2")
-        st.write("Seed 1 vs Winner Match 4")
-        st.write("Seed 2 vs Winner Match 3")
-        st.write("Seed 3 vs Winner Match 2")
-        st.write("Seed 4 vs Winner Match 1")
+        st.write("Seed 1 vs Highest Seed")
+        st.write("Seed 2 vs Second Highest Seed")
+        st.write("Seed 3 vs Third Highest Seed")
+        st.write("Seed 4 vs Fourth Highest Seed")
 
     with c3:
         st.subheader("Week 11")
         st.caption("Semi-Finals")
-        st.write("Semi-Final 1")
-        st.write("Semi-Final 2")
+        st.write("Lowest Seed vs Highest Seed")
+        st.write("Second Lowest Seed vs Second Highest Seed")
         
     with c4:
         st.subheader("Week 12")
@@ -365,6 +365,7 @@ with tab6:
     with c5:
         st.subheader("Winner")
         st.write("🥇")
+
 
 
 
