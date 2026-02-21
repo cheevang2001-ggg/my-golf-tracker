@@ -321,11 +321,11 @@ with tab5:
 
 # Update your tabs line to include the new one
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
-
+        
 # --- TAB 6: TOURNAMENT BRACKET ---
 with tab6:
     st.header("In Season Tournament Bracket")
-    st.info("Tournament starts Week 9. Top 3 players by Animal Points receive a bye into Round 2.")
+    st.info("Tournament starts Week 9. Top 4 players by Animal Points receive a bye into Round 2.")
     
     # Define rounds and their layout
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -333,33 +333,38 @@ with tab6:
     with c1:
         st.subheader("Week 9")
         st.caption("Round 1")
-        # Example Matchup
-        st.write("Match 1: Seed 4 vs Seed 13")
-        st.write("Match 2: Seed 5 vs Seed 12")
-        st.write("Match 3: Seed 6 vs Seed 11")
-        st.write("Match 4: Seed 7 vs Seed 10")
-        st.write("Match 5: Seed 8 vs Seed 9")
+        st.write("Seed 1 (BYE)")
+        st.write("Seed 2 (BYE)")
+        st.write("Seed 3 (BYE)")
+        st.write("Seed 4 (BYE)")
+        st.divider()
+        st.write("Match 1: Seed 5 vs Seed 12")
+        st.write("Match 2: Seed 6 vs Seed 11")
+        st.write("Match 3: Seed 7 vs Seed 10")
+        st.write("Match 4: Seed 8 vs Seed 9")
         
     with c2:
         st.subheader("Week 10")
         st.caption("Round 2")
-        st.write("Seed 1 vs Highest Seed")
-        st.write("Seed 2 vs Second Highest Seed")
-        st.write("Seed 3 vs Third Highest Seed")
-        st.write("Seed x vs Seed y")
-        # Add logic to pull winners here...
+        st.write("Seed 1 vs Winner Match 4")
+        st.write("Seed 2 vs Winner Match 3")
+        st.write("Seed 3 vs Winner Match 2")
+        st.write("Seed 4 vs Winner Match 1")
 
     with c3:
         st.subheader("Week 11")
         st.caption("Semi-Finals")
-        st.write("Lowest Seed vs Highest Seed")
-        st.write("Second Lowest Seed vs Second Highest Seed")
+        st.write("Semi-Final 1")
+        st.write("Semi-Final 2")
         
     with c4:
         st.subheader("Week 12")
         st.caption("FINALS")
-        st.write("Player x vs Player y")
+        st.markdown("**🏆 Championship Match**")
         
+    with c5:
+        st.subheader("Winner")
+        st.write("🥇")
 
 
 
