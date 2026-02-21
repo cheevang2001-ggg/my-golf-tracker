@@ -322,49 +322,50 @@ with tab5:
 # Update your tabs line to include the new one
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚙️ Admin", "🏆 Bracket"])
         
-# --- TAB 6: TOURNAMENT BRACKET ---
+# --- TAB 6: TOURNAMENT BRACKET (12-Man Re-seeding) ---
 with tab6:
-    st.header("In Season Tournament Bracket")
-    st.info("Tournament starts Week 9. Top 4 players by Animal Points receive a bye into Round 2.")
+    st.header("🏆 12-Man Re-Seeding Tournament")
+    st.info("Tournament starts Week 9. Bracket is re-seeded after Round 1 so top seeds play the lowest remaining seeds.")
+    st.info ("Highest Seed" refers to the player with the best rank (closest to 1) and the "Lowest Seed" refers to the player with the worst rank.")
     
-    # Define rounds and their layout
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4 = st.columns(4)
     
     with c1:
         st.subheader("Week 9")
-        st.caption("Round 1")
-        st.write("Seed 1 (BYE)")
-        st.write("Seed 2 (BYE)")
-        st.write("Seed 3 (BYE)")
-        st.write("Seed 4 (BYE)")
+        st.caption("Round 1 (Byes)")
+        st.write("🟢 **Seed 1 (BYE)**")
+        st.write("🟢 **Seed 2 (BYE)**")
+        st.write("🟢 **Seed 3 (BYE)**")
+        st.write("🟢 **Seed 4 (BYE)**")
         st.divider()
-        st.write("Match 1: Seed 5 vs Seed 12")
-        st.write("Match 2: Seed 6 vs Seed 11")
-        st.write("Match 3: Seed 7 vs Seed 10")
-        st.write("Match 4: Seed 8 vs Seed 9")
-        
+        st.markdown("**Matchups:**")
+        st.write("M1: Seed 5 vs Seed 12")
+        st.write("M2: Seed 6 vs Seed 11")
+        st.write("M3: Seed 7 vs Seed 10")
+        st.write("M4: Seed 8 vs Seed 9")
+
     with c2:
         st.subheader("Week 10")
-        st.caption("Round 2")
-        st.write("Seed 1 vs Highest Seed")
-        st.write("Seed 2 vs Second Highest Seed")
-        st.write("Seed 3 vs Third Highest Seed")
-        st.write("Seed 4 vs Fourth Highest Seed")
+        st.caption("Quarter-Finals (Re-seeded)")
+        # Logic: Top seeds play the lowest survivors
+        st.write("Seed 1 vs Lowest Remaining Seed")
+        st.write("Seed 2 vs 2nd Lowest Remaining")
+        st.divider()
+        st.write("Seed 3 vs 3rd Lowest Remaining")
+        st.write("Seed 4 vs Highest Remaining Seed")
 
     with c3:
         st.subheader("Week 11")
         st.caption("Semi-Finals")
-        st.write("Lowest Seed vs Highest Seed")
-        st.write("Second Lowest Seed vs Second Highest Seed")
-        
+        st.write("Top Bracket Winner")
+        st.write("vs")
+        st.write("Bottom Bracket Winner")
+
     with c4:
         st.subheader("Week 12")
-        st.caption("FINALS")
-        st.markdown("**🏆 Championship Match**")
-        
-    with c5:
-        st.subheader("Winner")
-        st.write("🥇")
+        st.caption("CHAMPIONSHIP")
+        st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
+        st.write("Final Match")
 
 
 
