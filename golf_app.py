@@ -325,9 +325,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📝 Scorecard", "🏆 Standings"
 # --- TAB 6: TOURNAMENT BRACKET (12-Man Re-seeding) ---
 with tab6:
     st.header("🏆 12-Man Re-Seeding Tournament")
-    st.info("Tournament starts Week 9. Bracket is re-seeded after Round 1 so top seeds play the lowest remaining seeds.")
-    st.info ("Highest Seed" refers to the player with the best rank (closest to 1) and the "Lowest Seed" refers to the player with the worst rank.")
-    
+    st.info("Tournament starts Week 9. Bracket is re-seeded after Round 1 so top seeds play the lowest remaining seeds. Highest Seed" refers to the player with the best rank (closest to 1) and the "Lowest Seed" refers to the player with the worst rank.")
+       
     c1, c2, c3, c4 = st.columns(4)
     
     with c1:
@@ -366,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
