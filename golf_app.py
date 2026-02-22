@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import time
 
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
@@ -8,10 +9,16 @@ st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
+# Session state for 4-hour PIN persistence
+if "unlocked_player" not in st.session_state:
+    st.session_state["unlocked_player"] = None
+if "login_timestamp" not in st.session_state:
+    st.session_state["login_timestamp"] = 0
+
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
+SESSION_TIMEOUT = 4 * 60 * 60  # 4 Hours in seconds
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# FedEx Points Scale for GGG_pts calculation
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
@@ -20,7 +27,6 @@ FEDEX_POINTS = {
 # --- STEP 2: FUNCTIONS ---
 def load_data():
     try:
-        # ttl=0 ensures the app pulls FRESH data on every interaction
         data = conn.read(ttl=0)
         return data.dropna(how='all')
     except:
@@ -29,7 +35,6 @@ def load_data():
 def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     existing_data = conn.read(ttl=0)
-    
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
     final_net = 0 if is_dnf else (final_gross - hcp_val)
@@ -42,7 +47,6 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     }])
     
     if not existing_data.empty:
-        # Overwrite if player already submitted for this week
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
@@ -52,18 +56,15 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING & CALCULATIONS ---
+# --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
-    
-    # 1. Ensure numeric types for math
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
     
-    # 2. Calculate GGG_pts (Replacing animal_pts)
     df_main['GGG_pts'] = 0.0
     for w in df_main['Week'].unique():
         if w == 0: continue
@@ -91,25 +92,39 @@ with tab1:
         st.warning("No players registered yet.")
     else:
         c1, c2 = st.columns(2)
-        player_select = c1.selectbox("Player", EXISTING_PLAYERS, key="p_sel")
-        week_select = c2.selectbox("Week", range(1, 13), key="w_sel")
-        user_pin_input = st.text_input(f"PIN for {player_select}", type="password", key="p_in")
-
+        player_select = c1.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
+        week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
+        
+        # PERSISTENCE LOGIC
+        current_time = time.time()
         is_verified = False
-        stored_pin = ""
-        if st.session_state["authenticated"]:
+        
+        # Check if current session is still valid for this player
+        time_elapsed = current_time - st.session_state["login_timestamp"]
+        if st.session_state["unlocked_player"] == player_select and time_elapsed < SESSION_TIMEOUT:
             is_verified = True
-        elif user_pin_input and not df_main.empty:
-            player_info = df_main[df_main['Player'] == player_select]
-            if not player_info.empty:
-                stored_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
-                if user_pin_input.strip() == stored_pin:
-                    is_verified = True
+        elif st.session_state["authenticated"]:
+            is_verified = True
+
+        if not is_verified:
+            user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key="p_in")
+            if user_pin_input and not df_main.empty:
+                player_info = df_main[df_main['Player'] == player_select]
+                if not player_info.empty:
+                    stored_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
+                    if user_pin_input.strip() == stored_pin:
+                        st.session_state["unlocked_player"] = player_select
+                        st.session_state["login_timestamp"] = current_time
+                        st.rerun() # Refresh to show the unlocked UI
+                    else:
+                        st.error("❌ Incorrect PIN. Please try again.")
 
         if is_verified:
-            # Personal Statistics Dashboard
+            # VISUAL INDICATION OF SUCCESS
+            st.success(f"✅ **{player_select} Unlocked** (Session active for 4 hours)")
+            
             p_data = df_main[df_main['Player'] == player_select]
-            st.write(f"### 📊 {player_select}'s Season Totals")
+            st.write(f"### 📊 Season Stats Summary")
             sc1, sc2, sc3 = st.columns(3)
             sc1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
             sc2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
@@ -117,18 +132,22 @@ with tab1:
             st.divider()
 
             with st.form("score_entry", clear_on_submit=True):
+                st.subheader(f"Week {week_select} Scorecard")
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
+                
                 col1, col2, col3 = st.columns(3)
                 s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_{player_select}_{week_select}")
                 s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_{player_select}_{week_select}")
                 s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_{player_select}_{week_select}")
                 
                 if st.form_submit_button("Submit Score"):
-                    pin_to_save = stored_pin if stored_pin else user_pin_input
-                    save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, pin_to_save)
+                    # Retrieve the original PIN to maintain data integrity in the sheet
+                    player_info = df_main[df_main['Player'] == player_select]
+                    final_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
+                    save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, final_pin)
         else:
-            st.info("Enter PIN to unlock Scorecard.")
+            st.info("🔒 Enter your 4-digit PIN to enter scores and see personal stats.")
 
 # --- TAB 2: STANDINGS ---
 with tab2:
@@ -137,45 +156,36 @@ with tab2:
         leaderboard = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
         leaderboard = leaderboard.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         leaderboard.index += 1
-        st.subheader("Leaderboard (GGG Points)")
         st.dataframe(leaderboard, use_container_width=True)
     else:
-        st.info("No data available yet.")
+        st.info("No data yet.")
 
 # --- TAB 3: HISTORY ---
 with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        # Filters
         f1, f2 = st.columns(2)
         p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS)
         w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)))
         
         history_df = df_main[df_main['Week'] > 0].copy()
-        
-        if p_filter != "All":
-            history_df = history_df[history_df['Player'] == p_filter]
-        if w_filter != "All":
-            history_df = history_df[history_df['Week'] == int(w_filter)]
+        if p_filter != "All": history_df = history_df[history_df['Player'] == p_filter]
+        if w_filter != "All": history_df = history_df[history_df['Week'] == int(w_filter)]
 
-        # REARRANGE COLUMNS: Move Pars/Birdies/Eagles and DNF to the end
-        # Hide PIN and ensure animal_pts is gone
+        # Rearranging columns for final layout
         cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-        cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c not in ['PIN', 'animal_pts']]
-        
-        history_df = history_df[cols_at_start + cols_at_end]
+        cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c not in ['PIN', 'GGG_pts']]
+        history_df = history_df[cols_at_start + ['GGG_pts'] + cols_at_end]
 
         st.dataframe(history_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
-    else:
-        st.info("No weekly scores recorded yet.")
 
 # --- TAB 6: ADMIN ---
 with tab6:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_key")
+    admin_pw = st.text_input("Admin Password", type="password", key="adm_auth")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🔄 Force Refresh Database"):
+        if st.button("🔄 Force Clear Cache"):
             st.cache_data.clear()
             st.rerun()
 
@@ -188,8 +198,8 @@ with tab7:
 with tab8:
     st.header("👤 Player Registration")
     with st.form("reg_form", clear_on_submit=True):
-        new_name = st.text_input("Full Name", key="rn")
-        new_pin = st.text_input("Create 4-Digit PIN", max_chars=4, type="password", key="rp")
+        new_name = st.text_input("Full Name")
+        new_pin = st.text_input("4-Digit PIN", max_chars=4, type="password")
         starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
         
         if st.form_submit_button("Register Player"):
