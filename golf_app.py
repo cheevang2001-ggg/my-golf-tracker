@@ -18,6 +18,12 @@ if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# Define the Master Schema to prevent KeyError
+MASTER_COLUMNS = [
+    'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
+    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF'
+]
+
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
@@ -26,43 +32,35 @@ FEDEX_POINTS = {
 # --- 2. CORE FUNCTIONS ---
 
 def load_data():
-    """Robust data loader with validation checks."""
+    """Load data with a fallback to Master Schema if sheet is empty."""
     try:
         data = conn.read(ttl=2)
-        if data is None or data.empty: 
-            return pd.DataFrame()
+        # If the sheet is empty or corrupted, return an empty dataframe with correct headers
+        if data is None or data.empty or 'Player' not in data.columns: 
+            return pd.DataFrame(columns=MASTER_COLUMNS)
         
         df = data.dropna(how='all')
         
-        # Validation Check: Ensure this is the GGGolf Main Sheet
-        if 'Player' not in df.columns:
-            return pd.DataFrame()
+        # Ensure all required columns exist (Fixes KeyError)
+        for col in MASTER_COLUMNS:
+            if col not in df.columns:
+                df[col] = 0 if col != 'Player' else ""
 
-        rename_map = {'Gross Score': 'Total_Score', 'Pars': 'Pars_Count', 'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count'}
-        df = df.rename(columns=rename_map)
-        
         numeric_cols = ['Week', 'Total_Score', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Handicap']
         for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         df['DNF'] = df['DNF'].astype(bool) if 'DNF' in df.columns else False
-        df = df[df['Player'].notna() & (df['Player'] != "")]
-        return df
+        return df[df['Player'] != ""]
     except:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data():
-    """Separate loader for real-time round tracking."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
         df = conn.read(worksheet="LiveScores", ttl=2)
-        if df is None or df.empty:
+        if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
-        df.columns = [str(c).strip() for c in df.columns]
-        for col in hole_cols:
-            if col not in df.columns: df[col] = 0
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
         return df
     except:
         return pd.DataFrame(columns=['Player'] + hole_cols)
@@ -73,9 +71,7 @@ def update_live_score(player, hole, strokes):
     if player in df_live['Player'].values:
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
     else:
-        new_row = {str(i): 0 for i in range(1, 10)}
-        new_row['Player'] = player
-        new_row[hole_col] = int(strokes)
+        new_row = {str(i): 0 for i in range(1, 10), 'Player': player}
         df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
     conn.update(worksheet="LiveScores", data=df_live)
     st.cache_data.clear()
@@ -91,47 +87,25 @@ def calculate_rolling_handicap(player_df, target_week):
             starting_hcp = float(val) if pd.notnull(val) else 10.0
         if len(rounds) == 0: return float(starting_hcp)
         last_4 = rounds.head(4)['Total_Score'].tolist()
-        if len(last_4) >= 4:
-            last_4.sort()
-            hcp = round(sum(last_4[:3]) / 3 - 36, 1)
-        else:
-            hcp = round(sum(last_4) / len(last_4) - 36, 1)
+        last_4.sort()
+        hcp = round(sum(last_4[:3]) / 3 - 36, 1) if len(last_4) >= 4 else round(sum(last_4)/len(last_4)-36, 1)
         return float(hcp)
-    except:
-        return 10.0
+    except: return 10.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    """Shielded save function to prevent data loss."""
     st.cache_data.clear()
     existing_data = load_data()
-    
-    # SHIELD 1: Prevent overwriting if database appears empty but shouldn't be
-    if existing_data.empty and EXISTING_PLAYERS:
-        st.error("❌ Critical: Data connection lost. App blocked save to prevent wipe. Please refresh.")
-        return
-
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
-    final_net = (final_gross - hcp_val) if not is_dnf else 0
-    
     new_entry = pd.DataFrame([{
-        'Week': week, 'Player': player, 'Pars_Count': pars, 
-        'Birdies_Count': birdies, 'Eagle_Count': eagles, 
-        'Total_Score': final_gross, 'Handicap': hcp_val, 
-        'Net_Score': final_net, 'DNF': is_dnf, 'PIN': pin
+        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
+        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
+        'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
     }])
-    
     updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
-    
-    try:
-        # SHIELD 2: Explicitly target the first sheet to prevent tab mixing
-        conn.update(data=updated_df)
-        st.success("Score Saved!")
-        st.cache_data.clear()
-        time.sleep(1)
-        st.rerun()
-    except Exception as e:
-        st.error(f"Save failed: {e}")
+    conn.update(data=updated_df[MASTER_COLUMNS]) # Force column order
+    st.cache_data.clear()
+    st.rerun()
 
 # --- 3. DATA PROCESSING ---
 df_main = load_data()
@@ -146,17 +120,14 @@ st.markdown("</div>", unsafe_allow_html=True)
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
-    if not EXISTING_PLAYERS: 
-        st.warning("⚠️ Connection to database is being established or no players found. If you have players, please wait 3 seconds and refresh.")
+    if not EXISTING_PLAYERS: st.warning("No players found. Please register in the Registration tab.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         is_unlocked = (st.session_state["unlocked_player"] == player_select and (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or st.session_state["authenticated"]
-        
         if not is_unlocked:
             user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
             if user_pin:
                 p_info = df_main[df_main['Player'] == player_select]
-                # Filter Week 0 to get the registration PIN
                 reg_row = p_info[p_info['Week'] == 0]
                 stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip() if not reg_row.empty else ""
                 if user_pin.strip() == stored_pin:
@@ -166,58 +137,33 @@ with tabs[0]: # Scorecard
         else:
             p_data = df_main[df_main['Player'] == player_select]
             st.divider()
-            w_s = st.selectbox("Select Week to View/Post", range(1, 15))
-            current_hcp_for_week = calculate_rolling_handicap(p_data, w_s)
-            played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
-            
-            st.markdown(f"### 📊 {player_select}'s Stats for Week {w_s}")
-            m1, m2, m3, m4, m5 = st.columns(5)
-            hcp_display = f"+{abs(current_hcp_for_week)}" if current_hcp_for_week < 0 else f"{current_hcp_for_week}"
-            m1.metric("Handicap", hcp_display)
-            m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "N/A")
-            m3.metric("Pars", int(played_rounds['Pars_Count'].sum()))
-            m4.metric("Birdies", int(played_rounds['Birdies_Count'].sum()))
-            m5.metric("Eagles", int(played_rounds['Eagle_Count'].sum()))
-            
-            if not played_rounds.empty:
-                chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(x=alt.X('Week:O'), y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
-                st.altair_chart(chart.properties(height=300), use_container_width=True)
-            
-            st.divider()
+            w_s = st.selectbox("Select Week", range(1, 15))
+            current_hcp = calculate_rolling_handicap(p_data, w_s)
+            h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
+            st.metric("Handicap", h_disp)
             with st.form("score_entry"):
-                st.write(f"Posting for **Week {w_s}** with **{hcp_display}** HCP.")
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
-                h_r = st.number_input("Handicap to apply", -10.0, 40.0, value=float(current_hcp_for_week), step=0.1, key=f"hcp_input_{w_s}")
+                h_r = st.number_input("HCP to apply", -10.0, 40.0, value=float(current_hcp), key=f"h_{w_s}")
                 c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
-                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
-                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_{w_s}")
-                
-                # SHIELD 3: Submit button disabled if data load failed
-                submit_disabled = True if not EXISTING_PLAYERS else False
-                if st.form_submit_button("Submit Score", disabled=submit_disabled):
-                    reg_row = p_data[p_data['Week'] == 0]
-                    pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
+                p_c = c1.number_input("Pars", 0, 18, key=f"p_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"b_{w_s}")
+                e_c = e_c = c3.number_input("Eagles", 0, 18, key=f"e_{w_s}")
+                if st.form_submit_button("Submit"):
+                    pin = str(p_data[p_data['Week'] == 0]['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
 
 with tabs[1]: # Standings
-    st.subheader("🏆 Season Standings")
+    st.subheader("🏆 Standings")
     if not df_main.empty:
-        valid_scores = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
-        if not valid_scores.empty:
-            valid_scores['Pts'] = 0.0
-            for w in valid_scores['Week'].unique():
-                m = (valid_scores['Week'] == w)
-                if m.any():
-                    valid_scores.loc[m, 'R'] = valid_scores.loc[m, 'Net_Score'].rank(method='min')
-                    for idx, row in valid_scores[m].iterrows():
-                        valid_scores.at[idx, 'Pts'] = FEDEX_POINTS.get(int(row['R']), 10.0)
-            summary = valid_scores.groupby('Player').agg({'Pts': 'sum', 'Net_Score': 'mean'}).reset_index()
-            summary = summary.rename(columns={'Net_Score': 'Avg Net', 'Pts': 'Total Pts'})
-            summary['Avg Net'] = summary['Avg Net'].round(1)
-            res = summary.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]).reset_index(drop=True)
-            res.index += 1
-            st.dataframe(res[['Player', 'Total Pts', 'Avg Net']], use_container_width=True)
+        v = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
+        if not v.empty:
+            v['Pts'] = 0.0
+            for w in v['Week'].unique():
+                m = v['Week'] == w
+                v.loc[m, 'R'] = v.loc[m, 'Net_Score'].rank(method='min')
+                for idx, row in v[m].iterrows(): v.at[idx, 'Pts'] = FEDEX_POINTS.get(int(row['R']), 10.0)
+            res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
+            st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True)
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
@@ -230,40 +176,34 @@ with tabs[2]: # Live Round
             if c3.button("Post", use_container_width=True):
                 update_live_score(curr_p, h_u, s_u)
                 st.rerun()
-    else: st.warning("⚠️ Unlock profile to post.")
-    st.divider()
     l_df = load_live_data()
-    if not l_df.empty:
-        h_cols = [str(i) for i in range(1, 10)]
-        l_df['Total'] = l_df[h_cols].sum(axis=1)
-        st.dataframe(l_df[['Player'] + h_cols + ['Total']].sort_values("Total"), use_container_width=True, hide_index=True)
+    if not l_df.empty: st.dataframe(l_df, use_container_width=True, hide_index=True)
 
 with tabs[3]: # History
     st.subheader("📅 History")
-    if not df_main.empty:
-        st.dataframe(df_main[df_main['Week'] > 0][['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
-
-with tabs[4]: # Info
-    st.subheader("ℹ️ League Info")
-    st.write("- HCP: Best 3 of 4. Plus HCPs add to score.")
+    # This section was causing the error - now protected by MASTER_COLUMNS check
+    h_df = df_main[df_main['Week'] > 0]
+    if not h_df.empty:
+        st.dataframe(h_df[['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
+    else: st.info("No history yet.")
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
     if not st.session_state["reg_access"]:
-        if st.text_input("League Key", type="password", key="reg_key_input") == REGISTRATION_KEY:
+        if st.text_input("League Key", type="password") == REGISTRATION_KEY:
             if st.button("Unlock"): st.session_state["reg_access"] = True; st.rerun()
     else:
         with st.form("r"):
             n, p, h = st.text_input("Name"), st.text_input("PIN", max_chars=4), st.number_input("HCP", -10.0, 40.0, 10.0)
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
-                    conn.update(data=pd.concat([df_main, pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True}])], ignore_index=True))
-                    st.cache_data.clear(); time.sleep(2); st.session_state["reg_access"] = False; st.rerun()
+                    new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+                    updated_reg = pd.concat([df_main, new_reg], ignore_index=True)
+                    conn.update(data=updated_reg[MASTER_COLUMNS])
+                    st.cache_data.clear(); time.sleep(1); st.session_state["reg_access"] = False; st.rerun()
 
 with tabs[6]: # Admin
-    st.subheader("⚙️ Admin")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
-        st.session_state["authenticated"] = True
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
-            st.cache_data.clear(); st.rerun()
+            st.rerun()
