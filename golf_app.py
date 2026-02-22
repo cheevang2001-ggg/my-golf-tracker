@@ -13,6 +13,8 @@ if "unlocked_player" not in st.session_state:
     st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state:
     st.session_state["login_timestamp"] = 0
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = 0  # Used to force-reset widgets
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 SESSION_TIMEOUT = 4 * 60 * 60  # 4 Hours
@@ -90,24 +92,25 @@ with tab1:
     if not EXISTING_PLAYERS:
         st.warning("No players registered yet.")
     else:
-        # Player selection acts as the master trigger
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
         
-        # Check session validity
         current_time = time.time()
-        session_valid = (
+        # Logic to check if session is valid
+        is_unlocked = (
             st.session_state["unlocked_player"] == player_select and 
             (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT
         )
         
-        # Override for Admin
+        # Admin bypass
         if st.session_state["authenticated"]:
-            session_valid = True
+            is_unlocked = True
 
-        if not session_valid:
-            # LOCKED STATE
-            st.info(f"🔒 {player_select} is locked.")
-            user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key=f"pin_{player_select}")
+        if not is_unlocked:
+            # LOCKED VIEW
+            st.info(f"🔒 {player_select} is currently locked.")
+            # We use session_id in the key to force the text box to clear on logout
+            pin_key = f"pin_{player_select}_{st.session_state['session_id']}"
+            user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key=pin_key)
             
             if user_pin_input:
                 player_info = df_main[df_main['Player'] == player_select]
@@ -116,20 +119,21 @@ with tab1:
                     if user_pin_input.strip() == stored_pin:
                         st.session_state["unlocked_player"] = player_select
                         st.session_state["login_timestamp"] = current_time
-                        st.success("Correct! Unlocking...")
-                        time.sleep(0.5) # Brief pause for user feedback
+                        st.success("Success! Unlocking Scorecard...")
+                        time.sleep(0.5)
                         st.rerun()
                     else:
-                        st.error("❌ Incorrect PIN.")
+                        st.error("❌ Incorrect PIN. Please try again.")
         else:
-            # UNLOCKED STATE
-            col_head1, col_head2 = st.columns([4, 1])
-            col_head1.success(f"✅ **{player_select} Session Active**")
+            # UNLOCKED VIEW
+            col_h1, col_h2 = st.columns([5, 1])
+            col_h1.success(f"✅ **{player_select} Unlocked** (Expires in 4 hours)")
             
-            # LOGOUT BUTTON - Specifically clears state and forces a hard rerun
-            if col_head2.button("Logout 🔓", use_container_width=True):
+            # HARD LOGOUT: Clears data and increments session_id to wipe the PIN text box
+            if col_h2.button("Logout 🔓", use_container_width=True):
                 st.session_state["unlocked_player"] = None
                 st.session_state["login_timestamp"] = 0
+                st.session_state["session_id"] += 1 
                 st.rerun()
 
             week_select = st.selectbox("Select Week", range(1, 13), key="w_sel")
@@ -148,9 +152,9 @@ with tab1:
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
                 
                 col1, col2, col3 = st.columns(3)
-                s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_input_{player_select}_{week_select}")
-                s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_input_{player_select}_{week_select}")
-                s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_input_{player_select}_{week_select}")
+                s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_in_{player_select}_{week_select}")
+                s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_in_{player_select}_{week_select}")
+                s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_in_{player_select}_{week_select}")
                 
                 if st.form_submit_button("Submit Score"):
                     player_info = df_main[df_main['Player'] == player_select]
@@ -171,8 +175,8 @@ with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         f1, f2 = st.columns(2)
-        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="hist_p")
-        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="hist_w")
+        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="h_p")
+        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="h_w")
         
         history_df = df_main[df_main['Week'] > 0].copy()
         if p_filter != "All": history_df = history_df[history_df['Player'] == p_filter]
@@ -187,7 +191,7 @@ with tab3:
 # --- TAB 6: ADMIN ---
 with tab6:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_key")
+    admin_pw = st.text_input("Admin Password", type="password", key="adm_auth")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
         if st.button("🔄 Force Refresh Database"):
