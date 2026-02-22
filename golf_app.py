@@ -6,7 +6,6 @@ import time
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
-# Session State for Security and UI Persistence
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
@@ -21,27 +20,29 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: FUNCTIONS (SHORTENED HEADERS) ---
+# --- STEP 2: CRASH-PROOF FUNCTIONS ---
 
 def load_data():
+    """Loads main league data with 10s cache safety."""
     try:
         data = conn.read(ttl=10)
         df = data.dropna(how='all')
         rename_map = {'Gross Score': 'Total_Score', 'Pars': 'Pars_Count', 'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count'}
         return df.rename(columns=rename_map)
     except Exception as e:
-        if "429" in str(e): st.warning("🐢 Google API limit reached. Cooling down for 10s...")
+        if "429" in str(e): st.warning("🐢 Google API limit. Retrying in 10s...")
         return pd.DataFrame()
 
 def load_live_data():
+    """Loads live scores with 5s cache safety."""
     try:
-        # Looking for columns 1-9 in the GSheet
         df = conn.read(worksheet="LiveScores", ttl=5)
         return df.dropna(how='all')
     except:
         return pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
 
 def update_live_hole(player, hole_col, strokes):
+    """Updates a single hole, ensuring whole numbers and bypassing cache for the write."""
     try:
         df_live = conn.read(worksheet="LiveScores", ttl=0)
         for i in range(1, 10):
@@ -64,17 +65,32 @@ def update_live_hole(player, hole_col, strokes):
         st.error(f"Update failed: {e}")
 
 def calculate_rolling_handicap(player_df):
-    rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
-    starting_hcp_row = player_df[player_df['Week'] == 0]
-    starting_hcp = float(starting_hcp_row['Handicap'].values[0]) if not starting_hcp_row.empty else 10.0
-    if len(rounds) == 0: return starting_hcp
-    last_4 = rounds.head(4)['Total_Score'].tolist()
-    if len(last_4) >= 4:
-        last_4.sort()
-        best_3 = last_4[:3] 
-        return round(sum(best_3) / 3 - 36, 1)
-    else:
-        return round(sum(last_4) / len(last_4) - 36, 1)
+    """CRASH-PROOF HANDICAP: Ensures result is always between 0.0 and 40.0."""
+    try:
+        rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
+        starting_hcp_row = player_df[player_df['Week'] == 0]
+        
+        # Default starting value
+        starting_hcp = 10.0
+        if not starting_hcp_row.empty:
+            val = starting_hcp_row['Handicap'].values[0]
+            starting_hcp = float(val) if pd.notnull(val) else 10.0
+        
+        if len(rounds) == 0:
+            final_hcp = starting_hcp
+        else:
+            last_4 = rounds.head(4)['Total_Score'].tolist()
+            if len(last_4) >= 4:
+                last_4.sort()
+                best_3 = last_4[:3] 
+                final_hcp = round(sum(best_3) / 3 - 36, 1)
+            else:
+                final_hcp = round(sum(last_4) / len(last_4) - 36, 1)
+        
+        # Guardrail for Streamlit input range
+        return max(0.0, min(40.0, float(final_hcp)))
+    except:
+        return 10.0 # Emergency fallback
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
@@ -108,7 +124,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Weekly Totals Scorecard
+with tabs[0]: # Scorecard Entry
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -136,21 +152,30 @@ with tabs[0]: # Weekly Totals Scorecard
                 st.session_state["unlocked_player"], st.session_state["login_timestamp"] = None, 0
                 st.session_state["session_id"] += 1
                 st.rerun()
+            
             p_data = df_main[df_main['Player'] == player_select]
             current_hcp = calculate_rolling_handicap(p_data)
+            
             st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
             st.divider()
+            
             week_select = st.selectbox("Select Week", range(1, 15))
+            
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap", 0.0, 40.0, float(current_hcp), step=0.1)
+                # Error-proof input
+                hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
+                
                 col1, col2, col3 = st.columns(3)
-                s_p, s_b, s_e = col1.number_input("Pars", 0, 18, 0), col2.number_input("Birdies", 0, 18, 0), col3.number_input("Eagles", 0, 18, 0)
+                s_p = col1.number_input("Pars", 0, 18, 0)
+                s_b = col2.number_input("Birdies", 0, 18, 0)
+                s_e = col3.number_input("Eagles", 0, 18, 0)
+                
                 if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
-with tabs[1]: # League Standings
+with tabs[1]: # Standings
     st.subheader("🏆 League Standings")
     if not df_main.empty:
         df_main['GGG_pts'] = 0.0
@@ -164,10 +189,10 @@ with tabs[1]: # League Standings
                     df_main.at[idx, 'GGG_pts'] = float(FEDEX_POINTS.get(int(r_val), 10))
         
         standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
-        standings['Current Handicap'] = [calculate_rolling_handicap(df_main[df_main['Player'] == p]) for p in standings['Player']]
+        standings['HCP'] = [calculate_rolling_handicap(df_main[df_main['Player'] == p]) for p in standings['Player']]
         standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         standings.index += 1
-        st.dataframe(standings[['Player', 'GGG_pts', 'Current Handicap']], use_container_width=True)
+        st.dataframe(standings[['Player', 'GGG_pts', 'HCP']], use_container_width=True)
 
 with tabs[2]: # 🔴 LIVE ROUND
     st.subheader("🔴 Live Round Tracking")
@@ -187,11 +212,9 @@ with tabs[2]: # 🔴 LIVE ROUND
             if c3.button("Post", use_container_width=True):
                 update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
                 st.rerun()
-    else:
-        st.warning("⚠️ Unlock profile in **Scorecard** to update.")
+    else: st.warning("⚠️ Unlock profile in **Scorecard** tab to update.")
 
     st.divider()
-    
     if not df_live.empty:
         for col in holes:
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
@@ -203,24 +226,20 @@ with tabs[2]: # 🔴 LIVE ROUND
             return [''] * len(row)
 
         display_cols = ['Player'] + holes + ['Total']
-        
-        # COLUMN CONFIG: Forces narrow columns for mobile
         col_config = {str(i): st.column_config.NumberColumn(width="small") for i in range(1, 10)}
         col_config["Player"] = st.column_config.TextColumn(width="medium")
         col_config["Total"] = st.column_config.NumberColumn(width="small")
 
         styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
         st.dataframe(styled_live, use_container_width=True, hide_index=True, column_config=col_config)
-    else:
-        st.info("No live scores recorded.")
 
-with tabs[3]: # Season History
+with tabs[3]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         hist = df_main[df_main['Week'] > 0].copy()
         st.dataframe(hist.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[4]: # League Info
+with tabs[4]: # Info
     st.subheader("ℹ️ League Information")
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     if info_choice == "Weekly Schedule":
@@ -230,8 +249,7 @@ with tabs[4]: # League Info
             "Event / Notes": ["Start", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "End", "GGG Picnic"]
         }
         st.table(pd.DataFrame(schedule_data).style.apply(lambda r: ['background-color: #90EE90; color: #808080; font-weight: bold' if any(ev in str(r["Event / Notes"]) for ev in ["GGG Event", "GGG Picnic"]) else '' for _ in r], axis=1))
-    else:
-        st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Baseline:** Par 36.")
+    else: st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Baseline:** Par 36.")
 
 with tabs[5]: # Registration
     st.header("👤 Player Registration")
@@ -245,7 +263,7 @@ with tabs[5]: # Registration
                 st.success(f"Registered {n_n}!")
                 st.rerun()
 
-with tabs[6]: # Admin Controls
+with tabs[6]: # Admin
     st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
