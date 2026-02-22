@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import time
-import altair as alt  # Added for custom chart control
+import altair as alt
 
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
@@ -21,7 +21,7 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: CRASH-PROOF FUNCTIONS ---
+# --- STEP 2: FUNCTIONS ---
 
 def load_data():
     try:
@@ -124,7 +124,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard Entry + DASHBOARD + CLEAN CHART
+with tabs[0]: # Scorecard Entry + DASHBOARD + REVERSED CHART
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -153,7 +153,6 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + CLEAN CHART
                 st.session_state["session_id"] += 1
                 st.rerun()
             
-            # --- PERSONAL DASHBOARD ---
             p_data = df_main[df_main['Player'] == player_select]
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
@@ -172,45 +171,48 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + CLEAN CHART
             m4.metric("Birdies", int(total_birdies))
             m5.metric("Eagles", int(total_eagles))
             
-            # --- CLEANED PROGRESSION CHART ---
+            # --- UPDATED REVERSED CHART ---
             if not played_rounds.empty:
-                st.markdown("#### Net Score Progression")
+                st.markdown("#### Performance Trend (Higher = Better Score)")
                 
-                # Custom Altair Chart for discrete X-axis and dots
+                # REVERSED Y-AXIS: Lower numbers are placed at the top
                 line = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(
-                    x=alt.X('Week:O', title='Week Number'), # :O forces whole numbers/labels
-                    y=alt.Y('Net_Score:Q', title='Net Score', scale=alt.Scale(zero=False)),
+                    x=alt.X('Week:O', title='Week'),
+                    y=alt.Y('Net_Score:Q', 
+                           title='Net Score', 
+                           scale=alt.Scale(reverse=True, zero=False)), # REVERSE=TRUE IS THE KEY
                     tooltip=['Week', 'Net_Score']
                 )
                 
-                points = line.mark_point(color='#2e7d32', size=80, filled=True)
+                points = line.mark_point(color='#2e7d32', size=100, filled=True)
                 
-                final_chart = (line + points).properties(height=300).configure_axis(
+                final_chart = (line + points).properties(height=350).configure_axis(
                     labelFontSize=12,
                     titleFontSize=14
                 )
                 
                 st.altair_chart(final_chart, use_container_width=True)
+                st.caption("Note: Y-axis is inverted. Lower scores trend upwards to visualize better performance.")
             else:
-                st.info("Play your first round to see your performance graph!")
+                st.info("Post your first score to see your trend!")
 
             st.divider()
             
             # --- SCORE ENTRY FORM ---
-            week_select = st.selectbox("Select Week to Post Score", range(1, 15))
+            week_select = st.selectbox("Select Week", range(1, 15))
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap for this Week", 0.0, 40.0, value=float(current_hcp), step=0.1)
+                hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
-                s_p = col1.number_input("Pars this round", 0, 18, 0)
-                s_b = col2.number_input("Birdies this round", 0, 18, 0)
-                s_e = col3.number_input("Eagles this round", 0, 18, 0)
+                s_p = col1.number_input("Pars", 0, 18, 0)
+                s_b = col2.number_input("Birdies", 0, 18, 0)
+                s_e = col3.number_input("Eagles", 0, 18, 0)
                 if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
-# (The rest of the Standings, Live, History, etc., remain unchanged from previous version)
-with tabs[1]: # Standings
+# STANDINGS TAB
+with tabs[1]:
     st.subheader("🏆 League Standings")
     if not df_main.empty:
         calc_df = df_main.copy()
@@ -230,7 +232,8 @@ with tabs[1]: # Standings
         standings.index += 1
         st.dataframe(standings[['Player', 'GGG_pts', 'HCP']], use_container_width=True)
 
-with tabs[2]: # 🔴 LIVE ROUND
+# LIVE TAB
+with tabs[2]:
     st.subheader("🔴 Live Round Tracking")
     col_ref, _ = st.columns([1, 4])
     if col_ref.checkbox("Auto-Refresh (30s)", value=True): st.info("🕒 Board is live.")
@@ -260,7 +263,8 @@ with tabs[2]: # 🔴 LIVE ROUND
         styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
         st.dataframe(styled_live, use_container_width=True, hide_index=True, column_config=col_config)
 
-with tabs[3]: # History
+# HISTORY TAB
+with tabs[3]:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         hist = df_main[df_main['Week'] > 0].copy()
@@ -268,7 +272,8 @@ with tabs[3]: # History
         hist_display = hist[[c for c in public_cols if c in hist.columns]]
         st.dataframe(hist_display.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[4]: # Info
+# INFO TAB
+with tabs[4]:
     st.subheader("ℹ️ League Information")
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     if info_choice == "Weekly Schedule":
@@ -276,7 +281,8 @@ with tabs[4]: # Info
         st.table(pd.DataFrame(schedule_data))
     else: st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Baseline:** Par 36.")
 
-with tabs[5]: # Registration
+# REGISTRATION TAB
+with tabs[5]:
     st.header("👤 Player Registration")
     with st.form("reg"):
         n_n, n_p, n_h = st.text_input("Name"), st.text_input("4-Digit PIN", max_chars=4), st.number_input("Starting Handicap", 0.0, 36.0, 10.0)
@@ -288,7 +294,8 @@ with tabs[5]: # Registration
                 st.success(f"Registered {n_n}!")
                 st.rerun()
 
-with tabs[6]: # Admin
+# ADMIN TAB
+with tabs[6]:
     st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
