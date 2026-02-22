@@ -173,7 +173,7 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + REVERSED CHART
             
             # --- UPDATED REVERSED CHART ---
             if not played_rounds.empty:
-                st.markdown("#### Performance Trend (Higher = Better Score)")
+                st.markdown("#### Performance Trend")
                 
                 # REVERSED Y-AXIS: Lower numbers are placed at the top
                 line = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(
@@ -309,3 +309,4 @@ with tabs[6]:
             st.cache_data.clear()
             st.warning("Live Board Cleared!")
             st.rerun()
+
