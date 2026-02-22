@@ -165,24 +165,27 @@ with tabs[2]: # History
         mid_cols = [c for c in [c for c in hist.columns if c not in ['PIN', 'session_id', 'animal_pts']] if c not in end_cols and c != 'GGG_pts']
         st.dataframe(hist[mid_cols + ['GGG_pts'] + end_cols].sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[3]: # League Info (Redirects)
+with tabs[3]: # League Info
     st.subheader("ℹ️ League Information")
-    info_choice = st.radio("What would you like to view?", ["League Weekly Schedule", "League Rules"], horizontal=True)
+    info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     
-    if info_choice == "League Weekly Schedule":
-        st.info("📅 **Weekly Schedule**")
-        # You can add your schedule table or list here
-        st.write("Week 1: May 4 - Opening Round")
-        st.write("Week 2: May 11 - Normal Play")
-        # 
+    if info_choice == "Weekly Schedule":
+        st.markdown("### 📅 2026 Weekly Schedule")
+        schedule_data = {
+            "Week": [f"Week {i}" for i in range(1, 15)],
+            "Date": ["May 31", "June 7", "June 14", "June 21", "June 28", "July 5", "July 12", "July 19", "July 26", "August 2", "August 9", "August 16", "August 23", "August 28"],
+            "Event / Notes": ["Start", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "End", "GGG Picnic"]
+        }
+        st.table(pd.DataFrame(schedule_data))
     else:
-        st.info("⚖️ **League Rules**")
+        st.markdown("### ⚖️ League Rules")
+        st.info("**Standard Play:** All rounds are played to a Par 36 baseline.")
         st.markdown("""
-        1. **Handicap:** Best 3 of last 4 rounds.
-        2. **Points:** Based on FedEx cup style ranking.
-        3. **DNF:** Recorded as 0 points for the week.
+        * **Handicap Calculation:** Your handicap is the average of the best 3 of your last 4 rounds (minus 36).
+        * **Scoring:** Scores must be submitted via the Scorecard tab using your private PIN.
+        * **Ranking:** FedEx Cup style points are awarded based on Net Score ranking each week.
+        * **DNF:** If you do not finish, select 'DNF'. You will receive 10 points for the week.
         """)
-        # 
 
 with tabs[4]: # Registration
     st.header("👤 Player Registration")
@@ -201,3 +204,4 @@ with tabs[5]: # Admin
         if st.button("Refresh App"):
             st.cache_data.clear()
             st.rerun()
+
