@@ -92,7 +92,6 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf Summer League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Reordered Tabs
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
@@ -134,7 +133,7 @@ with tabs[0]: # Scorecard
             current_hcp = calculate_rolling_handicap(p_data)
             st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
             st.divider()
-            week_select = st.selectbox("Select Week", range(1, 13))
+            week_select = st.selectbox("Select Week", range(1, 15))
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0.0, 40.0, float(current_hcp), step=0.1)
@@ -157,7 +156,7 @@ with tabs[2]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         f1, f2 = st.columns(2)
-        p_f, w_f = f1.selectbox("Filter Player", ["All"] + EXISTING_PLAYERS, key="hp"), f2.selectbox("Filter Week", ["All"] + list(range(1, 13)), key="hw")
+        p_f, w_f = f1.selectbox("Filter Player", ["All"] + EXISTING_PLAYERS, key="hp"), f2.selectbox("Filter Week", ["All"] + list(range(1, 15)), key="hw")
         hist = df_main[df_main['Week'] > 0].copy()
         if p_f != "All": hist = hist[hist['Player'] == p_f]
         if w_f != "All": hist = hist[hist['Week'] == int(w_f)]
@@ -178,14 +177,14 @@ with tabs[3]: # League Info
         }
         sched_df = pd.DataFrame(schedule_data)
         
-        # Apply Grey text and Green highlight for GGG Events
+        # Function to apply styles to the static table
         def highlight_events(row):
             if "GGG Event" in str(row["Event / Notes"]) or "GGG Picnic" in str(row["Event / Notes"]):
                 return ['background-color: #90EE90; color: #808080; font-weight: bold'] * len(row)
             return [''] * len(row)
 
-        styled_sched = sched_df.style.apply(highlight_events, axis=1)
-        st.dataframe(styled_sched, use_container_width=True, hide_index=True)
+        # Using st.table instead of st.dataframe so it expands to fit all rows without a scrollbar
+        st.table(sched_df.style.apply(highlight_events, axis=1))
 
     else:
         st.markdown("### ⚖️ League Rules")
@@ -206,13 +205,13 @@ with tabs[4]: # Registration
                 new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
+                st.success(f"Registered {n_n}! Welcome to the league.")
                 st.rerun()
 
 with tabs[5]: # Admin
+    st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("Refresh App"):
+        if st.button("Refresh All Data"):
             st.cache_data.clear()
             st.rerun()
-
-
