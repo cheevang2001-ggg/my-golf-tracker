@@ -68,27 +68,33 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING (FIXED VALUE ERROR) ---
+# --- STEP 3: DATA PROCESSING (FIXED CALCULATION) ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
+    
+    # 1. Ensure numeric types to prevent math errors
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     
-    # Initialize point column to avoid calculation errors
+    # 2. Initialize the column
     df_main['GGG_pts'] = 0.0
     
-    # Calculation Logic for GGG_pts (The source of the error)
+    # 3. Calculate points week-by-week
     for w in df_main['Week'].unique():
-        if w == 0: continue
+        if w == 0: continue  # Skip registration week
+        
+        # Identify non-DNF players for this specific week
         mask = (df_main['Week'] == w) & (df_main.get('DNF', False) == False)
+        
         if mask.any():
-            # Rank based on Net Score for the specific week
-            ranks = df_main.loc[mask, 'Net_Score'].rank(ascending=True, method='min')
-            # Map the ranks to points and reindex to match the original dataframe rows [cite: 3]
-            week_pts = ranks.map(FEDEX_POINTS).fillna(10)
-            df_main.loc[mask, 'GGG_pts'] = week_pts.reindex(df_main.loc[mask].index)
+            # Calculate ranks for just these specific rows
+            week_subset = df_main.loc[mask].copy()
+            week_subset['rank'] = week_subset['Net_Score'].rank(ascending=True, method='min')
+            
+            # Map ranks to points and assign directly using the row indices
+            df_main.loc[mask, 'GGG_pts'] = week_subset['rank'].map(FEDEX_POINTS).fillna(10)
 else:
     EXISTING_PLAYERS = []
 
@@ -216,3 +222,4 @@ with tab8:
                 st.cache_data.clear()
                 st.success(f"Registered {new_name}!")
                 st.rerun()
+
