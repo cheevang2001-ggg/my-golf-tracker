@@ -181,8 +181,26 @@ with tabs[2]: # 🔴 LIVE ROUND
         st.info("🕒 Board is live. Auto-refresh active.")
         # Native streamlit will rerun when this timer expires
     
-    df_live = load_live_data()
-    holes = [f"Hole {i}" for i in range(1, 10)]
+# SCOREBOARD DISPLAY
+    if not df_live.empty:
+        # Convert hole columns and Total to numeric, then fill empties with 0, then force to integer
+        for col in holes:
+            df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
+        
+        df_live['Total'] = df_live[holes].sum(axis=1).astype(int)
+        
+        # Highlight current player's row
+        def highlight_me(row):
+            if row.Player == st.session_state["unlocked_player"]:
+                return ['background-color: #2e7d32; color: white'] * len(row)
+            return [''] * len(row)
+
+        # Sort by Total and apply styling
+        # Note: Ensure we select only the columns we want to see
+        display_cols = ['Player'] + holes + ['Total']
+        styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
+        
+        st.dataframe(styled_live, use_container_width=True, hide_index=True)
     
     if st.session_state["unlocked_player"]:
         with st.expander(f"Enter Score for {st.session_state['unlocked_player']}", expanded=True):
@@ -250,3 +268,4 @@ with tabs[6]: # Admin
             conn.update(worksheet="LiveScores", data=reset_df)
             st.cache_data.clear()
             st.warning("Board Reset!")
+
