@@ -123,7 +123,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard Entry + DYNAMIC DASHBOARD
+with tabs[0]: # Scorecard Entry + DASHBOARD + CHART
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -152,9 +152,9 @@ with tabs[0]: # Scorecard Entry + DYNAMIC DASHBOARD
                 st.session_state["session_id"] += 1
                 st.rerun()
             
-            # --- PERSONAL DASHBOARD SECTION ---
+            # --- PERSONAL DASHBOARD ---
             p_data = df_main[df_main['Player'] == player_select]
-            played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)]
+            played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
             st.markdown(f"### 📊 {player_select}'s Season Stats")
             m1, m2, m3, m4, m5 = st.columns(5)
@@ -171,6 +171,14 @@ with tabs[0]: # Scorecard Entry + DYNAMIC DASHBOARD
             m4.metric("Birdies", int(total_birdies))
             m5.metric("Eagles", int(total_eagles))
             
+            # --- PROGRESSION CHART ---
+            if not played_rounds.empty:
+                st.markdown("#### Net Score Progression")
+                chart_data = played_rounds.set_index('Week')[['Net_Score']]
+                st.area_chart(chart_data, color="#2e7d32")
+            else:
+                st.info("Play your first round to see your progression chart!")
+
             st.divider()
             
             # --- SCORE ENTRY FORM ---
