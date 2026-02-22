@@ -95,11 +95,10 @@ with tab1:
         player_select = c1.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
         week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
         
-        # PERSISTENCE LOGIC
         current_time = time.time()
         is_verified = False
         
-        # Check if current session is still valid for this player
+        # Session Persistence Logic
         time_elapsed = current_time - st.session_state["login_timestamp"]
         if st.session_state["unlocked_player"] == player_select and time_elapsed < SESSION_TIMEOUT:
             is_verified = True
@@ -115,13 +114,18 @@ with tab1:
                     if user_pin_input.strip() == stored_pin:
                         st.session_state["unlocked_player"] = player_select
                         st.session_state["login_timestamp"] = current_time
-                        st.rerun() # Refresh to show the unlocked UI
+                        st.rerun()
                     else:
-                        st.error("❌ Incorrect PIN. Please try again.")
+                        st.error("❌ Incorrect PIN.")
 
         if is_verified:
-            # VISUAL INDICATION OF SUCCESS
-            st.success(f"✅ **{player_select} Unlocked** (Session active for 4 hours)")
+            # Verified Header & Logout Button
+            v1, v2 = st.columns([4, 1])
+            v1.success(f"✅ **{player_select} Unlocked**")
+            if v2.button("Logout 🔓"):
+                st.session_state["unlocked_player"] = None
+                st.session_state["login_timestamp"] = 0
+                st.rerun()
             
             p_data = df_main[df_main['Player'] == player_select]
             st.write(f"### 📊 Season Stats Summary")
@@ -142,12 +146,11 @@ with tab1:
                 s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_{player_select}_{week_select}")
                 
                 if st.form_submit_button("Submit Score"):
-                    # Retrieve the original PIN to maintain data integrity in the sheet
                     player_info = df_main[df_main['Player'] == player_select]
                     final_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                     save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, final_pin)
         else:
-            st.info("🔒 Enter your 4-digit PIN to enter scores and see personal stats.")
+            st.info("🔒 Enter your 4-digit PIN to access your scorecard.")
 
 # --- TAB 2: STANDINGS ---
 with tab2:
@@ -157,8 +160,6 @@ with tab2:
         leaderboard = leaderboard.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         leaderboard.index += 1
         st.dataframe(leaderboard, use_container_width=True)
-    else:
-        st.info("No data yet.")
 
 # --- TAB 3: HISTORY ---
 with tab3:
@@ -172,7 +173,7 @@ with tab3:
         if p_filter != "All": history_df = history_df[history_df['Player'] == p_filter]
         if w_filter != "All": history_df = history_df[history_df['Week'] == int(w_filter)]
 
-        # Rearranging columns for final layout
+        # Move Counts and DNF to the very end
         cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
         cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c not in ['PIN', 'GGG_pts']]
         history_df = history_df[cols_at_start + ['GGG_pts'] + cols_at_end]
@@ -182,17 +183,17 @@ with tab3:
 # --- TAB 6: ADMIN ---
 with tab6:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_auth")
+    admin_pw = st.text_input("Admin Password", type="password", key="adm_key")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🔄 Force Clear Cache"):
+        if st.button("🔄 Force Refresh Database"):
             st.cache_data.clear()
             st.rerun()
 
 # --- TAB 7: BRACKET ---
 with tab7:
     st.header("🏆 Tournament Bracket")
-    st.info("Starts Week 9.")
+    st.info("Tournament starts Week 9.")
 
 # --- TAB 8: REGISTRATION ---
 with tab8:
