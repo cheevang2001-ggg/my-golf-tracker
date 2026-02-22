@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import time
+import altair as alt  # Added for custom chart control
 
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
@@ -106,7 +107,7 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 df_main = load_data()
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
-    df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
+    df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0).astype(int)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['Total_Score'] = pd.to_numeric(df_main['Total_Score'], errors='coerce').fillna(0)
     df_main['Pars_Count'] = pd.to_numeric(df_main['Pars_Count'], errors='coerce').fillna(0)
@@ -123,7 +124,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard Entry + DASHBOARD + CHART
+with tabs[0]: # Scorecard Entry + DASHBOARD + CLEAN CHART
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -171,13 +172,27 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + CHART
             m4.metric("Birdies", int(total_birdies))
             m5.metric("Eagles", int(total_eagles))
             
-            # --- PROGRESSION CHART ---
+            # --- CLEANED PROGRESSION CHART ---
             if not played_rounds.empty:
                 st.markdown("#### Net Score Progression")
-                chart_data = played_rounds.set_index('Week')[['Net_Score']]
-                st.area_chart(chart_data, color="#2e7d32")
+                
+                # Custom Altair Chart for discrete X-axis and dots
+                line = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(
+                    x=alt.X('Week:O', title='Week Number'), # :O forces whole numbers/labels
+                    y=alt.Y('Net_Score:Q', title='Net Score', scale=alt.Scale(zero=False)),
+                    tooltip=['Week', 'Net_Score']
+                )
+                
+                points = line.mark_point(color='#2e7d32', size=80, filled=True)
+                
+                final_chart = (line + points).properties(height=300).configure_axis(
+                    labelFontSize=12,
+                    titleFontSize=14
+                )
+                
+                st.altair_chart(final_chart, use_container_width=True)
             else:
-                st.info("Play your first round to see your progression chart!")
+                st.info("Play your first round to see your performance graph!")
 
             st.divider()
             
@@ -194,6 +209,7 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + CHART
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
+# (The rest of the Standings, Live, History, etc., remain unchanged from previous version)
 with tabs[1]: # Standings
     st.subheader("🏆 League Standings")
     if not df_main.empty:
