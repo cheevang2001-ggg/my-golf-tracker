@@ -7,13 +7,17 @@ import altair as alt
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
+# Configuration Constants
+ADMIN_PASSWORD = "InsigniaSeahawks6145" 
+REGISTRATION_KEY = "GG2026"  # <--- Change this to your desired 1-time code
+SESSION_TIMEOUT = 4 * 60 * 60 
+
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
 if "session_id" not in st.session_state: st.session_state["session_id"] = 0 
+if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
-ADMIN_PASSWORD = "InsigniaSeahawks6145" 
-SESSION_TIMEOUT = 4 * 60 * 60 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 FEDEX_POINTS = {
@@ -21,22 +25,16 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: UPDATED HANDICAP LOGIC ---
+# --- STEP 2: CORE FUNCTIONS ---
 
 def calculate_rolling_handicap(player_df):
-    """
-    Calculates handicap based on 'Best 3 of last 4' rounds.
-    EXCLUDES GGG Events: Weeks 4, 8, 12.
-    """
     try:
-        # Exclude Week 0 (reg), DNF, and GGG Special Events (4, 8, 12)
         excluded_weeks = [0, 4, 8, 12]
         rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) & 
             (player_df['DNF'] == False)
         ].sort_values('Week', ascending=False)
         
-        # Get starting handicap from Week 0
         starting_hcp_row = player_df[player_df['Week'] == 0]
         starting_hcp = 10.0
         if not starting_hcp_row.empty:
@@ -56,8 +54,6 @@ def calculate_rolling_handicap(player_df):
         return max(0.0, min(40.0, float(final_hcp)))
     except:
         return 10.0
-
-# --- REMAINING HELPER FUNCTIONS ---
 
 def load_data():
     try:
@@ -172,21 +168,15 @@ with tabs[0]: # Scorecard
             
             st.markdown(f"### 📊 {player_select}'s Season Stats")
             m1, m2, m3, m4, m5 = st.columns(5)
-            
-            total_pars = played_rounds['Pars_Count'].sum()
-            total_birdies = played_rounds['Birdies_Count'].sum()
-            total_eagles = played_rounds['Eagle_Count'].sum()
-            avg_net = played_rounds['Net_Score'].mean() if not played_rounds.empty else 0.0
             current_hcp = calculate_rolling_handicap(p_data)
             
             m1.metric("Current HCP", f"{current_hcp:.1f}", help="Excludes Weeks 4, 8, 12")
-            m2.metric("Avg Net", f"{avg_net:.1f}")
-            m3.metric("Total Pars", int(total_pars))
-            m4.metric("Birdies", int(total_birdies))
-            m5.metric("Eagles", int(total_eagles))
+            m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "0.0")
+            m3.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
+            m4.metric("Birdies", int(played_rounds['Birdies_Count'].sum()))
+            m5.metric("Eagles", int(played_rounds['Eagle_Count'].sum()))
             
             if not played_rounds.empty:
-                st.markdown("#### Performance Trend (Higher = Better Score)")
                 line = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(
                     x=alt.X('Week:O', title='Week'),
                     y=alt.Y('Net_Score:Q', title='Net Score', scale=alt.Scale(reverse=True, zero=False)),
@@ -196,24 +186,19 @@ with tabs[0]: # Scorecard
                 st.altair_chart((line + points).properties(height=350), use_container_width=True)
             
             st.divider()
-            
             week_select = st.selectbox("Select Week", range(1, 15))
-            if week_select in [4, 8, 12]:
-                st.warning(f"⚠️ Week {week_select} is a GGG Event. Score will not affect future handicaps.")
+            if week_select in [4, 8, 12]: st.warning(f"⚠️ Week {week_select} is a GGG Event.")
             
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap for this Round", 0.0, 40.0, value=float(current_hcp), step=0.1)
+                hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
-                s_p = col1.number_input("Pars", 0, 18, 0)
-                s_b = col2.number_input("Birdies", 0, 18, 0)
-                s_e = col3.number_input("Eagles", 0, 18, 0)
+                s_p, s_b, s_e = col1.number_input("Pars", 0, 18), col2.number_input("Birdies", 0, 18), col3.number_input("Eagles", 0, 18)
                 if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
-# STANDINGS TAB
-with tabs[1]:
+with tabs[1]: # Standings
     st.subheader("🏆 League Standings")
     if not df_main.empty:
         calc_df = df_main.copy()
@@ -233,39 +218,26 @@ with tabs[1]:
         standings.index += 1
         st.dataframe(standings[['Player', 'GGG_pts', 'HCP']], use_container_width=True)
 
-# LIVE TAB
-with tabs[2]:
+with tabs[2]: # Live Round Tracking
     st.subheader("🔴 Live Round Tracking")
-    col_ref, _ = st.columns([1, 4])
-    if col_ref.checkbox("Auto-Refresh (30s)", value=True): st.info("🕒 Board is live.")
     df_live = load_live_data()
     hole_cols = [str(i) for i in range(1, 10)]
     if st.session_state["unlocked_player"]:
         with st.expander(f"Post Score: {st.session_state['unlocked_player']}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
-            target_hole = c1.selectbox("Hole", hole_cols)
-            target_strokes = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post", use_container_width=True):
-                update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
-                st.rerun()
-    else: st.warning("⚠️ Unlock profile in **Scorecard** tab to update.")
+            t_h, t_s = c1.selectbox("Hole", hole_cols), c2.number_input("Strokes", 1, 15, 4)
+            if c3.button("Post"): update_live_hole(st.session_state["unlocked_player"], t_h, t_s); st.rerun()
     st.divider()
     if not df_live.empty:
-        for col in hole_cols:
-            if col in df_live.columns: df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
+        for col in hole_cols: df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
         df_live['Total'] = df_live[hole_cols].sum(axis=1).astype(int)
         def highlight_me(row):
             if row.Player == st.session_state["unlocked_player"]: return ['background-color: #2e7d32; color: white'] * len(row)
             return [''] * len(row)
-        display_cols = ['Player'] + hole_cols + ['Total']
-        col_config = {str(i): st.column_config.NumberColumn(width="small") for i in range(1, 10)}
-        col_config["Player"] = st.column_config.TextColumn(width="medium")
-        col_config["Total"] = st.column_config.NumberColumn(width="small")
-        styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
-        st.dataframe(styled_live, use_container_width=True, hide_index=True, column_config=col_config)
+        styled_live = df_live[['Player'] + hole_cols + ['Total']].sort_values("Total").style.apply(highlight_me, axis=1)
+        st.dataframe(styled_live, use_container_width=True, hide_index=True)
 
-# HISTORY TAB
-with tabs[3]:
+with tabs[3]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         hist = df_main[df_main['Week'] > 0].copy()
@@ -273,8 +245,7 @@ with tabs[3]:
         hist_display = hist[[c for c in public_cols if c in hist.columns]]
         st.dataframe(hist_display.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-# INFO TAB
-with tabs[4]:
+with tabs[4]: # Info
     st.subheader("ℹ️ League Information")
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     if info_choice == "Weekly Schedule":
@@ -282,34 +253,46 @@ with tabs[4]:
         st.table(pd.DataFrame(schedule_data))
     else: st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Baseline:** Par 36.")
 
-# REGISTRATION TAB
-with tabs[5]:
+with tabs[5]: # SECURE PLAYER REGISTRATION
     st.header("👤 Player Registration")
-    with st.form("reg"):
-        n_n, n_p, n_h = st.text_input("Name"), st.text_input("4-Digit PIN", max_chars=4), st.number_input("Starting Handicap", 0.0, 36.0, 10.0)
-        if st.form_submit_button("Register"):
-            if n_n and len(n_p) == 4:
-                new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
-                conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
-                st.cache_data.clear()
-                st.success(f"Registered {n_n}!")
-                st.rerun()
+    
+    # Security Check Logic
+    if not st.session_state["reg_access"]:
+        st.info("🔐 This area is restricted to league members.")
+        with st.form("reg_gatekeeper"):
+            access_code = st.text_input("Enter League Registration Key", type="password")
+            if st.form_submit_button("Verify Code"):
+                if access_code == REGISTRATION_KEY:
+                    st.session_state["reg_access"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Key. Please contact the League Admin.")
+    else:
+        st.success("✅ Identity Verified. You may now register.")
+        with st.form("reg"):
+            n_n = st.text_input("Full Name")
+            n_p = st.text_input("Create 4-Digit PIN", max_chars=4, help="You will use this to unlock your scorecard.")
+            n_h = st.number_input("Starting Handicap (0-36)", 0.0, 36.0, 10.0)
+            if st.form_submit_button("Register Player"):
+                if n_n and len(n_p) == 4:
+                    new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
+                    conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
+                    st.cache_data.clear()
+                    st.success(f"Welcome to the league, {n_n}! You can now use the Scorecard tab.")
+                    st.session_state["reg_access"] = False # Reset access for next use
+                else:
+                    st.error("Please provide a name and a 4-digit PIN.")
+        
+        if st.button("Lock Registration Form"):
+            st.session_state["reg_access"] = False
+            st.rerun()
 
-# ADMIN TAB
-with tabs[6]:
+with tabs[6]: # Admin
     st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
         c1, c2 = st.columns(2)
-        if c1.button("Refresh Cache"):
-            st.cache_data.clear()
-            st.rerun()
+        if c1.button("Refresh Cache"): st.cache_data.clear(); st.rerun()
         if c2.button("🚨 RESET LIVE BOARD"):
-            reset_df = pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
-            conn.update(worksheet="LiveScores", data=reset_df)
-            st.cache_data.clear()
-            st.warning("Live Board Cleared!")
-            st.rerun()
-
-
-
+            conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
+            st.cache_data.clear(); st.warning("Live Board Cleared!"); st.rerun()
