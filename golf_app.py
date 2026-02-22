@@ -6,17 +6,16 @@ import time
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
+# Initialize session states
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
-# Session state for 4-hour PIN persistence
 if "unlocked_player" not in st.session_state:
     st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state:
     st.session_state["login_timestamp"] = 0
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
-SESSION_TIMEOUT = 4 * 60 * 60  # 4 Hours in seconds
+SESSION_TIMEOUT = 4 * 60 * 60  # 4 Hours
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 FEDEX_POINTS = {
@@ -91,41 +90,49 @@ with tab1:
     if not EXISTING_PLAYERS:
         st.warning("No players registered yet.")
     else:
-        c1, c2 = st.columns(2)
-        player_select = c1.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
-        week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
+        # Player selection acts as the master trigger
+        player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
         
+        # Check session validity
         current_time = time.time()
-        is_verified = False
+        session_valid = (
+            st.session_state["unlocked_player"] == player_select and 
+            (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT
+        )
         
-        # Session Persistence Logic
-        time_elapsed = current_time - st.session_state["login_timestamp"]
-        if st.session_state["unlocked_player"] == player_select and time_elapsed < SESSION_TIMEOUT:
-            is_verified = True
-        elif st.session_state["authenticated"]:
-            is_verified = True
+        # Override for Admin
+        if st.session_state["authenticated"]:
+            session_valid = True
 
-        if not is_verified:
-            user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key="p_in")
-            if user_pin_input and not df_main.empty:
+        if not session_valid:
+            # LOCKED STATE
+            st.info(f"🔒 {player_select} is locked.")
+            user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key=f"pin_{player_select}")
+            
+            if user_pin_input:
                 player_info = df_main[df_main['Player'] == player_select]
                 if not player_info.empty:
                     stored_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                     if user_pin_input.strip() == stored_pin:
                         st.session_state["unlocked_player"] = player_select
                         st.session_state["login_timestamp"] = current_time
+                        st.success("Correct! Unlocking...")
+                        time.sleep(0.5) # Brief pause for user feedback
                         st.rerun()
                     else:
                         st.error("❌ Incorrect PIN.")
-
-        if is_verified:
-            # Verified Header & Logout Button
-            v1, v2 = st.columns([4, 1])
-            v1.success(f"✅ **{player_select} Unlocked**")
-            if v2.button("Logout 🔓"):
+        else:
+            # UNLOCKED STATE
+            col_head1, col_head2 = st.columns([4, 1])
+            col_head1.success(f"✅ **{player_select} Session Active**")
+            
+            # LOGOUT BUTTON - Specifically clears state and forces a hard rerun
+            if col_head2.button("Logout 🔓", use_container_width=True):
                 st.session_state["unlocked_player"] = None
                 st.session_state["login_timestamp"] = 0
                 st.rerun()
+
+            week_select = st.selectbox("Select Week", range(1, 13), key="w_sel")
             
             p_data = df_main[df_main['Player'] == player_select]
             st.write(f"### 📊 Season Stats Summary")
@@ -141,16 +148,14 @@ with tab1:
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
                 
                 col1, col2, col3 = st.columns(3)
-                s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_{player_select}_{week_select}")
-                s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_{player_select}_{week_select}")
-                s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_{player_select}_{week_select}")
+                s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_input_{player_select}_{week_select}")
+                s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_input_{player_select}_{week_select}")
+                s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_input_{player_select}_{week_select}")
                 
                 if st.form_submit_button("Submit Score"):
                     player_info = df_main[df_main['Player'] == player_select]
                     final_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                     save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, final_pin)
-        else:
-            st.info("🔒 Enter your 4-digit PIN to access your scorecard.")
 
 # --- TAB 2: STANDINGS ---
 with tab2:
@@ -166,14 +171,13 @@ with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         f1, f2 = st.columns(2)
-        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS)
-        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)))
+        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="hist_p")
+        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="hist_w")
         
         history_df = df_main[df_main['Week'] > 0].copy()
         if p_filter != "All": history_df = history_df[history_df['Player'] == p_filter]
         if w_filter != "All": history_df = history_df[history_df['Week'] == int(w_filter)]
 
-        # Move Counts and DNF to the very end
         cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
         cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c not in ['PIN', 'GGG_pts']]
         history_df = history_df[cols_at_start + ['GGG_pts'] + cols_at_end]
