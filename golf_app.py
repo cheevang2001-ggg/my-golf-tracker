@@ -42,6 +42,25 @@ def load_data():
     except:
         return pd.DataFrame()
 
+def calculate_rolling_handicap(player_df):
+    # Filter for actual rounds (Week > 0 and not DNF)
+    rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
+    
+    # If fewer than 4 rounds, use the average of what's available or the starting handicap
+    if len(rounds) == 0:
+        starting_hcp = player_df[player_df['Week'] == 0]['Handicap'].values
+        return int(starting_hcp[0]) if len(starting_hcp) > 0 else 10
+    
+    last_4 = rounds.head(4)['Total_Score'].tolist()
+    
+    if len(last_4) >= 4:
+        last_4.sort()
+        best_3 = last_4[:3] # Drop the highest (last in sorted list)
+        return round(sum(best_3) / 3 - 36, 1) # Relative to Par 36
+    else:
+        # If they haven't played 4 rounds yet, average what they have relative to par
+        return round(sum(last_4) / len(last_4) - 36, 1)
+
 def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     existing_data = load_data()
@@ -138,20 +157,29 @@ with tabs[0]: # Scorecard
                 st.session_state["session_id"] += 1
                 st.rerun()
 
-            # --- NEW: TOTAL STATS DISPLAY ---
             p_data = df_main[df_main['Player'] == player_select]
-            st.markdown(f"### 📊 {player_select}'s Season Totals")
-            m1, m2, m3 = st.columns(3)
+            valid_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)]
+            
+            st.markdown(f"### 📊 {player_select}'s Season Dashboard")
+            m1, m2, m3, m4 = st.columns(4)
             m1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
             m2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
             m3.metric("Total Eagles", int(p_data['Eagle_Count'].sum()))
+            
+            avg_net = round(valid_rounds['Net_Score'].mean(), 1) if not valid_rounds.empty else 0
+            m4.metric("Avg Net Score", avg_net)
+            
+            # Calculate rolling handicap for the current week
+            current_hcp = calculate_rolling_handicap(p_data)
+            st.info(f"💡 Based on your last 4 rounds, your calculated Handicap for this week is: **{current_hcp}**")
             st.divider()
 
             week_select = st.selectbox("Select Week to Enter Score", range(1, 13))
             
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap", 0, 40, 10)
+                # Handicap input pre-filled with the rolling calculation
+                hcp_in = st.number_input("Handicap", 0.0, 40.0, float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
                 s_p = col1.number_input("Pars this Week", 0, 18, 0)
                 s_b = col2.number_input("Birdies this Week", 0, 18, 0)
@@ -199,7 +227,7 @@ with tabs[4]: # Registration
     with st.form("reg"):
         n_n = st.text_input("Name")
         n_p = st.text_input("4-Digit PIN", max_chars=4)
-        n_h = st.number_input("Handicap", 0, 36, 10)
+        n_h = st.number_input("Handicap", 0.0, 36.0, 10.0)
         if st.form_submit_button("Register"):
             if n_n and len(n_p) == 4:
                 new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
