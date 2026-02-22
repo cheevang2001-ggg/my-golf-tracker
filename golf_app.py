@@ -9,10 +9,64 @@ if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
+conn = st.connection("gsheets", type=GSheetsConnection)
 
+# --- STEP 2: FUNCTIONS ---
+@st.cache_data(ttl=600)
+def load_data():
+    return conn.read()
+
+def calculate_rolling_handicap(player_df, current_week):
+    # Filter for rounds where a score was actually entered [cite: 3]
+    valid_rounds = player_df[(player_df['Total_Score'] > 0) & (player_df['Week'] < current_week)]
+    valid_rounds = valid_rounds.sort_values('Week', ascending=False)
+    if len(valid_rounds) < 4:
+        return None 
+    last_4 = valid_rounds.head(4)['Total_Score'].tolist()
+    last_4.remove(max(last_4))
+    avg_gross = sum(last_4) / 3
+    return int(round(max(0, avg_gross - 36)))
+
+def get_handicaps(current_week, player_list):
+    df = load_data() 
+    calculated_hcps = {}
+    for player in player_list:
+        if not df.empty:
+            player_data = df[df['Player'] == player]
+            rolling = calculate_rolling_handicap(player_data, current_week)
+            # Default to 10 if no history found [cite: 3]
+            calculated_hcps[player] = rolling if rolling is not None else 10
+        else:
+            calculated_hcps[player] = 10
+    return calculated_hcps
+
+def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
+    st.cache_data.clear()
+    existing_data = conn.read(ttl=0)
+    
+    is_dnf = (score_val == "DNF")
+    final_gross = 0 if is_dnf else int(score_val)
+    final_net = 0 if is_dnf else (final_gross - hcp_val)
+    
+    new_entry = pd.DataFrame([{
+        'Week': week, 'Player': player,
+        'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles,
+        'Total_Score': final_gross, 'Handicap': hcp_val, 
+        'Net_Score': final_net, 'DNF': is_dnf
+    }])
+    
+    if not existing_data.empty:
+        updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
+        final_df = pd.concat([updated_df, new_entry], ignore_index=True)
+    else:
+        final_df = new_entry
+    conn.update(data=final_df)
+    st.cache_data.clear()
+
+# --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
 
-# Dynamically get player names from the 'Player' column in your Sheet
+# Dynamically pull players from the Google Sheet [cite: 8]
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
 else:
@@ -23,57 +77,6 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-@st.cache_data(ttl=600)
-def load_data():
-    return conn.read()
-
-def calculate_rolling_handicap(player_df, current_week):
-    valid_rounds = player_df[(player_df['Total_Score'] > 0) & (player_df['Week'] < current_week)]
-    valid_rounds = valid_rounds.sort_values('Week', ascending=False)
-    if len(valid_rounds) < 4:
-        return None 
-    last_4 = valid_rounds.head(4)['Total_Score'].tolist()
-    last_4.remove(max(last_4))
-    avg_gross = sum(last_4) / 3
-    return int(round(max(0, avg_gross - 36)))
-
-def get_handicaps(current_week):
-    df = load_data() 
-    calculated_hcps = {}
-    for player, hcp in DEFAULT_HANDICAPS.items():
-        if not df.empty:
-            player_data = df[df['Player'] == player]
-            rolling = calculate_rolling_handicap(player_data, current_week)
-            calculated_hcps[player] = rolling if rolling is not None else hcp
-        else:
-            calculated_hcps[player] = hcp
-    return calculated_hcps
-
-def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
-    st.cache_data.clear()
-    existing_data = conn.read(ttl=0)
-    
-    is_dnf = (score_val == "DNF")
-    final_gross = 0 if is_dnf else int(score_val)
-    final_net = 0 if is_dnf else (final_gross - hcp_val)
-    new_entry = pd.DataFrame([{
-        'Week': week, 'Player': player,
-        'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles,
-        'Total_Score': final_gross, 'Handicap': hcp_val, 
-        'Net_Score': final_net, 'DNF': is_dnf
-    }])
-    if not existing_data.empty:
-        updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
-        final_df = pd.concat([updated_df, new_entry], ignore_index=True)
-    else:
-        final_df = new_entry
-    conn.update(data=final_df)
-    st.cache_data.clear()
-
-# --- DATA PROCESSING ---
-df_main = load_data()
 if not df_main.empty:
     df_main = df_main.fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
@@ -84,360 +87,138 @@ if not df_main.empty:
             ranks = df_main.loc[mask, 'Net_Score'].rank(ascending=True, method='min')
             df_main.loc[mask, 'animal_pts'] = ranks.map(FEDEX_POINTS).fillna(0)
 
-# --- UI ---
+# --- STEP 4: UI HEADER ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
 st.markdown("<h1 style='margin-top: -10px;'>GGGolf 2026</h1><p style='margin-top: -20px; color: gray;'>Summer League 2026</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
-
-# --- UI: HEADER SECTION (Keep your logo and title here) ---
 st.divider()
 
-# --- DEFINE TABS ONCE ---
+# --- STEP 5: TABS DEFINITION ---
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "📝 Scorecard", 
-    "🏆 Standings", 
-    "📅 History", 
-    "📜 Info", 
-    "⚖️ Rules",   # New Tab
-    "⚙️ Admin", 
-    "🏆 Bracket"
-    "👤 Player Registration"
+    "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", 
+    "⚖️ Rules", "⚙️ Admin", "🏆 Bracket", "👤 Player Registration"
 ])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
-    c1, c2 = st.columns(2)
-    player_select = c1.selectbox("Select Player", EXISTING_PLAYERS)
-    week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
-    
-    # NEW: PIN INPUT
-    user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key="pin_input")
+    if not EXISTING_PLAYERS:
+        st.warning("No players registered yet. Please go to the Player Registration tab.")
+    else:
+        c1, c2 = st.columns(2)
+        player_select = c1.selectbox("Select Player", EXISTING_PLAYERS)
+        week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
+        
+        user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key="pin_input")
 
-    # VERIFICATION LOGIC
-    is_verified = False
-    if st.session_state["authenticated"]: # Admin Master Password
-        is_verified = True
-    elif user_pin_input and not df_main.empty:
-        try:
-            # Filter for the player in the main sheet
+        is_verified = False
+        if st.session_state["authenticated"]:
+            is_verified = True
+        elif user_pin_input and not df_main.empty:
+            # Locate PIN from the first time the player appears in the sheet [cite: 9, 10]
             player_info = df_main[df_main['Player'] == player_select]
             if not player_info.empty:
-                # Convert stored PIN to string, remove '.0' if it exists, and strip spaces
-                stored_pin = str(player_info.iloc[0]['PIN']).split('.')[0].strip()
+                stored_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                 if user_pin_input.strip() == stored_pin:
                     is_verified = True
-        except Exception:
-            pass
 
-    if is_verified:
-        # --- REST OF YOUR SCORECARD FORM STARTS HERE ---
-        st.success(f"✅ Access Granted for {player_select}")
-        
-        current_hcps_map = get_handicaps(week_select)
-        suggested_hcp = current_hcps_map.get(player_select)
-        
-        # ... (Include your existing metrics and selectboxes here) ...
-        
-        if st.button("Submit Score", use_container_width=True, key="sub_btn"):
-            save_data(week_select, player_select, sel_pars, sel_birdies, sel_eagles, score_select, hcp_in)
-            st.success(f"Scores updated for {player_select}!")
-            st.rerun()
-    else:
-        st.warning("Locked: Please enter your 4-digit PIN to enable editing.")
-        st.button("Submit Score", use_container_width=True, disabled=True, key="sub_dis")
-        
+        if is_verified:
+            st.success(f"✅ Access Granted for {player_select}")
+            with st.form("score_entry"):
+                current_hcps_map = get_handicaps(week_select, EXISTING_PLAYERS)
+                hcp_in = st.number_input("Handicap", value=current_hcps_map.get(player_select, 10))
+                score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 100)])
+                
+                col1, col2, col3 = st.columns(3)
+                sel_pars = col1.number_input("Pars", 0, 18, 0)
+                sel_birdies = col2.number_input("Birdies", 0, 18, 0)
+                sel_eagles = col3.number_input("Eagles", 0, 18, 0)
+                
+                if st.form_submit_button("Submit Score"):
+                    save_data(week_select, player_select, sel_pars, sel_birdies, sel_eagles, score_select, hcp_in)
+                    st.success("Score Saved!")
+                    st.rerun()
+        else:
+            st.warning("Locked: Please enter your 4-digit PIN.")
+
 # --- TAB 2: STANDINGS ---
 with tab2:
     if not df_main.empty:
-        st.markdown("<h2 style='text-align: center;'>League Standings</h2>", unsafe_allow_html=True)
-        valid_scores = df_main[df_main['DNF'] == False]
         standings = df_main.groupby('Player').agg({'animal_pts': 'sum'}).rename(columns={'animal_pts': 'Animal Pts'}).reset_index()
-        avg_nets = valid_scores.groupby('Player').agg({'Net_Score': 'mean'}).rename(columns={'Net_Score': 'Avg Net'}).reset_index()
-        standings = standings.merge(avg_nets, on='Player', how='left').fillna(0)
-        final_standings = standings.round(1).sort_values(by=['Animal Pts', 'Avg Net'], ascending=[False, True])
-
-        dynamic_height = (len(final_standings) + 1) * 35 + 3
-
-        left_spacer, center_content, right_spacer = st.columns([1, 4, 1])
-        with center_content:
-            st.dataframe(
-                final_standings, 
-                use_container_width=True, 
-                hide_index=True,
-                height=dynamic_height
-            )
+        st.dataframe(standings.sort_values("Animal Pts", ascending=False), use_container_width=True, hide_index=True)
     else:
         st.info("No scores recorded yet.")
 
-# --- TAB 3: WEEKLY HISTORY ---
+# --- TAB 3: HISTORY ---
 with tab3:
-    st.markdown("<h2 style='text-align: center;'>📅 Weekly History</h2>", unsafe_allow_html=True)
     if not df_main.empty:
-        # 1. Filters
-        f1, f2 = st.columns([1, 2])
-        filter_player = f1.multiselect("Filter Player", options=sorted(DEFAULT_HANDICAPS.keys()), key="hist_p")
-        filter_week = f2.multiselect("Filter Week", options=sorted(df_main['Week'].unique(), reverse=True), key="hist_w")
-        
-        # 2. Filtering Logic
-        history_df = df_main.copy()
-        if filter_player:
-            history_df = history_df[history_df['Player'].isin(filter_player)]
-        if filter_week:
-            history_df = history_df[history_df['Week'].isin(filter_week)]
-            
-        history_df = history_df.sort_values(['Week', 'Player'], ascending=[False, True])
-        history_df['Status'] = history_df['DNF'].map({True: "DNF", False: "Active"})
-        
-        # RENAME the calculated column
-        history_df = history_df.rename(columns={'animal_pts': 'Animal Points'})
-        
-        # 3. Define columns in the specific order requested
-        display_cols = [
-            'Week', 
-            'Player', 
-            'Status', 
-            'Total_Score', 
-            'Handicap', 
-            'Net_Score', 
-            'Animal Points',  # Moved after Net_Score
-            'Pars_Count', 
-            'Birdies_Count', 
-            'Eagle_Count'
-        ]
-        final_history = history_df[display_cols]
+        st.dataframe(df_main.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-        # 4. Calculate Dynamic Height
-        dynamic_height_hist = max(200, (len(final_history) + 1) * 35 + 3)
-
-        # 5. Display centered
-        l_sp, center_hist, r_sp = st.columns([0.1, 9.8, 0.1])
-        with center_hist:
-            st.dataframe(
-                final_history,
-                use_container_width=True,
-                hide_index=True,
-                height=dynamic_height_hist
-            )
-    else:
-        st.info("No history found. Once scores are submitted, they will appear here.")
-
-# --- TAB 4: LEAGUE INFO & PRIZES ---
+# --- TAB 4: INFO ---
 with tab4:
-    # Sub-navigation within the Info Tab
-    info_page = st.radio(
-        "Select Information Page:",
-        ["General Info", "Prizes"],
-        horizontal=True,
-        key="info_sub_nav"
-    )
-    
-    st.divider()
-
-    if info_page == "General Info":
-        st.header("📜 League Information")
-        st.markdown("""
-        **Tee Time:**About 2:00pm
-        * **Partners:** Randomized. Preferably choose someone you have not played with much. ***Unless players agree to play versus each other.***
-        * **Makeups:** There are no makeup, you will receive a DNF for the round.
-        * **Handicap system:** Your average of the best 3 rounds will be used as your handicap. 
-        * **Handicap Example:** Week 1;40 Week2;45 Week3;50 Week4;41 - Week3 will be removed and average of week1,2,4 will be used for handicap for a par 36. 
-        * **Handicap Example Continue:**Week5;60 - Weeks 2,3,4 will be used to average your handicap.
-        
-        * **Missed Week:** Return to buy a bucket at start of round.
-        * **No Animal Bets:** Bet your Bets, Drink your bets.
-        * **No Animal Bay Etiquette:** Return ball to hitting area for next player (1/4 drink penalty).
-        * **First Putt/Chips:** In-hole results in drinks for the bay (1/4 or 1/2).
-        * **Mulligans:** Owe 1 a bucket right away.
-        """)
-
-    elif info_page == "Prizes":
-        st.header("Season Prize - TBD")
-        st.write("Total Pot: TBD (Players x fee)")
-        
-        # 1. Cash Payout Table
-        st.subheader("Cash Payouts")
-        payout_data = {
-            "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash"],
-            "Amount": ["TBD", "TBD", "TBD", "TBD", "TBD"],
-            "Note": ["+ Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Cash Prize Pool"]
-        }
-        st.table(pd.DataFrame(payout_data))
-
-        # 2. Expenses Table
-        st.subheader("League Expenses")
-        expense_data = {
-            "Item": ["Championship Trophy - TBD", "TBD", "Remaining Balanc - TBD"],
-            "Cost": ["$80.00", "$100.00", "$100.00"],
-            "Total": ["", "", "$280.00"]
-        }
-        st.table(pd.DataFrame(expense_data))
-
-        # Final Summary
-        st.divider()
-        st.markdown(f"""
-        **Total Accounting:**
-        * Total Cash Payouts: **$500**
-        * Total League Expenses: **$280**
-        * **Grand Total: $780**
-        """)
-        st.info("$100 remaining will be used for in season tournament.")
+    st.header("📜 League Information")
+    st.markdown("""
+    **General Info:**
+    * **Tee Time:** About 2:00pm [cite: 22]
+    * **Makeups:** There are no makeups; a DNF will be issued[cite: 22].
+    * **Handicap:** Average of best 3 rounds used[cite: 22].
+    """)
 
 # --- TAB 5: RULES ---
 with tab5:
     st.header("⚖️ League Rules & Etiquette")
-    st.divider()
-    
     col_r1, col_r2 = st.columns(2)
-    
     with col_r1:
-        st.subheader("Gameplay Rules")
-        st.markdown("""
-        * **Format:** Net stroke play based on calculated rolling handicap.
-        * **Mulligans:** Strictly prohibited. Any mulligan taken results in an immediate 1-bucket penalty.
-        * **Gimmies:** Must be agreed upon by the group (standard is 'inside the leather').
-        * **Out of Bounds:** Follow standard course/simulator local rules.
-        """)
-
+        st.subheader("Gameplay")
+        st.write("- Net stroke play format[cite: 32].")
+        st.write("- Mulligans: 1-bucket penalty[cite: 33].")
     with col_r2:
-        st.subheader("Animal & Bay Etiquette")
-        st.markdown("""
-        * **Bay Cleanliness:** Always return the ball to the hitting area for the next player. 
-        * **Penalty:** Failure to reset the hitting area results in a 1/4 drink penalty.
-        * **Pace of Play:** Be ready to hit when it is your turn to keep the league on schedule.
-        """)
-    
-    st.info("💡 For any disputes, the League Commissioner has the final say.")
+        st.subheader("Etiquette")
+        st.write("- Reset hitting area after turn[cite: 36].")
 
 # --- TAB 6: ADMIN ---
-with tab5:
-    st.subheader("Admin Access")
-    
-    def check_password():
-        if st.session_state["admin_pwd_input"] == ADMIN_PASSWORD:
-            st.session_state["authenticated"] = True
-            st.success("Admin Access Granted!")
-        else:
-            st.session_state["authenticated"] = False
-            if st.session_state["admin_pwd_input"] != "":
-                st.error("Incorrect Password")
-
-    st.text_input(
-        "Enter Admin Password", 
-        type="password", 
-        key="admin_pwd_input", 
-        on_change=check_password
-    )
-
-    if st.session_state["authenticated"]:
-        st.write("✅ **You are currently logged in as Admin.**")
-        if st.button("🔄 Sync/Refresh Data", key="syn_admin"):
+with tab6:
+    st.subheader("⚙️ Admin Controls")
+    admin_input = st.text_input("Enter Admin Password", type="password", key="admin_pwd")
+    if admin_input == ADMIN_PASSWORD:
+        st.session_state["authenticated"] = True
+        st.success("Admin Logged In")
+        if st.button("Refresh Data"):
             st.cache_data.clear()
             st.rerun()
-        if st.button("🚪 Logout"):
-            st.session_state["authenticated"] = False
-            st.rerun()
     else:
-        st.info("Enter the password and press Enter to enable editing.")
+        st.session_state["authenticated"] = False
 
-# --- TAB 7: TOURNAMENT BRACKET ---
-with tab6:
-    st.header("In Season Tournament - STAY TUNE TBD")
-    st.info("Tournament TBD")
-    
-    # Define rounds and their layout using columns
-    c1, c2, c3, c4, c5 = st.columns(5)
-    
+# --- TAB 7: BRACKET ---
+with tab7:
+    st.header("🏆 Tournament Bracket")
+    st.info("Re-seeding Bracket - TBD based on final regular season standings.")
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.subheader("Week 9")
-        st.caption("Round 1")
-        st.write("Match 1: Seed 4 vs Seed 13")
-        st.write("Match 2: Seed 5 vs Seed 12")
-        st.write("Match 3: Seed 6 vs Seed 11")
-        st.write("Match 4: Seed 7 vs Seed 10")
-        st.write("Match 5: Seed 8 vs Seed 9")
-        
-    with c2:
-        st.subheader("Week 10")
-        st.caption("Round 2")
-        st.write("Seed 1 vs Highest Seed")
-        st.write("Seed 2 vs Second Highest Seed")
-        st.write("Seed 3 vs Third Highest Seed")
-        st.write("Winner M1 vs Winner M5")
+        st.write("Matchups TBD")
 
-    with c3:
-        st.subheader("Week 11")
-        st.caption("Semi-Finals")
-        st.write("Matchup A")
-        st.write("Matchup B")
-        
-    with c4:
-        st.subheader("Week 12")
-        st.caption("FINALS")
-        st.markdown("**🏆 Championship Match**")
-        
-# --- TAB 8: TOURNAMENT BRACKET ---
-with tab8: # Or whichever tab you want the registration in
+# --- TAB 8: REGISTRATION ---
+with tab8:
     st.header("👤 Player Registration")
-    st.info("New to the league? Register your name and a private 4-digit PIN here.")
-
-    with st.form("registration_form"):
-        new_name = st.text_input("Full Name (First and Last)")
-        new_pin = st.text_input("Create 4-Digit PIN", type="password", max_chars=4)
-        starting_hcp = st.number_input("Starting Handicap", min_value=0, max_value=36, value=10)
+    st.info("Register below to join the Summer League.")
+    with st.form("reg_form"):
+        new_name = st.text_input("Full Name")
+        new_pin = st.text_input("Create 4-Digit PIN (used for scorecard)", max_chars=4, type="password")
+        starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
         
-        reg_submitted = st.form_submit_button("Register for Summer League")
-        
-        if reg_submitted:
+        if st.form_submit_button("Register Player"):
             if new_name and len(new_pin) == 4:
-                if new_name in EXISTING_PLAYERS:
-                    st.error("This name is already registered!")
-                else:
-                    # Create a "Week 0" entry to initialize the player
-                    new_player_data = pd.DataFrame([{
-                        "Week": 0,
-                        "Player": new_name,
-                        "PIN": new_pin,
-                        "Handicap": starting_hcp,
-                        "Gross Score": 0,
-                        "Pars": 0, "Birdies": 0, "Eagles": 0 # Initialize metrics
-                    }])
-                    
-                    # Append to Google Sheets
-                    updated_df = pd.concat([df_main, new_player_data], ignore_index=True)
-                    conn.update(data=updated_df)
-                    st.cache_data.clear() # Force app to see new player immediately
-                    st.success(f"Welcome to the league, {new_name}! You can now log scores in the Scorecard tab.")
-                    st.rerun()
+                # Format to match Scorecard columns: Total_Score, Pars_Count, etc. [cite: 45, 47]
+                new_reg = pd.DataFrame([{
+                    "Week": 0, "Player": new_name, "PIN": new_pin, 
+                    "Handicap": starting_hcp, "Total_Score": 0, "DNF": True,
+                    "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Net_Score": 0
+                }])
+                updated_df = pd.concat([df_main, new_reg], ignore_index=True)
+                conn.update(data=updated_df)
+                st.cache_data.clear()
+                st.success(f"Welcome {new_name}! You are now registered.")
+                st.rerun()
             else:
-                st.warning("Please provide both a name and a 4-digit PIN.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                st.error("Please provide a name and a 4-digit PIN.")
