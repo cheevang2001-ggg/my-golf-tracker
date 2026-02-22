@@ -24,33 +24,37 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: FUNCTIONS (Must be defined BEFORE Step 3) ---
+# --- UPDATED STEP 2: FUNCTIONS (Quota Optimized) ---
 
 def load_data():
     try:
-        # ttl=0 ensures we always get the freshest data from the main sheet
-        data = conn.read(ttl=0)
+        # Increased ttl to 5 seconds to prevent hitting Google's 60-req/min limit
+        # This means scores update every 5 seconds instead of every 0 seconds
+        data = conn.read(ttl=5) 
         df = data.dropna(how='all')
         rename_map = {'Gross Score': 'Total_Score', 'Pars': 'Pars_Count', 'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count'}
         df = df.rename(columns=rename_map)
         return df
     except Exception as e:
-        st.error(f"Error loading main data: {e}")
+        if "429" in str(e):
+            st.error("🐢 Google is cooling down. Please wait 10 seconds and refresh.")
+        else:
+            st.error(f"Error loading main data: {e}")
         return pd.DataFrame()
 
 def load_live_data():
     try:
-        # Explicitly checking for the LiveScores worksheet
-        df = conn.read(worksheet="LiveScores", ttl=0)
+        # Cache live scores for 3 seconds - fast enough for golf, slow enough for Google
+        df = conn.read(worksheet="LiveScores", ttl=3)
         return df.dropna(how='all')
     except Exception:
-        # Returns empty structure if sheet is missing or empty
         return pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
 
 def update_live_hole(player, hole_col, strokes):
     try:
+        # When writing data, we bypass cache to ensure the update goes through
         df_live = load_live_data()
-        # Ensure numeric columns
+        
         for i in range(1, 10):
             col = f"Hole {i}"
             if col not in df_live.columns: df_live[col] = 0
@@ -65,37 +69,13 @@ def update_live_hole(player, hole_col, strokes):
             df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
         
         conn.update(worksheet="LiveScores", data=df_live)
+        # Clear cache immediately after an update so the player sees their change
         st.cache_data.clear()
     except Exception as e:
-        st.error(f"Failed to update Live Score: {e}")
-
-def calculate_rolling_handicap(player_df):
-    rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
-    starting_hcp_row = player_df[player_df['Week'] == 0]
-    starting_hcp = float(starting_hcp_row['Handicap'].values[0]) if not starting_hcp_row.empty else 10.0
-    if len(rounds) == 0: return starting_hcp
-    last_4 = rounds.head(4)['Total_Score'].tolist()
-    if len(last_4) >= 4:
-        last_4.sort()
-        best_3 = last_4[:3] 
-        return round(sum(best_3) / 3 - 36, 1)
-    else:
-        return round(sum(last_4) / len(last_4) - 36, 1)
-
-def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    st.cache_data.clear()
-    existing_data = load_data()
-    is_dnf = (score_val == "DNF")
-    final_gross = 0 if is_dnf else int(score_val)
-    final_net = 0 if is_dnf else (final_gross - hcp_val)
-    new_entry = pd.DataFrame([{'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 'Net_Score': final_net, 'DNF': is_dnf, 'PIN': pin}])
-    if not existing_data.empty:
-        updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
-        final_df = pd.concat([updated_df, new_entry], ignore_index=True)
-    else: final_df = new_entry
-    conn.update(data=final_df)
-    st.cache_data.clear()
-    st.rerun()
+        if "429" in str(e):
+            st.warning("Whoa! Too many updates. Wait a moment before your next entry.")
+        else:
+            st.error(f"Failed to update Live Score: {e}")
 
 # --- STEP 3: DATA PROCESSING (Now safe to call load_data) ---
 df_main = load_data()
@@ -256,5 +236,6 @@ with tabs[6]: # Admin
             st.cache_data.clear()
             st.warning("Live Scorecard has been wiped for the next round!")
             st.rerun()
+
 
 
