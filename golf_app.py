@@ -26,13 +26,12 @@ FEDEX_POINTS = {
 def load_data():
     """Loads main league data with a 10-second cache safety."""
     try:
-        # ttl=10 protects against Quota 429 errors when many users open the app
         data = conn.read(ttl=10)
         df = data.dropna(how='all')
         rename_map = {'Gross Score': 'Total_Score', 'Pars': 'Pars_Count', 'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count'}
         return df.rename(columns=rename_map)
     except Exception as e:
-        if "429" in str(e): st.warning("🐢 High traffic. Refreshing in 10s...")
+        if "429" in str(e): st.warning("🐢 Google is busy. Retrying in 10s...")
         return pd.DataFrame()
 
 def load_live_data():
@@ -44,18 +43,16 @@ def load_live_data():
         return pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
 
 def update_live_hole(player, hole_col, strokes):
-    """Updates a single hole with a safety lock to prevent data overwrite."""
+    """Updates a single hole with concurrency protection."""
     try:
-        # Step A: Get freshest data (ignore cache for writes)
+        # Bypass cache for the write-back process
         df_live = conn.read(worksheet="LiveScores", ttl=0)
         
-        # Step B: Sanitize
         for i in range(1, 10):
             col = f"Hole {i}"
             if col not in df_live.columns: df_live[col] = 0
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0)
 
-        # Step C: Update or Insert
         if player in df_live['Player'].values:
             df_live.loc[df_live['Player'] == player, hole_col] = strokes
         else:
@@ -64,13 +61,39 @@ def update_live_hole(player, hole_col, strokes):
             new_row[hole_col] = strokes
             df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
         
-        # Step D: Push to Google
         conn.update(worksheet="LiveScores", data=df_live)
-        st.cache_data.clear() # Force immediate local update
-        st.success(f"Score Saved for {hole_col}!")
-        time.sleep(1) # Small pause to let Google API breathe
+        st.cache_data.clear()
+        st.toast(f"Hole {hole_col} updated!")
     except Exception as e:
-        st.error(f"Write conflict: {e}. Please try again in 3 seconds.")
+        st.error(f"Write conflict: {e}")
+
+def calculate_rolling_handicap(player_df):
+    rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
+    starting_hcp_row = player_df[player_df['Week'] == 0]
+    starting_hcp = float(starting_hcp_row['Handicap'].values[0]) if not starting_hcp_row.empty else 10.0
+    if len(rounds) == 0: return starting_hcp
+    last_4 = rounds.head(4)['Total_Score'].tolist()
+    if len(last_4) >= 4:
+        last_4.sort()
+        best_3 = last_4[:3] 
+        return round(sum(best_3) / 3 - 36, 1)
+    else:
+        return round(sum(last_4) / len(last_4) - 36, 1)
+
+def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
+    st.cache_data.clear()
+    existing_data = load_data()
+    is_dnf = (score_val == "DNF")
+    final_gross = 0 if is_dnf else int(score_val)
+    final_net = 0 if is_dnf else (final_gross - hcp_val)
+    new_entry = pd.DataFrame([{'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 'Net_Score': final_net, 'DNF': is_dnf, 'PIN': pin}])
+    if not existing_data.empty:
+        updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
+        final_df = pd.concat([updated_df, new_entry], ignore_index=True)
+    else: final_df = new_entry
+    conn.update(data=final_df)
+    st.cache_data.clear()
+    st.rerun()
 
 # --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
@@ -79,8 +102,7 @@ if not df_main.empty and 'Player' in df_main.columns:
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
-else:
-    EXISTING_PLAYERS = []
+else: EXISTING_PLAYERS = []
 
 # --- STEP 4: UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
@@ -90,21 +112,75 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
+with tabs[0]: # Scorecard Entry
+    if not EXISTING_PLAYERS: st.warning("No players registered.")
+    else:
+        player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
+        current_time = time.time()
+        is_unlocked = (st.session_state["unlocked_player"] == player_select and (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT)
+        if st.session_state["authenticated"]: is_unlocked = True
+
+        if not is_unlocked:
+            st.info(f"🔒 {player_select} is locked.")
+            pin_key = f"pin_{player_select}_{st.session_state['session_id']}"
+            user_pin_input = st.text_input("Enter PIN to Unlock", type="password", key=pin_key)
+            if user_pin_input:
+                p_info = df_main[df_main['Player'] == player_select]
+                if not p_info.empty:
+                    stored_pin = str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip()
+                    if user_pin_input.strip() == stored_pin:
+                        st.session_state["unlocked_player"] = player_select
+                        st.session_state["login_timestamp"] = current_time
+                        st.rerun()
+                    else: st.error("❌ Incorrect PIN.")
+        else:
+            c1, c2 = st.columns([5, 1])
+            c1.success(f"✅ **{player_select} Unlocked**")
+            if c2.button("Logout 🔓"):
+                st.session_state["unlocked_player"], st.session_state["login_timestamp"] = None, 0
+                st.session_state["session_id"] += 1
+                st.rerun()
+            p_data = df_main[df_main['Player'] == player_select]
+            current_hcp = calculate_rolling_handicap(p_data)
+            st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
+            st.divider()
+            week_select = st.selectbox("Select Week", range(1, 15))
+            with st.form("score_entry", clear_on_submit=True):
+                score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
+                hcp_in = st.number_input("Handicap", 0.0, 40.0, float(current_hcp), step=0.1)
+                col1, col2, col3 = st.columns(3)
+                s_p, s_b, s_e = col1.number_input("Pars", 0, 18, 0), col2.number_input("Birdies", 0, 18, 0), col3.number_input("Eagles", 0, 18, 0)
+                if st.form_submit_button("Submit Final Weekly Score"):
+                    p_info = df_main[df_main['Player'] == player_select]
+                    save_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
+
+with tabs[1]: # Standings
+    st.subheader("🏆 League Standings")
+    if not df_main.empty:
+        df_main['GGG_pts'] = 0.0
+        for w in df_main['Week'].unique():
+            if w == 0: continue
+            mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
+            if mask.any():
+                week_scores = df_main.loc[mask, 'Net_Score']
+                ranks = week_scores.rank(ascending=True, method='min')
+                for idx, r_val in ranks.items():
+                    df_main.at[idx, 'GGG_pts'] = float(FEDEX_POINTS.get(int(r_val), 10))
+        
+        standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
+        standings['Current Handicap'] = [calculate_rolling_handicap(df_main[df_main['Player'] == p]) for p in standings['Player']]
+        standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
+        standings.index += 1
+        st.dataframe(standings[['Player', 'GGG_pts', 'Current Handicap']], use_container_width=True)
+
 with tabs[2]: # 🔴 LIVE ROUND
     st.subheader("🔴 Live Round Tracking")
     
-    # --- AUTO REFRESH TOOL ---
     col_ref, col_empty = st.columns([1, 4])
-    auto_refresh = col_ref.checkbox("Auto-Refresh (30s)", value=True)
+    if col_ref.checkbox("Auto-Refresh (30s)", value=True):
+        st.info("🕒 Board is live. Auto-refresh active.")
+        # Native streamlit will rerun when this timer expires
     
-    if auto_refresh:
-        # This will trigger a rerun every 30 seconds
-        st.info("🕒 Board is live. Refreshing every 30 seconds.")
-        time.sleep(0.1) # Smoothness buffer
-        st.empty() 
-        # Note: In a production app, we'd use st_autorefresh, 
-        # but native streamlit will rerun on any interaction.
-
     df_live = load_live_data()
     holes = [f"Hole {i}" for i in range(1, 10)]
     
@@ -113,20 +189,16 @@ with tabs[2]: # 🔴 LIVE ROUND
             c1, c2, c3 = st.columns([2, 1, 1])
             target_hole = c1.selectbox("Select Hole", holes)
             target_strokes = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Update", use_container_width=True):
+            if c3.button("Update Hole", use_container_width=True):
                 update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
                 st.rerun()
-    else:
-        st.warning("⚠️ Unlock your profile in the **Scorecard** tab to post scores.")
+    else: st.warning("⚠️ Unlock your profile in **Scorecard** to post.")
 
     st.divider()
-    
-    # SCOREBOARD DISPLAY
     if not df_live.empty:
         df_live[holes] = df_live[holes].apply(pd.to_numeric, errors='coerce').fillna(0)
         df_live['Total'] = df_live[holes].sum(axis=1)
         
-        # Highlight current player's row
         def highlight_me(row):
             if row.Player == st.session_state["unlocked_player"]:
                 return ['background-color: #2e7d32; color: white'] * len(row)
@@ -134,17 +206,11 @@ with tabs[2]: # 🔴 LIVE ROUND
 
         styled_live = df_live[['Player'] + holes + ['Total']].sort_values("Total").style.apply(highlight_me, axis=1)
         st.dataframe(styled_live, use_container_width=True, hide_index=True)
-    else:
-        st.info("The board is clear. Ready for tee-off!")
 
 with tabs[3]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        f1, f2 = st.columns(2)
-        p_f, w_f = f1.selectbox("Filter Player", ["All"] + EXISTING_PLAYERS, key="hp"), f2.selectbox("Filter Week", ["All"] + list(range(1, 15)), key="hw")
         hist = df_main[df_main['Week'] > 0].copy()
-        if p_f != "All": hist = hist[hist['Player'] == p_f]
-        if w_f != "All": hist = hist[hist['Week'] == int(w_f)]
         st.dataframe(hist.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
 with tabs[4]: # League Info
@@ -157,9 +223,7 @@ with tabs[4]: # League Info
             "Event / Notes": ["Start", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "End", "GGG Picnic"]
         }
         st.table(pd.DataFrame(schedule_data).style.apply(lambda r: ['background-color: #90EE90; color: #808080; font-weight: bold' if any(ev in str(r["Event / Notes"]) for ev in ["GGG Event", "GGG Picnic"]) else '' for _ in r], axis=1))
-    else:
-        st.markdown("### ⚖️ League Rules")
-        st.info("**Standard Play:** All rounds are played to a Par 36 baseline.")
+    else: st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Base:** Par 36.")
 
 with tabs[5]: # Registration
     st.header("👤 Player Registration")
@@ -177,21 +241,12 @@ with tabs[6]: # Admin
     st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        st.success("Admin Authenticated")
-        
-        col_ref, col_res = st.columns(2)
-        if col_ref.button("Refresh All App Data"):
+        c1, c2 = st.columns(2)
+        if c1.button("Refresh Cache"):
             st.cache_data.clear()
             st.rerun()
-            
-        if col_res.button("🚨 RESET LIVE SCORES"):
-            # Create a blank dataframe with headers only
+        if c2.button("🚨 RESET LIVE BOARD"):
             reset_df = pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
             conn.update(worksheet="LiveScores", data=reset_df)
             st.cache_data.clear()
-            st.warning("Live Scorecard has been wiped for the next round!")
-            st.rerun()
-
-
-
-
+            st.warning("Board Reset!")
