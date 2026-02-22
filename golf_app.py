@@ -23,7 +23,6 @@ FEDEX_POINTS = {
 # --- STEP 2: CRASH-PROOF FUNCTIONS ---
 
 def load_data():
-    """Loads main league data with 10s cache safety."""
     try:
         data = conn.read(ttl=10)
         df = data.dropna(how='all')
@@ -34,20 +33,31 @@ def load_data():
         return pd.DataFrame()
 
 def load_live_data():
-    """Loads live scores with 5s cache safety."""
+    """Loads live scores and ensures columns 1-9 ALWAYS exist to prevent KeyErrors."""
+    hole_cols = [str(i) for i in range(1, 10)]
     try:
         df = conn.read(worksheet="LiveScores", ttl=5)
-        return df.dropna(how='all')
+        if df.empty:
+            return pd.DataFrame(columns=['Player'] + hole_cols)
+        
+        # Convert all column names to strings to avoid TypeErrors
+        df.columns = [str(c) for c in df.columns]
+        
+        # Ensure all hole columns exist; if missing from Sheet, fill with 0
+        for col in hole_cols:
+            if col not in df.columns:
+                df[col] = 0
+        return df
     except:
-        return pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
+        return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_hole(player, hole_col, strokes):
-    """Updates a single hole, ensuring whole numbers and bypassing cache for the write."""
     try:
-        df_live = conn.read(worksheet="LiveScores", ttl=0)
-        for i in range(1, 10):
-            col = str(i)
-            if col not in df_live.columns: df_live[col] = 0
+        df_live = load_live_data()
+        hole_cols = [str(i) for i in range(1, 10)]
+        
+        # Ensure numeric conversion
+        for col in hole_cols:
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
 
         if player in df_live['Player'].values:
@@ -65,12 +75,9 @@ def update_live_hole(player, hole_col, strokes):
         st.error(f"Update failed: {e}")
 
 def calculate_rolling_handicap(player_df):
-    """CRASH-PROOF HANDICAP: Ensures result is always between 0.0 and 40.0."""
     try:
         rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
         starting_hcp_row = player_df[player_df['Week'] == 0]
-        
-        # Default starting value
         starting_hcp = 10.0
         if not starting_hcp_row.empty:
             val = starting_hcp_row['Handicap'].values[0]
@@ -86,11 +93,9 @@ def calculate_rolling_handicap(player_df):
                 final_hcp = round(sum(best_3) / 3 - 36, 1)
             else:
                 final_hcp = round(sum(last_4) / len(last_4) - 36, 1)
-        
-        # Guardrail for Streamlit input range
         return max(0.0, min(40.0, float(final_hcp)))
     except:
-        return 10.0 # Emergency fallback
+        return 10.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
@@ -155,22 +160,17 @@ with tabs[0]: # Scorecard Entry
             
             p_data = df_main[df_main['Player'] == player_select]
             current_hcp = calculate_rolling_handicap(p_data)
-            
             st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
             st.divider()
             
             week_select = st.selectbox("Select Week", range(1, 15))
-            
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                # Error-proof input
                 hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
-                
                 col1, col2, col3 = st.columns(3)
                 s_p = col1.number_input("Pars", 0, 18, 0)
                 s_b = col2.number_input("Birdies", 0, 18, 0)
                 s_e = col3.number_input("Eagles", 0, 18, 0)
-                
                 if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
@@ -202,12 +202,12 @@ with tabs[2]: # 🔴 LIVE ROUND
         st.info("🕒 Board is live.")
 
     df_live = load_live_data()
-    holes = [str(i) for i in range(1, 10)]
+    hole_cols = [str(i) for i in range(1, 10)]
     
     if st.session_state["unlocked_player"]:
         with st.expander(f"Post Score: {st.session_state['unlocked_player']}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
-            target_hole = c1.selectbox("Hole", holes)
+            target_hole = c1.selectbox("Hole", hole_cols)
             target_strokes = c2.number_input("Strokes", 1, 15, 4)
             if c3.button("Post", use_container_width=True):
                 update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
@@ -216,16 +216,17 @@ with tabs[2]: # 🔴 LIVE ROUND
 
     st.divider()
     if not df_live.empty:
-        for col in holes:
+        # Convert all to numeric now that we know columns exist
+        for col in hole_cols:
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
-        df_live['Total'] = df_live[holes].sum(axis=1).astype(int)
+        df_live['Total'] = df_live[hole_cols].sum(axis=1).astype(int)
         
         def highlight_me(row):
             if row.Player == st.session_state["unlocked_player"]:
                 return ['background-color: #2e7d32; color: white'] * len(row)
             return [''] * len(row)
 
-        display_cols = ['Player'] + holes + ['Total']
+        display_cols = ['Player'] + hole_cols + ['Total']
         col_config = {str(i): st.column_config.NumberColumn(width="small") for i in range(1, 10)}
         col_config["Player"] = st.column_config.TextColumn(width="medium")
         col_config["Total"] = st.column_config.NumberColumn(width="small")
