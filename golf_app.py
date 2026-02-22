@@ -108,6 +108,10 @@ if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
+    df_main['Total_Score'] = pd.to_numeric(df_main['Total_Score'], errors='coerce').fillna(0)
+    df_main['Pars_Count'] = pd.to_numeric(df_main['Pars_Count'], errors='coerce').fillna(0)
+    df_main['Birdies_Count'] = pd.to_numeric(df_main['Birdies_Count'], errors='coerce').fillna(0)
+    df_main['Eagle_Count'] = pd.to_numeric(df_main['Eagle_Count'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
 else: EXISTING_PLAYERS = []
 
@@ -119,7 +123,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard Entry
+with tabs[0]: # Scorecard Entry + DYNAMIC DASHBOARD
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -148,19 +152,36 @@ with tabs[0]: # Scorecard Entry
                 st.session_state["session_id"] += 1
                 st.rerun()
             
+            # --- PERSONAL DASHBOARD SECTION ---
             p_data = df_main[df_main['Player'] == player_select]
+            played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)]
+            
+            st.markdown(f"### 📊 {player_select}'s Season Stats")
+            m1, m2, m3, m4, m5 = st.columns(5)
+            
+            total_pars = played_rounds['Pars_Count'].sum()
+            total_birdies = played_rounds['Birdies_Count'].sum()
+            total_eagles = played_rounds['Eagle_Count'].sum()
+            avg_net = played_rounds['Net_Score'].mean() if not played_rounds.empty else 0.0
             current_hcp = calculate_rolling_handicap(p_data)
-            st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
+            
+            m1.metric("Handicap", f"{current_hcp:.1f}")
+            m2.metric("Avg Net", f"{avg_net:.1f}")
+            m3.metric("Total Pars", int(total_pars))
+            m4.metric("Birdies", int(total_birdies))
+            m5.metric("Eagles", int(total_eagles))
+            
             st.divider()
             
-            week_select = st.selectbox("Select Week", range(1, 15))
+            # --- SCORE ENTRY FORM ---
+            week_select = st.selectbox("Select Week to Post Score", range(1, 15))
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
+                hcp_in = st.number_input("Handicap for this Week", 0.0, 40.0, value=float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
-                s_p = col1.number_input("Pars", 0, 18, 0)
-                s_b = col2.number_input("Birdies", 0, 18, 0)
-                s_e = col3.number_input("Eagles", 0, 18, 0)
+                s_p = col1.number_input("Pars this round", 0, 18, 0)
+                s_b = col2.number_input("Birdies this round", 0, 18, 0)
+                s_e = col3.number_input("Eagles this round", 0, 18, 0)
                 if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
@@ -215,13 +236,11 @@ with tabs[2]: # 🔴 LIVE ROUND
         styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
         st.dataframe(styled_live, use_container_width=True, hide_index=True, column_config=col_config)
 
-with tabs[3]: # History (PIN HIDDEN)
+with tabs[3]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        # CRITICAL: Only show non-sensitive columns
         hist = df_main[df_main['Week'] > 0].copy()
         public_cols = ['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap', 'Pars_Count', 'Birdies_Count', 'Eagle_Count']
-        # Filter columns that actually exist in the dataframe to prevent crashes
         hist_display = hist[[c for c in public_cols if c in hist.columns]]
         st.dataframe(hist_display.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
