@@ -6,6 +6,7 @@ import time
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
+# Initialize session states for authentication and persistence
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state:
@@ -16,7 +17,7 @@ if "session_id" not in st.session_state:
     st.session_state["session_id"] = 0 
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
-SESSION_TIMEOUT = 4 * 60 * 60 
+SESSION_TIMEOUT = 4 * 60 * 60 # 4 Hours
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 FEDEX_POINTS = {
@@ -29,8 +30,7 @@ def load_data():
     try:
         data = conn.read(ttl=0)
         df = data.dropna(how='all')
-        
-        # Data Recovery: Maps old test column names to new standard names
+        # Backwards compatibility for column names
         rename_map = {
             'Gross Score': 'Total_Score',
             'Pars': 'Pars_Count',
@@ -59,6 +59,7 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     }])
     
     if not existing_data.empty:
+        # Avoid duplicates for same player/week
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
@@ -68,40 +69,36 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING (FINAL STABLE CALCULATION) ---
+# --- STEP 3: DATA PROCESSING (CRASH-PROOF CALCULATION) ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
-    # 1. Backwards Compatibility: Rename columns if they still have old names
-    rename_map = {
-        'Gross Score': 'Total_Score', 'Pars': 'Pars_Count',
-        'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count',
-        'animal_pts': 'GGG_pts'
-    }
-    df_main = df_main.rename(columns=rename_map)
-    
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
     
-    # 2. Initialize point column
+    # Initialize point column
     df_main['GGG_pts'] = 0.0
     
-    # 3. Calculate points week-by-week using list-conversion to avoid index errors
+    # Calculate GGG_pts week-by-week using a safe row-by-row assignment
     for w in df_main['Week'].unique():
         if w == 0: continue
         mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
         
         if mask.any():
-            # Get the scores for this week
-            scores = df_main.loc[mask, 'Net_Score']
-            # Calculate ranks
-            ranks = scores.rank(ascending=True, method='min')
-            # Map to points and convert to a plain list (bypasses Index matching)
-            points_list = ranks.map(FEDEX_POINTS).fillna(10).tolist()
-            # Assign the list back to the main dataframe
-            df_main.loc[mask, 'GGG_pts'] = points_list
+            # Get subset of players for this week
+            week_indices = df_main.index[mask].tolist()
+            week_scores = df_main.loc[mask, 'Net_Score']
+            
+            # Rank scores
+            ranks = week_scores.rank(ascending=True, method='min')
+            
+            # Assign points to each specific row index individually to prevent ValueErrors
+            for idx in week_indices:
+                r_val = ranks.at[idx]
+                pts = FEDEX_POINTS.get(int(r_val), 10)
+                df_main.at[idx, 'GGG_pts'] = float(pts)
 else:
     EXISTING_PLAYERS = []
 
@@ -111,13 +108,10 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf Summer League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", 
-    "⚖️ Rules", "⚙️ Admin", "🏆 Bracket", "👤 Registration"
-])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", "⚖️ Rules", "⚙️ Admin", "👤 Registration"])
 
-# --- TAB 1: SCORECARD (WITH HARD LOGOUT) ---
-with tab1:
+# --- TAB: SCORECARD ---
+with tabs[0]:
     if not EXISTING_PLAYERS:
         st.warning("No players registered yet.")
     else:
@@ -127,12 +121,11 @@ with tab1:
         is_unlocked = (st.session_state["unlocked_player"] == player_select and 
                        (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT)
         
-        if st.session_state["authenticated"]: 
-            is_unlocked = True
+        if st.session_state["authenticated"]: is_unlocked = True
 
         if not is_unlocked:
             st.info(f"🔒 {player_select} is locked.")
-            pin_key = f"pin_box_{player_select}_{st.session_state['session_id']}"
+            pin_key = f"pin_input_{player_select}_{st.session_state['session_id']}"
             user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key=pin_key)
             
             if user_pin_input:
@@ -156,28 +149,27 @@ with tab1:
 
             week_select = st.selectbox("Select Week", range(1, 13), key="w_sel")
             p_data = df_main[df_main['Player'] == player_select]
-            st.write(f"### 📊 Season Stats Summary")
+            st.write(f"### 📊 Season Totals")
             sc1, sc2, sc3 = st.columns(3)
-            sc1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
-            sc2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
-            sc3.metric("Total Eagles", int(p_data['Eagle_Count'].sum()))
-            st.divider()
-
-            with st.form("score_entry", clear_on_submit=True):
+            sc1.metric("Pars", int(p_data['Pars_Count'].sum()))
+            sc2.metric("Birdies", int(p_data['Birdies_Count'].sum()))
+            sc3.metric("Eagles", int(p_data['Eagle_Count'].sum()))
+            
+            with st.form("score_entry"):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
                 c1, c2, c3 = st.columns(3)
                 s_p = c1.number_input("Pars", 0, 18, 0)
                 s_b = c2.number_input("Birdies", 0, 18, 0)
                 s_e = c3.number_input("Eagles", 0, 18, 0)
-                
                 if st.form_submit_button("Submit Score"):
+                    # Use existing PIN for save
                     player_info = df_main[df_main['Player'] == player_select]
                     final_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                     save_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, final_pin)
 
-# --- TAB 2: STANDINGS ---
-with tab2:
+# --- TAB: STANDINGS ---
+with tabs[1]:
     st.header("🏆 League Standings")
     if not df_main.empty:
         leaderboard = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
@@ -185,79 +177,49 @@ with tab2:
         leaderboard.index += 1
         st.dataframe(leaderboard, use_container_width=True)
 
-# --- TAB 3: HISTORY ---
-with tab3:
+# --- TAB: HISTORY (ORDERED & FILTERED) ---
+with tabs[2]:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        # Filter UI
         f1, f2 = st.columns(2)
-        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="hist_p")
-        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="hist_w")
+        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="h_p")
+        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="h_w")
         
-        # Start with all weekly scores (Week 1+)
-        history_df = df_main[df_main['Week'] > 0].copy()
+        hist_df = df_main[df_main['Week'] > 0].copy()
+        if p_filter != "All": hist_df = hist_df[hist_df['Player'] == p_filter]
+        if w_filter != "All": hist_df = hist_df[hist_df['Week'] == int(w_filter)]
+
+        # Column Management
+        cols_to_exclude = ['PIN', 'session_id', 'animal_pts']
+        current_cols = [c for c in hist_df.columns if c not in cols_to_exclude]
         
-        # Apply Filters
-        if p_filter != "All":
-            history_df = history_df[history_df['Player'] == p_filter]
-        if w_filter != "All":
-            history_df = history_df[history_df['Week'] == int(w_filter)]
+        # Target Order: Standard Stats -> GGG_pts -> Hole Counts -> DNF
+        end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
+        start_cols = [c for c in current_cols if c not in end_cols and c != 'GGG_pts']
+        
+        hist_df = hist_df[start_cols + ['GGG_pts'] + end_cols]
+        st.dataframe(hist_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-        if history_df.empty:
-            st.info("No records found for the selected filters.")
-        else:
-            # 1. Identify which columns actually exist to avoid "KeyError"
-            available_cols = history_df.columns.tolist()
-            
-            # 2. Define our target order (Counts at the end, DNF very last)
-            # Remove internal columns like PIN and session_id
-            internal_cols = ['PIN', 'session_id', 'animal_pts']
-            
-            end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-            
-            # Identify columns that should go at the start
-            start_cols = [c for c in available_cols if c not in end_cols and c not in internal_cols and c != 'GGG_pts']
-            
-            # Reconstruct the dataframe in order: Start -> Points -> Counts -> DNF
-            final_order = start_cols + ['GGG_pts'] + [c for c in end_cols if c in available_cols]
-            history_df = history_df[final_order]
-
-            st.dataframe(
-                history_df.sort_values(["Week", "Player"], ascending=[False, True]), 
-                use_container_width=True, 
-                hide_index=True
-            )
-
-# --- TAB 6: ADMIN ---
-with tab6:
+# --- TAB: ADMIN ---
+with tabs[5]:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_key")
-    if admin_pw == ADMIN_PASSWORD:
+    if st.text_input("Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🔄 Force Refresh Database"):
+        if st.button("Refresh Database"):
             st.cache_data.clear()
             st.rerun()
 
-# --- TAB 8: REGISTRATION ---
-with tab8:
-    st.header("👤 Player Registration")
+# --- TAB: REGISTRATION ---
+with tabs[6]:
+    st.header("👤 New Registration")
     with st.form("reg_form", clear_on_submit=True):
-        new_name = st.text_input("Full Name")
-        new_pin = st.text_input("4-Digit PIN", max_chars=4, type="password")
-        starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
-        
-        if st.form_submit_button("Register Player"):
-            if new_name and len(new_pin) == 4:
-                new_reg = pd.DataFrame([{
-                    "Week": 0, "Player": new_name, "PIN": new_pin, 
-                    "Handicap": starting_hcp, "Total_Score": 0, "DNF": True,
-                    "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Net_Score": 0, "GGG_pts": 0
-                }])
-                updated_df = pd.concat([df_main, new_reg], ignore_index=True)
-                conn.update(data=updated_df)
+        n_name = st.text_input("Name")
+        n_pin = st.text_input("4-Digit PIN", max_chars=4, type="password")
+        n_hcp = st.number_input("Handicap", 0, 36, 10)
+        if st.form_submit_button("Register"):
+            if n_name and len(n_pin) == 4:
+                new_row = pd.DataFrame([{"Week": 0, "Player": n_name, "PIN": n_pin, "Handicap": n_hcp, "DNF": True}])
+                conn.update(data=pd.concat([df_main, new_row], ignore_index=True))
                 st.cache_data.clear()
-                st.success(f"Registered {new_name}!")
+                st.success("Registered!")
                 st.rerun()
-
-
-
