@@ -51,6 +51,42 @@ def load_data():
             'Eagles': 'Eagle_Count'
         }
         df = df.rename(columns=rename_map)
+
+# --- ADD THE NEW LIVE FUNCTIONS HERE (Approx Line 55) ---
+
+def load_live_data():
+    """Specifically pulls from the LiveScores worksheet."""
+    hole_cols = [str(i) for i in range(1, 10)]
+    try:
+        df = conn.read(worksheet="LiveScores", ttl=2)
+        if df is None or df.empty:
+            return pd.DataFrame(columns=['Player'] + hole_cols)
+        
+        df.columns = [str(c).strip() for c in df.columns]
+        for col in hole_cols:
+            if col not in df.columns:
+                df[col] = 0
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        
+        return df
+    except:
+        return pd.DataFrame(columns=['Player'] + hole_cols)
+
+def update_live_score(player, hole, strokes):
+    """Updates a single hole for a player in the LiveScores sheet."""
+    df_live = load_live_data()
+    hole_col = str(hole)
+    
+    if player in df_live['Player'].values:
+        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
+    else:
+        new_row = {str(i): 0 for i in range(1, 10)}
+        new_row['Player'] = player
+        new_row[hole_col] = int(strokes)
+        df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+    
+    conn.update(worksheet="LiveScores", data=df_live)
+    st.cache_data.clear()
         
         # Clean Numeric Columns - This prevents the 'Blank Tab' issue
         numeric_cols = ['Week', 'Total_Score', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Handicap']
@@ -225,17 +261,43 @@ with tabs[1]:
 
 # --- TAB 2: LIVE ROUND ---
 with tabs[2]:
-    st.subheader("🔴 Live Scores")
-    st.info("Live board logic would pull from a secondary 'LiveScores' sheet.")
-    # (Simplified for this full script)
-    st.write("This tab displays current round strokes per hole.")
+    st.subheader("🔴 Live Round Tracking")
+    
+    # Check if a player is logged in to allow editing
+    current_player = st.session_state.get("unlocked_player")
+    
+    if current_player:
+        with st.expander(f"Update Score for {current_player}", expanded=True):
+            c1, c2, c3 = st.columns([2, 1, 1])
+            hole_to_update = c1.selectbox("Hole", range(1, 10), key="live_hole")
+            strokes_to_add = c2.number_input("Strokes", 1, 15, 4, key="live_strokes")
+            if c3.button("Post to Board", use_container_width=True):
+                update_live_score(current_player, hole_to_update, strokes_to_add)
+                st.toast(f"Hole {hole_to_update} updated!")
+                time.sleep(1)
+                st.rerun()
+    else:
+        st.warning("⚠️ Please unlock your profile in the **Scorecard** tab to post live scores.")
 
-# --- TAB 3: HISTORY ---
-with tabs[3]:
-    st.subheader("📅 Weekly Results")
-    if not df_main.empty:
-        history = df_main[df_main['Week'] > 0][['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True])
-        st.dataframe(history, use_container_width=True, hide_index=True)
+    st.divider()
+
+    # Display the Board
+    live_df = load_live_data()
+    if not live_df.empty:
+        hole_cols = [str(i) for i in range(1, 10)]
+        live_df['Total'] = live_df[hole_cols].sum(axis=1)
+        
+        # Style the dataframe so the logged-in player is highlighted
+        def highlight_current(row):
+            if row.Player == current_player:
+                return ['background-color: #2e7d32; color: white'] * len(row)
+            return [''] * len(row)
+
+        styled_board = live_df[['Player'] + hole_cols + ['Total']].sort_values("Total", ascending=True).style.apply(highlight_current, axis=1)
+        
+        st.dataframe(styled_board, use_container_width=True, hide_index=True)
+    else:
+        st.info("The live board is currently empty. Start posting scores!")
 
 # --- TAB 4: INFO ---
 with tabs[4]:
@@ -282,3 +344,4 @@ with tabs[6]:
         if st.button("Refresh All App Data"):
             st.cache_data.clear()
             st.rerun()
+
