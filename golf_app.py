@@ -109,34 +109,41 @@ with tab1:
     player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
     week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
     
-    # 1. Ask for PIN
-    user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password")
+    # NEW: PIN INPUT
+    user_pin_input = st.text_input(f"Enter PIN for {player_select}", type="password", key="pin_input")
 
-    # 2. Logic to verify PIN
+    # VERIFICATION LOGIC
     is_verified = False
-    is_admin = (user_pin_input == ADMIN_PASSWORD)
-
-    if not df_main.empty and user_pin_input:
+    if st.session_state["authenticated"]: # Admin Master Password
+        is_verified = True
+    elif user_pin_input and not df_main.empty:
         try:
-            # Get the PIN from the sheet for the selected player
-            # We use .astype(str) to ensure we are comparing text to text
-            player_row = df_main[df_main['Player'] == player_select]
-            if not player_row.empty:
-                # Get the PIN, convert to string, remove decimals (if 1214.0), and strip spaces
-                stored_pin = str(player_row.iloc[0]['PIN']).split('.')[0].strip()
-                
-                if user_pin_input.strip() == stored_pin or is_admin:
+            # Filter for the player in the main sheet
+            player_info = df_main[df_main['Player'] == player_select]
+            if not player_info.empty:
+                # Convert stored PIN to string, remove '.0' if it exists, and strip spaces
+                stored_pin = str(player_info.iloc[0]['PIN']).split('.')[0].strip()
+                if user_pin_input.strip() == stored_pin:
                     is_verified = True
-        except Exception as e:
-            st.error(f"Error reading PIN: {e}")
+        except Exception:
+            pass
 
-    # 3. Only show the scorecard if verified
     if is_verified:
-        st.success(f"✅ Verified: {player_select}")
-        # --- INSERT EXISTING SCORECARD FORM HERE ---
-        # Move all your existing metric and selectbox code inside this 'if' block
-    elif user_pin_input:
-        st.error("❌ Incorrect PIN. Please try again.")
+        # --- REST OF YOUR SCORECARD FORM STARTS HERE ---
+        st.success(f"✅ Access Granted for {player_select}")
+        
+        current_hcps_map = get_handicaps(week_select)
+        suggested_hcp = current_hcps_map.get(player_select)
+        
+        # ... (Include your existing metrics and selectboxes here) ...
+        
+        if st.button("Submit Score", use_container_width=True, key="sub_btn"):
+            save_data(week_select, player_select, sel_pars, sel_birdies, sel_eagles, score_select, hcp_in)
+            st.success(f"Scores updated for {player_select}!")
+            st.rerun()
+    else:
+        st.warning("Locked: Please enter your 4-digit PIN to enable editing.")
+        st.button("Submit Score", use_container_width=True, disabled=True, key="sub_dis")
         
 # --- TAB 2: STANDINGS ---
 with tab2:
@@ -366,6 +373,7 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+
 
 
 
