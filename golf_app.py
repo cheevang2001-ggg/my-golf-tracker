@@ -8,7 +8,7 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
-REGISTRATION_KEY = "whitebass"
+REGISTRATION_KEY = "GG2026"
 SESSION_TIMEOUT = 4 * 60 * 60 
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
@@ -45,7 +45,6 @@ def load_data():
         return pd.DataFrame()
 
 def load_live_data():
-    """Specifically pulls from the LiveScores worksheet."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
         df = conn.read(worksheet="LiveScores", ttl=2)
@@ -60,7 +59,6 @@ def load_live_data():
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Updates a single hole in the LiveScores worksheet."""
     df_live = load_live_data()
     hole_col = str(hole)
     if player in df_live['Player'].values:
@@ -73,16 +71,25 @@ def update_live_score(player, hole, strokes):
     conn.update(worksheet="LiveScores", data=df_live)
     st.cache_data.clear()
 
-def calculate_rolling_handicap(player_df):
+def calculate_rolling_handicap(player_df, target_week):
+    """Calculates HCP based on rounds BEFORE the target week."""
     try:
         excluded_weeks = [0, 4, 8, 12]
-        rounds = player_df[(~player_df['Week'].isin(excluded_weeks)) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
+        # Only look at rounds played in weeks LESS THAN the week we are viewing
+        rounds = player_df[
+            (~player_df['Week'].isin(excluded_weeks)) & 
+            (player_df['DNF'] == False) & 
+            (player_df['Week'] < target_week)
+        ].sort_values('Week', ascending=False)
+        
         starting_hcp = 10.0
         starting_hcp_row = player_df[player_df['Week'] == 0]
         if not starting_hcp_row.empty:
             val = starting_hcp_row['Handicap'].iloc[0]
             starting_hcp = float(val) if pd.notnull(val) else 10.0
+            
         if len(rounds) == 0: return starting_hcp
+        
         last_4 = rounds.head(4)['Total_Score'].tolist()
         if len(last_4) >= 4:
             last_4.sort()
@@ -130,26 +137,34 @@ with tabs[0]: # Scorecard
                 else: st.error("❌ Incorrect PIN.")
         else:
             p_data = df_main[df_main['Player'] == player_select]
+            
+            st.divider()
+            w_s = st.selectbox("Select Week to View/Post", range(1, 15))
+            
+            # HCP calculation based on target week selection
+            current_hcp_for_week = calculate_rolling_handicap(p_data, w_s)
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
-            current_hcp = calculate_rolling_handicap(p_data)
-            st.markdown(f"### 📊 {player_select}'s Stats")
+            
+            st.markdown(f"### 📊 {player_select}'s Stats for Week {w_s}")
             m1, m2, m3, m4, m5 = st.columns(5)
-            m1.metric("HCP", f"{current_hcp:.1f}")
+            m1.metric("Handicap", f"{current_hcp_for_week:.1f}", help=f"HCP at start of Week {w_s}")
             m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "N/A")
             m3.metric("Pars", int(played_rounds['Pars_Count'].sum()))
             m4.metric("Birdies", int(played_rounds['Birdies_Count'].sum()))
             m5.metric("Eagles", int(played_rounds['Eagle_Count'].sum()))
+            
             if not played_rounds.empty:
                 chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(x=alt.X('Week:O'), y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
+            
             st.divider()
             with st.form("score_entry"):
-                w_s = st.selectbox("Week", range(1, 15))
-                s_v = st.selectbox("Gross", ["DNF"] + [str(i) for i in range(25, 120)])
-                h_r = st.number_input("HCP", 0.0, 40.0, value=float(current_hcp))
+                st.write(f"Posting for **Week {w_s}** with **{current_hcp_for_week:.1f}** HCP.")
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
+                h_r = st.number_input("Handicap to apply", 0.0, 40.0, value=float(current_hcp_for_week), step=0.1)
                 c1, c2, c3 = st.columns(3)
                 p_c, b_c, e_c = c1.number_input("Pars", 0, 18), c2.number_input("Birdies", 0, 18), c3.number_input("Eagles", 0, 18)
-                if st.form_submit_button("Submit"):
+                if st.form_submit_button("Submit Score"):
                     pin = str(p_data[p_data['Week'] == 0]['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
 
@@ -167,7 +182,7 @@ with tabs[1]: # Standings
         res.index += 1
         st.dataframe(res, use_container_width=True)
 
-with tabs[2]: # UPDATED LIVE ROUND TAB
+with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
     curr_p = st.session_state.get("unlocked_player")
     if curr_p:
@@ -199,7 +214,7 @@ with tabs[4]: # Info
 with tabs[5]: # Registration
     st.header("👤 Registration")
     if not st.session_state["reg_access"]:
-        if st.text_input("League Key", type="password") == REGISTRATION_KEY:
+        if st.text_input("League Key", type="password", key="reg_key_input") == REGISTRATION_KEY:
             if st.button("Unlock"): st.session_state["reg_access"] = True; st.rerun()
     else:
         with st.form("r"):
