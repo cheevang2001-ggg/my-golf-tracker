@@ -56,31 +56,48 @@ def load_data():
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data():
+    """Separate loader for real-time round tracking with strict header forcing."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
         df = conn.read(worksheet="LiveScores", ttl=2)
-        if df is None or df.empty or 'Player' not in df.columns:
+        if df is None or df.empty:
             return pd.DataFrame(columns=['Player'] + hole_cols)
-        return df
+        
+        # FORCE headers to strings to prevent 1.1, 2.1 duplicates
+        df.columns = [str(c).strip().split('.')[0] for c in df.columns]
+        
+        # Ensure all hole columns exist
+        for col in hole_cols:
+            if col not in df.columns:
+                df[col] = 0
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+            
+        return df[['Player'] + hole_cols] # Return columns in specific order
     except:
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
+    """Updates existing hole score or adds new player without duplicating columns."""
     df_live = load_live_data()
     hole_col = str(hole)
     
+    # Ensure the dataframe columns are strictly strings
+    df_live.columns = [str(c) for c in df_live.columns]
+    
     if player in df_live['Player'].values:
+        # Update the specific hole for the existing player
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
     else:
-        # Create the dictionary for holes 1-9 first
+        # Create a clean new row
         new_row = {str(i): 0 for i in range(1, 10)}
-        # Then add the Player name
         new_row['Player'] = player
-        # Then set the specific hole score
         new_row[hole_col] = int(strokes)
-        
         df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
-        
+    
+    # Final cleanup: ensure no ghost columns survived
+    hole_cols = [str(i) for i in range(1, 10)]
+    df_live = df_live[['Player'] + hole_cols]
+    
     conn.update(worksheet="LiveScores", data=df_live)
     st.cache_data.clear()
 
@@ -215,4 +232,5 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
