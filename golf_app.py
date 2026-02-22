@@ -21,10 +21,9 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: FUNCTIONS (QUOTA-SAFE & INTEGER-FORCED) ---
+# --- STEP 2: FUNCTIONS (SHORTENED HEADERS) ---
 
 def load_data():
-    """Loads main league data with 10s cache to avoid Quota 429 errors."""
     try:
         data = conn.read(ttl=10)
         df = data.dropna(how='all')
@@ -35,40 +34,34 @@ def load_data():
         return pd.DataFrame()
 
 def load_live_data():
-    """Loads live scores with 5s cache."""
     try:
+        # Looking for columns 1-9 in the GSheet
         df = conn.read(worksheet="LiveScores", ttl=5)
         return df.dropna(how='all')
     except:
-        return pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
+        return pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
 
 def update_live_hole(player, hole_col, strokes):
-    """Updates a single hole, forcing whole numbers and bypassing cache for the write."""
     try:
-        # Step A: Get freshest data directly for the write operation
         df_live = conn.read(worksheet="LiveScores", ttl=0)
-        
-        # Step B: Sanitize all hole columns to integers
         for i in range(1, 10):
-            col = f"Hole {i}"
+            col = str(i)
             if col not in df_live.columns: df_live[col] = 0
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
 
-        # Step C: Update existing player or add new row
         if player in df_live['Player'].values:
             df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         else:
-            new_row = {col: 0 for col in df_live.columns if col != 'Player'}
+            new_row = {str(i): 0 for i in range(1, 10)}
             new_row['Player'] = player
             new_row[hole_col] = int(strokes)
             df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
         
-        # Step D: Push back to GSheets
         conn.update(worksheet="LiveScores", data=df_live)
-        st.cache_data.clear() # Clear cache so everyone sees the update
-        st.toast(f"Hole {hole_col} updated for {player}!")
+        st.cache_data.clear()
+        st.toast(f"Hole {hole_col} updated!")
     except Exception as e:
-        st.error(f"Write conflict or Quota error: {e}")
+        st.error(f"Update failed: {e}")
 
 def calculate_rolling_handicap(player_df):
     rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
@@ -181,31 +174,27 @@ with tabs[2]: # 🔴 LIVE ROUND
     
     col_ref, col_empty = st.columns([1, 4])
     if col_ref.checkbox("Auto-Refresh (30s)", value=True):
-        st.info("🕒 Board is live. Auto-refreshing in the background.")
+        st.info("🕒 Board is live.")
 
     df_live = load_live_data()
-    holes = [f"Hole {i}" for i in range(1, 10)]
+    holes = [str(i) for i in range(1, 10)]
     
-    # Input section for the unlocked player
     if st.session_state["unlocked_player"]:
-        with st.expander(f"Update Your Live Card: {st.session_state['unlocked_player']}", expanded=True):
+        with st.expander(f"Post Score: {st.session_state['unlocked_player']}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
-            target_hole = c1.selectbox("Select Hole", holes)
+            target_hole = c1.selectbox("Hole", holes)
             target_strokes = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post Score", use_container_width=True):
+            if c3.button("Post", use_container_width=True):
                 update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
                 st.rerun()
     else:
-        st.warning("⚠️ Unlock your profile in the **Scorecard** tab to post live scores.")
+        st.warning("⚠️ Unlock profile in **Scorecard** to update.")
 
     st.divider()
     
-    # Live Display with Whole Number Formatting
     if not df_live.empty:
-        # Force all hole values and total to integers
         for col in holes:
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
-        
         df_live['Total'] = df_live[holes].sum(axis=1).astype(int)
         
         def highlight_me(row):
@@ -214,10 +203,16 @@ with tabs[2]: # 🔴 LIVE ROUND
             return [''] * len(row)
 
         display_cols = ['Player'] + holes + ['Total']
+        
+        # COLUMN CONFIG: Forces narrow columns for mobile
+        col_config = {str(i): st.column_config.NumberColumn(width="small") for i in range(1, 10)}
+        col_config["Player"] = st.column_config.TextColumn(width="medium")
+        col_config["Total"] = st.column_config.NumberColumn(width="small")
+
         styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
-        st.dataframe(styled_live, use_container_width=True, hide_index=True)
+        st.dataframe(styled_live, use_container_width=True, hide_index=True, column_config=col_config)
     else:
-        st.info("No live scores recorded yet.")
+        st.info("No live scores recorded.")
 
 with tabs[3]: # Season History
     st.subheader("📅 Weekly History")
@@ -225,7 +220,7 @@ with tabs[3]: # Season History
         hist = df_main[df_main['Week'] > 0].copy()
         st.dataframe(hist.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[4]: # League Info & Schedule
+with tabs[4]: # League Info
     st.subheader("ℹ️ League Information")
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     if info_choice == "Weekly Schedule":
@@ -236,7 +231,7 @@ with tabs[4]: # League Info & Schedule
         }
         st.table(pd.DataFrame(schedule_data).style.apply(lambda r: ['background-color: #90EE90; color: #808080; font-weight: bold' if any(ev in str(r["Event / Notes"]) for ev in ["GGG Event", "GGG Picnic"]) else '' for _ in r], axis=1))
     else:
-        st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Par 36 Base:** All scores normalized to 9 holes.")
+        st.markdown("### ⚖️ League Rules\n* **Handicap:** Best 3 of last 4.\n* **Baseline:** Par 36.")
 
 with tabs[5]: # Registration
     st.header("👤 Player Registration")
@@ -247,7 +242,7 @@ with tabs[5]: # Registration
                 new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
-                st.success(f"Registered {n_n}! Welcome to the league.")
+                st.success(f"Registered {n_n}!")
                 st.rerun()
 
 with tabs[6]: # Admin Controls
@@ -255,11 +250,11 @@ with tabs[6]: # Admin Controls
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
         c1, c2 = st.columns(2)
-        if c1.button("Refresh All Data"):
+        if c1.button("Refresh Cache"):
             st.cache_data.clear()
             st.rerun()
         if c2.button("🚨 RESET LIVE BOARD"):
-            reset_df = pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
+            reset_df = pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
             conn.update(worksheet="LiveScores", data=reset_df)
             st.cache_data.clear()
             st.warning("Live Board Cleared!")
