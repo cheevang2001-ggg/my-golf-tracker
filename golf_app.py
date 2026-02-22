@@ -176,23 +176,48 @@ with tabs[0]: # Scorecard Entry
                     save_weekly_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
 with tabs[1]: # Standings
-    st.subheader("🏆 League Standings")
+    st.subheader("🏆 2026 Season Standings")
     if not df_main.empty:
-        df_main['GGG_pts'] = 0.0
-        for w in df_main['Week'].unique():
-            if w == 0: continue
-            mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
-            if mask.any():
-                week_scores = df_main.loc[mask, 'Net_Score']
-                ranks = week_scores.rank(ascending=True, method='min')
-                for idx, r_val in ranks.items():
-                    df_main.at[idx, 'GGG_pts'] = float(FEDEX_POINTS.get(int(r_val), 10))
+        # Create a fresh copy for calculations
+        calc_df = df_main.copy()
+        calc_df['GGG_pts'] = 0.0
         
-        standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
+        # Iterate through each week to assign points
+        for w in calc_df['Week'].unique():
+            if w == 0: continue # Skip registration week
+            
+            # Filter for active rounds this week
+            mask = (calc_df['Week'] == w) & (calc_df['DNF'] == False)
+            if mask.any():
+                week_data = calc_df.loc[mask].copy()
+                # Rank: Lower net score = smaller rank number (1st, 2nd, etc)
+                week_data['Rank'] = week_data['Net_Score'].rank(ascending=True, method='min')
+                
+                # Map ranks to FedEx points
+                for idx, row in week_data.iterrows():
+                    points = FEDEX_POINTS.get(int(row['Rank']), 10.0) # 10 pt floor
+                    calc_df.at[idx, 'GGG_pts'] = float(points)
+        
+        # Aggregate totals by player
+        standings = calc_df.groupby('Player')['GGG_pts'].sum().reset_index()
+        
+        # Calculate current handicap for display
         standings['HCP'] = [calculate_rolling_handicap(df_main[df_main['Player'] == p]) for p in standings['Player']]
+        
+        # Sort by points descending
         standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
-        standings.index += 1
-        st.dataframe(standings[['Player', 'GGG_pts', 'HCP']], use_container_width=True)
+        standings.index += 1 # 1-based leaderboard
+        
+        st.dataframe(
+            standings[['Player', 'GGG_pts', 'HCP']], 
+            use_container_width=True,
+            column_config={
+                "GGG_pts": st.column_config.NumberColumn("Total Points", format="%d"),
+                "HCP": st.column_config.NumberColumn("Current HCP", format="%.1f")
+            }
+        )
+    else:
+        st.info("No scores recorded yet. Standings will appear after Week 1.")
 
 with tabs[2]: # 🔴 LIVE ROUND
     st.subheader("🔴 Live Round Tracking")
@@ -278,3 +303,4 @@ with tabs[6]: # Admin
             st.cache_data.clear()
             st.warning("Live Board Cleared!")
             st.rerun()
+
