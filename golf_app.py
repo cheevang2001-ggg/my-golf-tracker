@@ -6,6 +6,34 @@ import time
 # --- STEP 1: CONFIGURATION ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide") 
 
+# Inject Custom CSS for Mobile "Freeze Panes" and Table Sizing
+st.markdown("""
+    <style>
+    /* Force first column and header to be sticky */
+    [data-testid="stTable"] {
+        overflow-x: auto !important;
+    }
+    th:first-child, td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: #0e1117; /* Matches Streamlit Dark Theme */
+        z-index: 10;
+        border-right: 1px solid #444;
+    }
+    th {
+        position: sticky;
+        top: 0;
+        background-color: #0e1117;
+        z-index: 20;
+    }
+    /* Tighten spacing for mobile */
+    .stTable td, .stTable th {
+        padding: 4px 8px !important;
+        font-size: 0.85rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Session State for Security and UI Persistence
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
@@ -24,7 +52,6 @@ FEDEX_POINTS = {
 # --- STEP 2: FUNCTIONS (QUOTA-SAFE & INTEGER-FORCED) ---
 
 def load_data():
-    """Loads main league data with 10s cache to avoid Quota 429 errors."""
     try:
         data = conn.read(ttl=10)
         df = data.dropna(how='all')
@@ -35,7 +62,6 @@ def load_data():
         return pd.DataFrame()
 
 def load_live_data():
-    """Loads live scores with 5s cache."""
     try:
         df = conn.read(worksheet="LiveScores", ttl=5)
         return df.dropna(how='all')
@@ -43,18 +69,13 @@ def load_live_data():
         return pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
 
 def update_live_hole(player, hole_col, strokes):
-    """Updates a single hole, forcing whole numbers and bypassing cache for the write."""
     try:
-        # Step A: Get freshest data directly for the write operation
         df_live = conn.read(worksheet="LiveScores", ttl=0)
-        
-        # Step B: Sanitize all hole columns to integers
         for i in range(1, 10):
             col = f"Hole {i}"
             if col not in df_live.columns: df_live[col] = 0
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
 
-        # Step C: Update existing player or add new row
         if player in df_live['Player'].values:
             df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         else:
@@ -63,10 +84,9 @@ def update_live_hole(player, hole_col, strokes):
             new_row[hole_col] = int(strokes)
             df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
         
-        # Step D: Push back to GSheets
         conn.update(worksheet="LiveScores", data=df_live)
-        st.cache_data.clear() # Clear cache so everyone sees the update
-        st.toast(f"Hole {hole_col} updated for {player}!")
+        st.cache_data.clear()
+        st.toast(f"Hole {hole_col} updated!")
     except Exception as e:
         st.error(f"Write conflict or Quota error: {e}")
 
@@ -181,43 +201,40 @@ with tabs[2]: # 🔴 LIVE ROUND
     
     col_ref, col_empty = st.columns([1, 4])
     if col_ref.checkbox("Auto-Refresh (30s)", value=True):
-        st.info("🕒 Board is live. Auto-refreshing in the background.")
+        st.info("🕒 Board is live.")
 
     df_live = load_live_data()
     holes = [f"Hole {i}" for i in range(1, 10)]
     
-    # Input section for the unlocked player
     if st.session_state["unlocked_player"]:
-        with st.expander(f"Update Your Live Card: {st.session_state['unlocked_player']}", expanded=True):
+        with st.expander(f"Update: {st.session_state['unlocked_player']}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
             target_hole = c1.selectbox("Select Hole", holes)
             target_strokes = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post Score", use_container_width=True):
+            if c3.button("Post", use_container_width=True):
                 update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
                 st.rerun()
     else:
-        st.warning("⚠️ Unlock your profile in the **Scorecard** tab to post live scores.")
+        st.warning("⚠️ Unlock profile in **Scorecard** to post.")
 
     st.divider()
     
-    # Live Display with Whole Number Formatting
     if not df_live.empty:
-        # Force all hole values and total to integers
         for col in holes:
             df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0).astype(int)
-        
         df_live['Total'] = df_live[holes].sum(axis=1).astype(int)
         
         def highlight_me(row):
             if row.Player == st.session_state["unlocked_player"]:
-                return ['background-color: #2e7d32; color: white'] * len(row)
+                return ['background-color: #2e7d32; color: white; font-weight: bold'] * len(row)
             return [''] * len(row)
 
         display_cols = ['Player'] + holes + ['Total']
+        # Using st.table for better CSS sticky column support on mobile
         styled_live = df_live[display_cols].sort_values("Total").style.apply(highlight_me, axis=1)
-        st.dataframe(styled_live, use_container_width=True, hide_index=True)
+        st.table(styled_live)
     else:
-        st.info("No live scores recorded yet.")
+        st.info("No live scores recorded.")
 
 with tabs[3]: # Season History
     st.subheader("📅 Weekly History")
@@ -230,8 +247,8 @@ with tabs[4]: # League Info & Schedule
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
     if info_choice == "Weekly Schedule":
         schedule_data = {
-            "Week": [f"Week {i}" for i in range(1, 15)],
-            "Date": ["May 31", "June 7", "June 14", "June 21", "June 28", "July 5", "July 12", "July 19", "July 26", "August 2", "August 9", "August 16", "August 23", "August 28"],
+            "Week": [f"W{i}" for i in range(1, 15)], # Shortened for mobile
+            "Date": ["May 31", "Jun 7", "Jun 14", "Jun 21", "Jun 28", "Jul 5", "Jul 12", "Jul 19", "Jul 26", "Aug 2", "Aug 9", "Aug 16", "Aug 23", "Aug 28"],
             "Event / Notes": ["Start", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "End", "GGG Picnic"]
         }
         st.table(pd.DataFrame(schedule_data).style.apply(lambda r: ['background-color: #90EE90; color: #808080; font-weight: bold' if any(ev in str(r["Event / Notes"]) for ev in ["GGG Event", "GGG Picnic"]) else '' for _ in r], axis=1))
@@ -247,7 +264,7 @@ with tabs[5]: # Registration
                 new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
-                st.success(f"Registered {n_n}! Welcome to the league.")
+                st.success(f"Registered {n_n}!")
                 st.rerun()
 
 with tabs[6]: # Admin Controls
