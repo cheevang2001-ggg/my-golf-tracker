@@ -192,7 +192,6 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + REVERSED CHART
                 )
                 
                 st.altair_chart(final_chart, use_container_width=True)
-                st.caption("Note: Y-axis is inverted. Lower scores trend upwards to visualize better performance.")
             else:
                 st.info("Post your first score to see your trend!")
 
@@ -309,4 +308,5 @@ with tabs[6]:
             st.cache_data.clear()
             st.warning("Live Board Cleared!")
             st.rerun()
+
 
