@@ -12,16 +12,17 @@ ADMIN_PASSWORD = "InsigniaSeahawks6145"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- STEP 2: FUNCTIONS ---
-@st.cache_data(ttl=10) # Reduced TTL to 10 seconds for more frequent updates
+@st.cache_data(ttl=10) # Low TTL to help prevent "Ghost Data"
 def load_data():
     try:
-        data = conn.read()
-        return data.dropna(how='all') # Ensure we don't load totally empty rows
+        # read(ttl=0) ensures we bypass local cache to check the actual sheet
+        data = conn.read(ttl=0)
+        return data.dropna(how='all')
     except:
         return pd.DataFrame()
 
-def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
-    st.cache_data.clear() # Wipe cache so History updates immediately
+def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
+    st.cache_data.clear()
     existing_data = conn.read(ttl=0)
     
     is_dnf = (score_val == "DNF")
@@ -32,8 +33,7 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
         'Week': week, 'Player': player,
         'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles,
         'Total_Score': final_gross, 'Handicap': hcp_val, 
-        'Net_Score': final_net, 'DNF': is_dnf,
-        'PIN': st.session_state.get('current_user_pin', '') # Carry over PIN
+        'Net_Score': final_net, 'DNF': is_dnf, 'PIN': pin
     }])
     
     if not existing_data.empty:
@@ -48,18 +48,18 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val):
 # --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
 
-# Dynamically pull players
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
 else:
     EXISTING_PLAYERS = []
 
-# --- STEP 4: UI ---
+# --- STEP 4: UI LAYOUT ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1>GGGolf 2026 Summer League</h1>", unsafe_allow_html=True)
+st.markdown("<h1>GGGolf Summer League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
+# Fixed Tab Unpacking (8 Variables for 8 Tabs)
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", 
     "⚖️ Rules", "⚙️ Admin", "🏆 Bracket", "👤 Registration"
@@ -68,12 +68,11 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
 # --- TAB 1: SCORECARD ---
 with tab1:
     if not EXISTING_PLAYERS:
-        st.warning("No players registered. Please go to Registration.")
+        st.warning("No players registered.")
     else:
         c1, c2 = st.columns(2)
         player_select = c1.selectbox("Player", EXISTING_PLAYERS)
         week_select = c2.selectbox("Week", range(1, 13))
-        
         user_pin_input = st.text_input(f"PIN for {player_select}", type="password")
 
         is_verified = False
@@ -86,69 +85,79 @@ with tab1:
                 stored_pin = str(player_info.iloc[0].get('PIN', '')).split('.')[0].strip()
                 if user_pin_input.strip() == stored_pin:
                     is_verified = True
-                    st.session_state['current_user_pin'] = stored_pin
 
         if is_verified:
-            # clear_on_submit=True resets the counters to 0 after clicking submit
+            # clear_on_submit forces counters back to 0
             with st.form("score_entry", clear_on_submit=True):
-                st.subheader(f"Week {week_select} Entry: {player_select}")
-                
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
                 
-                st.divider()
-                st.caption("Enter your round stats:")
                 col1, col2, col3 = st.columns(3)
-                # Use unique keys for each player/week to force reset on change
+                # Unique keys per week/player prevent values carrying over
                 s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_{player_select}_{week_select}")
                 s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_{player_select}_{week_select}")
                 s_eagles = col3.number_input("Eagles", 0, 18, 0, key=f"e_{player_select}_{week_select}")
                 
-                # --- CALCULATION PREVIEW ---
-                total_stats = s_pars + s_birdies + s_eagles
-                st.info(f"📊 **Summary:** {s_pars} Pars, {s_birdies} Birdies, {s_eagles} Eagles | **Total Better-Than-Bogey:** {total_stats}")
-                
                 if st.form_submit_button("Submit Score"):
-                    save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in)
-                    st.success("Score Saved! Data is updating...")
+                    save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, stored_pin)
+                    st.success("Score Saved!")
                     st.rerun()
         else:
-            st.warning("Please enter your PIN.")
+            st.info("Enter PIN to unlock.")
 
-# --- TAB 3: HISTORY (Updated to handle empty sheets) ---
+# --- TAB 2: STANDINGS ---
+with tab2:
+    st.subheader("League Standings")
+    if not df_main.empty:
+        st.write("Calculation Logic TBD")
+
+# --- TAB 3: HISTORY ---
 with tab3:
     st.subheader("Season History")
     if not df_main.empty:
-        # Filter out "Week 0" initialization rows so history stays clean
-        display_df = df_main[df_main['Week'] > 0]
-        if not display_df.empty:
-            st.dataframe(display_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
+        # FILTER: Only show weeks 1-12 (hides the Week 0 registration data)
+        history_df = df_main[df_main['Week'] > 0]
+        if history_df.empty:
+            st.info("No weekly scores recorded yet.")
         else:
-            st.write("No scores recorded for weeks 1-12 yet.")
+            st.dataframe(history_df.sort_values("Week", ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.write("The league database is currently empty.")
+        st.info("Database is empty.")
 
-# --- TAB 6: ADMIN (Add Force Refresh) ---
+# --- TAB 4: INFO ---
+with tab4:
+    st.write("League details go here.")
+
+# --- TAB 5: RULES ---
+with tab5:
+    st.write("Rules go here.")
+
+# --- TAB 6: ADMIN ---
 with tab6:
-    st.subheader("Admin Controls")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_pw")
+    st.subheader("⚙️ Admin Settings")
+    admin_pw = st.text_input("Admin Password", type="password")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("Force Clear App Cache"):
+        if st.button("🔄 Force Clear Ghost Data (Cache)"):
             st.cache_data.clear()
             st.rerun()
+    else:
+        st.session_state["authenticated"] = False
 
-# --- TAB 8: REGISTRATION (Improved Reset) ---
+# --- TAB 7: BRACKET ---
+with tab7:
+    st.write("Tournament Bracket TBD")
+
+# --- TAB 8: REGISTRATION ---
 with tab8:
-    st.header("👤 Player Registration")
+    st.header("👤 New Player Registration")
     with st.form("reg_form", clear_on_submit=True):
-        new_name = st.text_input("Full Name", key="n_name")
-        new_pin = st.text_input("Create 4-Digit PIN", max_chars=4, type="password", key="n_pin")
-        starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
+        new_name = st.text_input("Name")
+        new_pin = st.text_input("4-Digit PIN", max_chars=4, type="password")
+        starting_hcp = st.number_input("Handicap", 0, 36, 10)
         
-        if st.form_submit_button("Register Player"):
+        if st.form_submit_button("Register"):
             if new_name and len(new_pin) == 4:
-                # Initialize with Week 0 and 0 counts
                 new_reg = pd.DataFrame([{
                     "Week": 0, "Player": new_name, "PIN": new_pin, 
                     "Handicap": starting_hcp, "Total_Score": 0, "DNF": True,
@@ -157,5 +166,5 @@ with tab8:
                 updated_df = pd.concat([df_main, new_reg], ignore_index=True)
                 conn.update(data=updated_df)
                 st.cache_data.clear()
-                st.success(f"Welcome {new_name}!")
+                st.success("Registered!")
                 st.rerun()
