@@ -178,19 +178,31 @@ with tab2:
         leaderboard.index += 1
         st.dataframe(leaderboard, use_container_width=True)
 
-# --- TAB 3: HISTORY ---
+# --- TAB 3: HISTORY (REARRANGED) ---
 with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
+        # Create a filtered copy for history (Weeks 1+)
         history_df = df_main[df_main['Week'] > 0].copy()
         
-        # Display logic and column ordering
-        display_cols = [c for c in history_df.columns if c not in ['PIN', 'session_id']]
-        end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-        start_cols = [c for c in display_cols if c not in end_cols and c != 'GGG_pts']
-        history_df = history_df[start_cols + ['GGG_pts'] + end_cols]
-        
-        st.dataframe(history_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
+        if history_df.empty:
+            st.info("No scores recorded yet.")
+        else:
+            # Drop the hidden columns and old column names
+            cols_to_drop = ['PIN', 'animal_pts', 'session_id']
+            cols_to_show = [c for c in history_df.columns if c not in cols_to_drop]
+            
+            # Define the order: Move counts and DNF to the very end
+            end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
+            start_cols = [c for c in cols_to_show if c not in end_cols]
+            
+            history_df = history_df[start_cols + end_cols]
+            
+            st.dataframe(
+                history_df.sort_values(["Week", "Player"], ascending=[False, True]), 
+                use_container_width=True, 
+                hide_index=True
+            )
 
 # --- TAB 6: ADMIN ---
 with tab6:
@@ -222,4 +234,5 @@ with tab8:
                 st.cache_data.clear()
                 st.success(f"Registered {new_name}!")
                 st.rerun()
+
 
