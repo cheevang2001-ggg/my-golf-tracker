@@ -11,6 +11,7 @@ if "authenticated" not in st.session_state:
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# FedEx Points Scale for GGG_pts calculation
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
@@ -19,6 +20,7 @@ FEDEX_POINTS = {
 # --- STEP 2: FUNCTIONS ---
 def load_data():
     try:
+        # ttl=0 ensures the app pulls FRESH data on every interaction
         data = conn.read(ttl=0)
         return data.dropna(how='all')
     except:
@@ -40,6 +42,7 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     }])
     
     if not existing_data.empty:
+        # Overwrite if player already submitted for this week
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
@@ -49,17 +52,19 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING ---
+# --- STEP 3: DATA PROCESSING & CALCULATIONS ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
-    # Ensure numeric types
+    
+    # 1. Ensure numeric types for math
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
-    df_main['GGG_pts'] = 0.0 # Renamed from animal_pts
+    df_main['DNF'] = df_main.get('DNF', False).astype(bool)
     
-    # Calculate GGG Points per week
+    # 2. Calculate GGG_pts (Replacing animal_pts)
+    df_main['GGG_pts'] = 0.0
     for w in df_main['Week'].unique():
         if w == 0: continue
         mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
@@ -102,6 +107,7 @@ with tab1:
                     is_verified = True
 
         if is_verified:
+            # Personal Statistics Dashboard
             p_data = df_main[df_main['Player'] == player_select]
             st.write(f"### 📊 {player_select}'s Season Totals")
             sc1, sc2, sc3 = st.columns(3)
@@ -128,36 +134,35 @@ with tab1:
 with tab2:
     st.header("🏆 League Standings")
     if not df_main.empty:
-        # Leaderboard based on GGG_pts
         leaderboard = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
         leaderboard = leaderboard.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         leaderboard.index += 1
         st.subheader("Leaderboard (GGG Points)")
         st.dataframe(leaderboard, use_container_width=True)
     else:
-        st.info("No data yet.")
+        st.info("No data available yet.")
 
-# --- TAB 3: HISTORY (REARRANGED & FILTERED) ---
+# --- TAB 3: HISTORY ---
 with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        # Filtering UI
+        # Filters
         f1, f2 = st.columns(2)
         p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS)
         w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)))
         
         history_df = df_main[df_main['Week'] > 0].copy()
         
-        # Apply Filters
         if p_filter != "All":
             history_df = history_df[history_df['Player'] == p_filter]
         if w_filter != "All":
             history_df = history_df[history_df['Week'] == int(w_filter)]
 
-        # REARRANGE COLUMNS & HIDE PIN
-        # Move Counts to the end
-        cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count']
-        cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c != 'PIN']
+        # REARRANGE COLUMNS: Move Pars/Birdies/Eagles and DNF to the end
+        # Hide PIN and ensure animal_pts is gone
+        cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
+        cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c not in ['PIN', 'animal_pts']]
+        
         history_df = history_df[cols_at_start + cols_at_end]
 
         st.dataframe(history_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
@@ -167,17 +172,17 @@ with tab3:
 # --- TAB 6: ADMIN ---
 with tab6:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="adm_e")
+    admin_pw = st.text_input("Admin Password", type="password", key="adm_key")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🔄 Force Refresh"):
+        if st.button("🔄 Force Refresh Database"):
             st.cache_data.clear()
             st.rerun()
 
 # --- TAB 7: BRACKET ---
 with tab7:
     st.header("🏆 Tournament Bracket")
-    st.info("Re-seeding Bracket - TBD based on standings.")
+    st.info("Starts Week 9.")
 
 # --- TAB 8: REGISTRATION ---
 with tab8:
@@ -197,5 +202,5 @@ with tab8:
                 updated_df = pd.concat([df_main, new_reg], ignore_index=True)
                 conn.update(data=updated_df)
                 st.cache_data.clear()
-                st.success("Registered!")
+                st.success(f"Registered {new_name}!")
                 st.rerun()
