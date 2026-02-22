@@ -19,7 +19,7 @@ FEDEX_POINTS = {
 # --- STEP 2: FUNCTIONS ---
 def load_data():
     try:
-        data = conn.read(ttl=0) # ttl=0 ensures real-time data fetch
+        data = conn.read(ttl=0)
         return data.dropna(how='all')
     except:
         return pd.DataFrame()
@@ -54,12 +54,18 @@ df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
-    # Ensure numeric types for calculation
+    # Ensure numeric types
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
-    df_main['Pars_Count'] = pd.to_numeric(df_main['Pars_Count'], errors='coerce').fillna(0)
-    df_main['Birdies_Count'] = pd.to_numeric(df_main['Birdies_Count'], errors='coerce').fillna(0)
-    df_main['Eagle_Count'] = pd.to_numeric(df_main['Eagle_Count'], errors='coerce').fillna(0)
+    df_main['GGG_pts'] = 0.0 # Renamed from animal_pts
+    
+    # Calculate GGG Points per week
+    for w in df_main['Week'].unique():
+        if w == 0: continue
+        mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
+        if mask.any():
+            ranks = df_main.loc[mask, 'Net_Score'].rank(ascending=True, method='min')
+            df_main.loc[mask, 'GGG_pts'] = ranks.map(FEDEX_POINTS).fillna(10)
 else:
     EXISTING_PLAYERS = []
 
@@ -96,24 +102,17 @@ with tab1:
                     is_verified = True
 
         if is_verified:
-            # Display Player's Current Season Totals
             p_data = df_main[df_main['Player'] == player_select]
-            tot_p = p_data['Pars_Count'].sum()
-            tot_b = p_data['Birdies_Count'].sum()
-            tot_e = p_data['Eagle_Count'].sum()
-            
             st.write(f"### 📊 {player_select}'s Season Totals")
             sc1, sc2, sc3 = st.columns(3)
-            sc1.metric("Total Pars", int(tot_p))
-            sc2.metric("Total Birdies", int(tot_b))
-            sc3.metric("Total Eagles", int(tot_e))
+            sc1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
+            sc2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
+            sc3.metric("Total Eagles", int(p_data['Eagle_Count'].sum()))
             st.divider()
 
             with st.form("score_entry", clear_on_submit=True):
-                st.subheader(f"Enter Week {week_select} Score")
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
-                
                 col1, col2, col3 = st.columns(3)
                 s_pars = col1.number_input("Pars", 0, 18, 0, key=f"p_{player_select}_{week_select}")
                 s_birdies = col2.number_input("Birdies", 0, 18, 0, key=f"b_{player_select}_{week_select}")
@@ -123,94 +122,80 @@ with tab1:
                     pin_to_save = stored_pin if stored_pin else user_pin_input
                     save_data(week_select, player_select, s_pars, s_birdies, s_eagles, score_select, hcp_in, pin_to_save)
         else:
-            st.info("Enter PIN to unlock Scorecard and see your stats.")
+            st.info("Enter PIN to unlock Scorecard.")
 
 # --- TAB 2: STANDINGS ---
 with tab2:
     st.header("🏆 League Standings")
     if not df_main.empty:
-        # 1. STANDINGS CALCULATION (FedEx Points)
-        points_data = []
-        actual_weeks = df_main[df_main['Week'] > 0].copy()
-        
-        for w in actual_weeks['Week'].unique():
-            week_df = actual_weeks[(actual_weeks['Week'] == w) & (actual_weeks['DNF'] == False)].copy()
-            if not week_df.empty:
-                # Rank players for the week (Lowest Net Score gets Rank 1)
-                week_df['Rank'] = week_df['Net_Score'].rank(method='min', ascending=True)
-                week_df['Pts'] = week_df['Rank'].map(FEDEX_POINTS).fillna(10) # 10 pts for anyone outside top 13
-                points_data.append(week_df[['Player', 'Pts']])
-        
-        if points_data:
-            all_pts = pd.concat(points_data)
-            leaderboard = all_pts.groupby('Player')['Pts'].sum().reset_index()
-            leaderboard = leaderboard.sort_values(by='Pts', ascending=False).reset_index(drop=True)
-            leaderboard.index += 1
-            st.subheader("Leaderboard (Points)")
-            st.dataframe(leaderboard, use_container_width=True)
-        
-        st.divider()
-        
-        # 2. CATEGORY TOTALS (Pars, Birdies, Eagles)
-        st.subheader("🎯 Season Category Totals")
-        cat_totals = df_main.groupby('Player').agg({
-            'Pars_Count': 'sum',
-            'Birdies_Count': 'sum',
-            'Eagle_Count': 'sum'
-        }).reset_index()
-        cat_totals.columns = ['Player', 'Total Pars', 'Total Birdies', 'Total Eagles']
-        st.dataframe(cat_totals.sort_values(by='Total Pars', ascending=False), use_container_width=True, hide_index=True)
+        # Leaderboard based on GGG_pts
+        leaderboard = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
+        leaderboard = leaderboard.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
+        leaderboard.index += 1
+        st.subheader("Leaderboard (GGG Points)")
+        st.dataframe(leaderboard, use_container_width=True)
     else:
-        st.info("No data available yet.")
+        st.info("No data yet.")
 
-# --- TAB 3: HISTORY ---
+# --- TAB 3: HISTORY (REARRANGED & FILTERED) ---
 with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
+        # Filtering UI
+        f1, f2 = st.columns(2)
+        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS)
+        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)))
+        
         history_df = df_main[df_main['Week'] > 0].copy()
-        if 'PIN' in history_df.columns:
-            history_df = history_df.drop(columns=['PIN'])
-        if not history_df.empty:
-            st.dataframe(history_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
-        else:
-            st.info("No weekly scores recorded yet.")
+        
+        # Apply Filters
+        if p_filter != "All":
+            history_df = history_df[history_df['Player'] == p_filter]
+        if w_filter != "All":
+            history_df = history_df[history_df['Week'] == int(w_filter)]
+
+        # REARRANGE COLUMNS & HIDE PIN
+        # Move Counts to the end
+        cols_at_end = ['Pars_Count', 'Birdies_Count', 'Eagle_Count']
+        cols_at_start = [c for c in history_df.columns if c not in cols_at_end and c != 'PIN']
+        history_df = history_df[cols_at_start + cols_at_end]
+
+        st.dataframe(history_df.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
+    else:
+        st.info("No weekly scores recorded yet.")
 
 # --- TAB 6: ADMIN ---
 with tab6:
     st.subheader("⚙️ Admin Settings")
-    admin_pw = st.text_input("Admin Password", type="password", key="admin_entry")
+    admin_pw = st.text_input("Admin Password", type="password", key="adm_e")
     if admin_pw == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🔄 Force Refresh Database"):
+        if st.button("🔄 Force Refresh"):
             st.cache_data.clear()
             st.rerun()
 
 # --- TAB 7: BRACKET ---
 with tab7:
     st.header("🏆 Tournament Bracket")
-    st.info("Tournament starts Week 9. Bracket re-seeded after Round 1.")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.subheader("Week 9")
-        st.write("Matchups TBD based on standings.")
+    st.info("Re-seeding Bracket - TBD based on standings.")
 
 # --- TAB 8: REGISTRATION ---
 with tab8:
     st.header("👤 Player Registration")
     with st.form("reg_form", clear_on_submit=True):
-        new_name = st.text_input("Full Name", key="reg_n")
-        new_pin = st.text_input("Create 4-Digit PIN", max_chars=4, type="password", key="reg_p")
+        new_name = st.text_input("Full Name", key="rn")
+        new_pin = st.text_input("Create 4-Digit PIN", max_chars=4, type="password", key="rp")
         starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
         
-        if st.form_submit_button("Register"):
+        if st.form_submit_button("Register Player"):
             if new_name and len(new_pin) == 4:
                 new_reg = pd.DataFrame([{
                     "Week": 0, "Player": new_name, "PIN": new_pin, 
                     "Handicap": starting_hcp, "Total_Score": 0, "DNF": True,
-                    "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Net_Score": 0
+                    "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Net_Score": 0, "GGG_pts": 0
                 }])
                 updated_df = pd.concat([df_main, new_reg], ignore_index=True)
                 conn.update(data=updated_df)
                 st.cache_data.clear()
-                st.success(f"Registered {new_name}!")
+                st.success("Registered!")
                 st.rerun()
