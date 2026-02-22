@@ -171,7 +171,7 @@ with tabs[0]: # Scorecard
             
             # Calculate rolling handicap for the current week
             current_hcp = calculate_rolling_handicap(p_data)
-            st.info(f"💡 Based on your last 4 rounds, your calculated Handicap for this week is: **{current_hcp}**")
+            st.info(f"💡 Your calculated Handicap for this week is: **{current_hcp}**")
             st.divider()
 
             week_select = st.selectbox("Select Week to Enter Score", range(1, 13))
@@ -234,3 +234,4 @@ with tabs[4]: # Registration
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
                 st.rerun()
+
