@@ -59,7 +59,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf Summer League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Fixed Tab Unpacking (8 Variables for 8 Tabs)
+# tab header
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📝 Scorecard", "🏆 Standings", "📅 History", "📜 Info", 
     "⚖️ Rules", "⚙️ Admin", "🏆 Bracket", "👤 Registration"
@@ -208,4 +208,5 @@ with tab8:
                 st.cache_data.clear()
                 st.success("Registered!")
                 st.rerun()
+
 
