@@ -31,10 +31,35 @@ def load_data():
         df = data.dropna(how='all')
         rename_map = {'Gross Score': 'Total_Score', 'Pars': 'Pars_Count', 'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count'}
         df = df.rename(columns=rename_map)
-        if 'animal_pts' in df.columns: df = df.drop(columns=['animal_pts'])
         return df
     except:
         return pd.DataFrame()
+
+def load_live_data():
+    try:
+        df = conn.read(worksheet="LiveScores", ttl=0)
+        return df.dropna(how='all')
+    except:
+        return pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
+
+def update_live_hole(player, hole_col, strokes):
+    df_live = load_live_data()
+    # Ensure columns exist and are numeric
+    for i in range(1, 10):
+        col = f"Hole {i}"
+        if col not in df_live.columns: df_live[col] = 0
+        df_live[col] = pd.to_numeric(df_live[col], errors='coerce').fillna(0)
+
+    if player in df_live['Player'].values:
+        df_live.loc[df_live['Player'] == player, hole_col] = strokes
+    else:
+        new_row = {col: 0 for col in df_live.columns if col != 'Player'}
+        new_row['Player'] = player
+        new_row[hole_col] = strokes
+        df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+    
+    conn.update(worksheet="LiveScores", data=df_live)
+    st.cache_data.clear()
 
 def calculate_rolling_handicap(player_df):
     rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
@@ -57,7 +82,6 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     final_net = 0 if is_dnf else (final_gross - hcp_val)
     new_entry = pd.DataFrame([{'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 'Net_Score': final_net, 'DNF': is_dnf, 'PIN': pin}])
     if not existing_data.empty:
-        if 'GGG_pts' in existing_data.columns: existing_data = existing_data.drop(columns=['GGG_pts'])
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else: final_df = new_entry
@@ -68,22 +92,10 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
 # --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
 if not df_main.empty and 'Player' in df_main.columns:
-    if 'GGG_pts' in df_main.columns: df_main = df_main.drop(columns=['GGG_pts'])
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
-    df_main['GGG_pts'] = 0.0
-    for w in df_main['Week'].unique():
-        if w == 0: continue
-        mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
-        if mask.any():
-            week_indices = df_main.index[mask].tolist()
-            week_scores = df_main.loc[mask, 'Net_Score']
-            ranks = week_scores.rank(ascending=True, method='min')
-            for idx in week_indices:
-                r_val = ranks.at[idx]
-                df_main.at[idx, 'GGG_pts'] = float(FEDEX_POINTS.get(int(r_val), 10))
 else: EXISTING_PLAYERS = []
 
 # --- STEP 4: UI ---
@@ -92,9 +104,9 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf Summer League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard
+with tabs[0]: # Scorecard Entry
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -123,13 +135,6 @@ with tabs[0]: # Scorecard
                 st.session_state["session_id"] += 1
                 st.rerun()
             p_data = df_main[df_main['Player'] == player_select]
-            valid_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)]
-            st.markdown(f"### 📊 {player_select}'s Season Dashboard")
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
-            m2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
-            m3.metric("Total Eagles", int(p_data['Eagle_Count'].sum()))
-            m4.metric("Avg Net Score", round(valid_rounds['Net_Score'].mean(), 1) if not valid_rounds.empty else 0)
             current_hcp = calculate_rolling_handicap(p_data)
             st.info(f"💡 Current Rolling Handicap: **{current_hcp}**")
             st.divider()
@@ -139,20 +144,56 @@ with tabs[0]: # Scorecard
                 hcp_in = st.number_input("Handicap", 0.0, 40.0, float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
                 s_p, s_b, s_e = col1.number_input("Pars", 0, 18, 0), col2.number_input("Birdies", 0, 18, 0), col3.number_input("Eagles", 0, 18, 0)
-                if st.form_submit_button("Submit Score"):
+                if st.form_submit_button("Submit Final Weekly Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     save_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip())
 
 with tabs[1]: # Standings
     st.subheader("🏆 League Standings")
     if not df_main.empty:
+        # Re-calc pts logic
+        df_main['GGG_pts'] = 0.0
+        for w in df_main['Week'].unique():
+            if w == 0: continue
+            mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
+            if mask.any():
+                week_scores = df_main.loc[mask, 'Net_Score']
+                ranks = week_scores.rank(ascending=True, method='min')
+                for idx, r_val in ranks.items():
+                    df_main.at[idx, 'GGG_pts'] = float(FEDEX_POINTS.get(int(r_val), 10))
+        
         standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
         standings['Current Handicap'] = [calculate_rolling_handicap(df_main[df_main['Player'] == p]) for p in standings['Player']]
         standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         standings.index += 1
         st.dataframe(standings[['Player', 'GGG_pts', 'Current Handicap']], use_container_width=True)
 
-with tabs[2]: # History
+with tabs[2]: # 🔴 LIVE ROUND
+    st.subheader("🔴 Live Round Tracking")
+    df_live = load_live_data()
+    holes = [f"Hole {i}" for i in range(1, 10)]
+    
+    if st.session_state["unlocked_player"]:
+        st.markdown(f"#### Update your score: **{st.session_state['unlocked_player']}**")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        target_hole = c1.selectbox("Select Hole", holes)
+        target_strokes = c2.number_input("Strokes", 1, 15, 4)
+        if c3.button("Update Hole", use_container_width=True):
+            update_live_hole(st.session_state["unlocked_player"], target_hole, target_strokes)
+            st.rerun()
+    else:
+        st.warning("⚠️ Please unlock your profile in the **Scorecard** tab to enter live scores.")
+
+    st.divider()
+    if not df_live.empty:
+        # Calculate row-wise totals
+        df_live[holes] = df_live[holes].apply(pd.to_numeric, errors='coerce').fillna(0)
+        df_live['Total'] = df_live[holes].sum(axis=1)
+        st.dataframe(df_live[['Player'] + holes + ['Total']].sort_values("Total"), use_container_width=True, hide_index=True)
+    else:
+        st.info("No live scores recorded for today yet.")
+
+with tabs[3]: # History
     st.subheader("📅 Weekly History")
     if not df_main.empty:
         f1, f2 = st.columns(2)
@@ -160,43 +201,23 @@ with tabs[2]: # History
         hist = df_main[df_main['Week'] > 0].copy()
         if p_f != "All": hist = hist[hist['Player'] == p_f]
         if w_f != "All": hist = hist[hist['Week'] == int(w_f)]
-        end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-        mid_cols = [c for c in [c for c in hist.columns if c not in ['PIN', 'session_id', 'animal_pts']] if c not in end_cols and c != 'GGG_pts']
-        st.dataframe(hist[mid_cols + ['GGG_pts'] + end_cols].sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
+        st.dataframe(hist.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[3]: # League Info
+with tabs[4]: # League Info
     st.subheader("ℹ️ League Information")
     info_choice = st.radio("Select View", ["Weekly Schedule", "League Rules"], horizontal=True)
-    
     if info_choice == "Weekly Schedule":
-        st.markdown("### 📅 2026 Weekly Schedule")
         schedule_data = {
             "Week": [f"Week {i}" for i in range(1, 15)],
             "Date": ["May 31", "June 7", "June 14", "June 21", "June 28", "July 5", "July 12", "July 19", "July 26", "August 2", "August 9", "August 16", "August 23", "August 28"],
             "Event / Notes": ["Start", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "-", "-", "-", "GGG Event", "End", "GGG Picnic"]
         }
-        sched_df = pd.DataFrame(schedule_data)
-        
-        # Function to apply styles to the static table
-        def highlight_events(row):
-            if "GGG Event" in str(row["Event / Notes"]) or "GGG Picnic" in str(row["Event / Notes"]):
-                return ['background-color: #90EE90; color: #808080; font-weight: bold'] * len(row)
-            return [''] * len(row)
-
-        # Using st.table instead of st.dataframe so it expands to fit all rows without a scrollbar
-        st.table(sched_df.style.apply(highlight_events, axis=1))
-
+        st.table(pd.DataFrame(schedule_data).style.apply(lambda r: ['background-color: #90EE90; color: #808080; font-weight: bold' if any(ev in str(r["Event / Notes"]) for ev in ["GGG Event", "GGG Picnic"]) else '' for _ in r], axis=1))
     else:
         st.markdown("### ⚖️ League Rules")
         st.info("**Standard Play:** All rounds are played to a Par 36 baseline.")
-        st.markdown("""
-        * **Handicap Calculation:** Best 3 of last 4 rounds (minus 36).
-        * **Scoring:** Submit via Scorecard tab using your private PIN.
-        * **Ranking:** FedEx Cup style points based on Net Score.
-        * **DNF:** Record as 'DNF' to receive minimum attendance points.
-        """)
 
-with tabs[4]: # Registration
+with tabs[5]: # Registration
     st.header("👤 Player Registration")
     with st.form("reg"):
         n_n, n_p, n_h = st.text_input("Name"), st.text_input("4-Digit PIN", max_chars=4), st.number_input("Starting Handicap", 0.0, 36.0, 10.0)
@@ -205,13 +226,24 @@ with tabs[4]: # Registration
                 new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
-                st.success(f"Registered {n_n}! Welcome to the league.")
+                st.success(f"Registered {n_n}!")
                 st.rerun()
 
-with tabs[5]: # Admin
+with tabs[6]: # Admin
     st.subheader("⚙️ Admin Controls")
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("Refresh All Data"):
+        st.success("Admin Authenticated")
+        
+        col_ref, col_res = st.columns(2)
+        if col_ref.button("Refresh All App Data"):
             st.cache_data.clear()
+            st.rerun()
+            
+        if col_res.button("🚨 RESET LIVE SCORES"):
+            # Create a blank dataframe with headers only
+            reset_df = pd.DataFrame(columns=['Player'] + [f"Hole {i}" for i in range(1, 10)])
+            conn.update(worksheet="LiveScores", data=reset_df)
+            st.cache_data.clear()
+            st.warning("Live Scorecard has been wiped for the next round!")
             st.rerun()
