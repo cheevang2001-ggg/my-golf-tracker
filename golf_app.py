@@ -10,12 +10,13 @@ if "authenticated" not in st.session_state:
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
 
-# Added Lefty with Handicap 5
-DEFAULT_HANDICAPS = {
-    "Cory": 3, "Lex": 7, "Mike": 9,
-    "Carter": 5, "Dale": 4, "Long Lee": 6, "Txv": 4,
-    "Matt": 2, "Beef": 9
-}
+df_main = load_data()
+
+# Dynamically get player names from the 'Player' column in your Sheet
+if not df_main.empty and 'Player' in df_main.columns:
+    EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
+else:
+    EXISTING_PLAYERS = []
 
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
@@ -93,7 +94,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.divider()
 
 # --- DEFINE TABS ONCE ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📝 Scorecard", 
     "🏆 Standings", 
     "📅 History", 
@@ -101,12 +102,13 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "⚖️ Rules",   # New Tab
     "⚙️ Admin", 
     "🏆 Bracket"
+    "👤 Player Registration"
 ])
 
 # --- TAB 1: SCORECARD ---
 with tab1:
     c1, c2 = st.columns(2)
-    player_select = c1.selectbox("Select Player", sorted(DEFAULT_HANDICAPS.keys()), key="p_sel")
+    player_select = c1.selectbox("Select Player", EXISTING_PLAYERS)
     week_select = c2.selectbox("Select Week", range(1, 13), key="w_sel")
     
     # NEW: PIN INPUT
@@ -373,6 +375,43 @@ with tab6:
         st.subheader("Week 12")
         st.caption("FINALS")
         st.markdown("**🏆 Championship Match**")
+        
+# --- TAB 8: TOURNAMENT BRACKET ---
+with tab8: # Or whichever tab you want the registration in
+    st.header("👤 Player Registration")
+    st.info("New to the league? Register your name and a private 4-digit PIN here.")
+
+    with st.form("registration_form"):
+        new_name = st.text_input("Full Name (First and Last)")
+        new_pin = st.text_input("Create 4-Digit PIN", type="password", max_chars=4)
+        starting_hcp = st.number_input("Starting Handicap", min_value=0, max_value=36, value=10)
+        
+        reg_submitted = st.form_submit_button("Register for Summer League")
+        
+        if reg_submitted:
+            if new_name and len(new_pin) == 4:
+                if new_name in EXISTING_PLAYERS:
+                    st.error("This name is already registered!")
+                else:
+                    # Create a "Week 0" entry to initialize the player
+                    new_player_data = pd.DataFrame([{
+                        "Week": 0,
+                        "Player": new_name,
+                        "PIN": new_pin,
+                        "Handicap": starting_hcp,
+                        "Gross Score": 0,
+                        "Pars": 0, "Birdies": 0, "Eagles": 0 # Initialize metrics
+                    }])
+                    
+                    # Append to Google Sheets
+                    updated_df = pd.concat([df_main, new_player_data], ignore_index=True)
+                    conn.update(data=updated_df)
+                    st.cache_data.clear() # Force app to see new player immediately
+                    st.success(f"Welcome to the league, {new_name}! You can now log scores in the Scorecard tab.")
+                    st.rerun()
+            else:
+                st.warning("Please provide both a name and a 4-digit PIN.")
+
 
 
 
