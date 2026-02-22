@@ -21,7 +21,43 @@ FEDEX_POINTS = {
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
 }
 
-# --- STEP 2: FUNCTIONS ---
+# --- STEP 2: UPDATED HANDICAP LOGIC ---
+
+def calculate_rolling_handicap(player_df):
+    """
+    Calculates handicap based on 'Best 3 of last 4' rounds.
+    EXCLUDES GGG Events: Weeks 4, 8, 12.
+    """
+    try:
+        # Exclude Week 0 (reg), DNF, and GGG Special Events (4, 8, 12)
+        excluded_weeks = [0, 4, 8, 12]
+        rounds = player_df[
+            (~player_df['Week'].isin(excluded_weeks)) & 
+            (player_df['DNF'] == False)
+        ].sort_values('Week', ascending=False)
+        
+        # Get starting handicap from Week 0
+        starting_hcp_row = player_df[player_df['Week'] == 0]
+        starting_hcp = 10.0
+        if not starting_hcp_row.empty:
+            val = starting_hcp_row['Handicap'].values[0]
+            starting_hcp = float(val) if pd.notnull(val) else 10.0
+            
+        if len(rounds) == 0:
+            final_hcp = starting_hcp
+        else:
+            last_4 = rounds.head(4)['Total_Score'].tolist()
+            if len(last_4) >= 4:
+                last_4.sort()
+                best_3 = last_4[:3] 
+                final_hcp = round(sum(best_3) / 3 - 36, 1)
+            else:
+                final_hcp = round(sum(last_4) / len(last_4) - 36, 1)
+        return max(0.0, min(40.0, float(final_hcp)))
+    except:
+        return 10.0
+
+# --- REMAINING HELPER FUNCTIONS ---
 
 def load_data():
     try:
@@ -66,28 +102,6 @@ def update_live_hole(player, hole_col, strokes):
     except Exception as e:
         st.error(f"Update failed: {e}")
 
-def calculate_rolling_handicap(player_df):
-    try:
-        rounds = player_df[(player_df['Week'] > 0) & (player_df['DNF'] == False)].sort_values('Week', ascending=False)
-        starting_hcp_row = player_df[player_df['Week'] == 0]
-        starting_hcp = 10.0
-        if not starting_hcp_row.empty:
-            val = starting_hcp_row['Handicap'].values[0]
-            starting_hcp = float(val) if pd.notnull(val) else 10.0
-        if len(rounds) == 0:
-            final_hcp = starting_hcp
-        else:
-            last_4 = rounds.head(4)['Total_Score'].tolist()
-            if len(last_4) >= 4:
-                last_4.sort()
-                best_3 = last_4[:3] 
-                final_hcp = round(sum(best_3) / 3 - 36, 1)
-            else:
-                final_hcp = round(sum(last_4) / len(last_4) - 36, 1)
-        return max(0.0, min(40.0, float(final_hcp)))
-    except:
-        return 10.0
-
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     existing_data = load_data()
@@ -124,7 +138,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard Entry + DASHBOARD + REVERSED CHART
+with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: st.warning("No players registered.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
@@ -165,43 +179,31 @@ with tabs[0]: # Scorecard Entry + DASHBOARD + REVERSED CHART
             avg_net = played_rounds['Net_Score'].mean() if not played_rounds.empty else 0.0
             current_hcp = calculate_rolling_handicap(p_data)
             
-            m1.metric("Handicap", f"{current_hcp:.1f}")
+            m1.metric("Current HCP", f"{current_hcp:.1f}", help="Excludes Weeks 4, 8, 12")
             m2.metric("Avg Net", f"{avg_net:.1f}")
             m3.metric("Total Pars", int(total_pars))
             m4.metric("Birdies", int(total_birdies))
             m5.metric("Eagles", int(total_eagles))
             
-            # --- UPDATED REVERSED CHART ---
             if not played_rounds.empty:
-                st.markdown("#### Performance Trend")
-                
-                # REVERSED Y-AXIS: Lower numbers are placed at the top
+                st.markdown("#### Performance Trend (Higher = Better Score)")
                 line = alt.Chart(played_rounds).mark_line(color='#2e7d32', size=3).encode(
                     x=alt.X('Week:O', title='Week'),
-                    y=alt.Y('Net_Score:Q', 
-                           title='Net Score', 
-                           scale=alt.Scale(reverse=True, zero=False)), # REVERSE=TRUE IS THE KEY
+                    y=alt.Y('Net_Score:Q', title='Net Score', scale=alt.Scale(reverse=True, zero=False)),
                     tooltip=['Week', 'Net_Score']
                 )
-                
                 points = line.mark_point(color='#2e7d32', size=100, filled=True)
-                
-                final_chart = (line + points).properties(height=350).configure_axis(
-                    labelFontSize=12,
-                    titleFontSize=14
-                )
-                
-                st.altair_chart(final_chart, use_container_width=True)
-            else:
-                st.info("Post your first score to see your trend!")
-
+                st.altair_chart((line + points).properties(height=350), use_container_width=True)
+            
             st.divider()
             
-            # --- SCORE ENTRY FORM ---
             week_select = st.selectbox("Select Week", range(1, 15))
+            if week_select in [4, 8, 12]:
+                st.warning(f"⚠️ Week {week_select} is a GGG Event. Score will not affect future handicaps.")
+            
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                hcp_in = st.number_input("Handicap", 0.0, 40.0, value=float(current_hcp), step=0.1)
+                hcp_in = st.number_input("Handicap for this Round", 0.0, 40.0, value=float(current_hcp), step=0.1)
                 col1, col2, col3 = st.columns(3)
                 s_p = col1.number_input("Pars", 0, 18, 0)
                 s_b = col2.number_input("Birdies", 0, 18, 0)
@@ -308,5 +310,6 @@ with tabs[6]:
             st.cache_data.clear()
             st.warning("Live Board Cleared!")
             st.rerun()
+
 
 
