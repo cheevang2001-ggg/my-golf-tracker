@@ -160,10 +160,17 @@ with tabs[0]: # Scorecard
             st.divider()
             with st.form("score_entry"):
                 st.write(f"Posting for **Week {w_s}** with **{current_hcp_for_week:.1f}** HCP.")
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
-                h_r = st.number_input("Handicap to apply", 0.0, 40.0, value=float(current_hcp_for_week), step=0.1)
+                
+                # We add the week variable to the key to force a reset when the week changes
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
+                h_r = st.number_input("Handicap to apply", 0.0, 40.0, value=float(current_hcp_for_week), step=0.1, key=f"hcp_input_{w_s}")
+                
                 c1, c2, c3 = st.columns(3)
-                p_c, b_c, e_c = c1.number_input("Pars", 0, 18), c2.number_input("Birdies", 0, 18), c3.number_input("Eagles", 0, 18)
+                # Adding {w_s} to the key ensures these fields return to 0 when you change weeks
+                p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
+                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_{w_s}")
+                
                 if st.form_submit_button("Submit Score"):
                     pin = str(p_data[p_data['Week'] == 0]['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
@@ -231,3 +238,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.cache_data.clear(); st.rerun()
+
