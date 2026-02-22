@@ -16,7 +16,7 @@ if "session_id" not in st.session_state:
     st.session_state["session_id"] = 0 
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145" 
-SESSION_TIMEOUT = 4 * 60 * 60 # 4 Hours
+SESSION_TIMEOUT = 4 * 60 * 60 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 FEDEX_POINTS = {
@@ -29,14 +29,17 @@ def load_data():
     try:
         data = conn.read(ttl=0)
         df = data.dropna(how='all')
+        # Professional Column Mapping
         rename_map = {
             'Gross Score': 'Total_Score',
             'Pars': 'Pars_Count',
             'Birdies': 'Birdies_Count',
-            'Eagles': 'Eagle_Count',
-            'animal_pts': 'GGG_pts'
+            'Eagles': 'Eagle_Count'
         }
         df = df.rename(columns=rename_map)
+        # Remove any stray "animal_pts" or duplicated "GGG_pts" from the sheet
+        if 'animal_pts' in df.columns:
+            df = df.drop(columns=['animal_pts'])
         return df
     except:
         return pd.DataFrame()
@@ -56,6 +59,9 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     }])
     
     if not existing_data.empty:
+        # Prevent duplicate column creation by dropping GGG_pts before saving
+        if 'GGG_pts' in existing_data.columns:
+            existing_data = existing_data.drop(columns=['GGG_pts'])
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
         final_df = pd.concat([updated_df, new_entry], ignore_index=True)
     else:
@@ -65,14 +71,20 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING ---
+# --- STEP 3: DATA PROCESSING (UNIQUE COLUMN ENFORCEMENT) ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
+    # CRITICAL: Drop GGG_pts if it exists so we don't have duplicates
+    if 'GGG_pts' in df_main.columns:
+        df_main = df_main.drop(columns=['GGG_pts'])
+    
     EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
+    
+    # Initialize a single, unique GGG_pts column
     df_main['GGG_pts'] = 0.0
     
     for w in df_main['Week'].unique():
@@ -104,6 +116,7 @@ with tabs[0]: # Scorecard
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
         current_time = time.time()
         
+        # Check if the session is still valid for this specific player
         is_unlocked = (st.session_state["unlocked_player"] == player_select and 
                        (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT)
         
@@ -126,7 +139,7 @@ with tabs[0]: # Scorecard
         else:
             c1, c2 = st.columns([5, 1])
             c1.success(f"✅ **{player_select} Unlocked**")
-            if c2.button("Logout 🔓"):
+            if c2.button("Logout 🔓", key="logout_btn"):
                 st.session_state["unlocked_player"] = None
                 st.session_state["login_timestamp"] = 0
                 st.session_state["session_id"] += 1
@@ -147,26 +160,31 @@ with tabs[0]: # Scorecard
                     save_data(week_select, player_select, s_p, s_b, s_e, score_select, hcp_in, final_pin)
 
 with tabs[1]: # Standings
+    st.subheader("🏆 League Standings")
     if not df_main.empty:
+        # Ensure we only have one GGG_pts column before grouping
         standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
         standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         standings.index += 1
         st.dataframe(standings, use_container_width=True)
 
 with tabs[2]: # History
+    st.subheader("📅 Weekly History")
     if not df_main.empty:
         f1, f2 = st.columns(2)
-        p_f = f1.selectbox("Filter Player", ["All"] + EXISTING_PLAYERS)
-        w_f = f2.selectbox("Filter Week", ["All"] + list(range(1, 13)))
+        p_f = f1.selectbox("Filter Player", ["All"] + EXISTING_PLAYERS, key="hist_p")
+        w_f = f2.selectbox("Filter Week", ["All"] + list(range(1, 13)), key="hist_w")
         
         hist = df_main[df_main['Week'] > 0].copy()
         if p_f != "All": hist = hist[hist['Player'] == p_f]
         if w_f != "All": hist = hist[hist['Week'] == int(w_f)]
         
-        # Columns reordering
+        # Columns reordering: Stats first, Points middle, Counts/DNF end
         end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-        current_cols = [c for c in hist.columns if c not in ['PIN', 'session_id']]
+        # Remove hidden/internal columns
+        current_cols = [c for c in hist.columns if c not in ['PIN', 'session_id', 'animal_pts']]
         mid_cols = [c for c in current_cols if c not in end_cols and c != 'GGG_pts']
+        
         hist = hist[mid_cols + ['GGG_pts'] + end_cols]
         st.dataframe(hist.sort_values(["Week", "Player"], ascending=[False, True]), use_container_width=True, hide_index=True)
 
@@ -178,6 +196,7 @@ with tabs[3]: # Admin
             st.rerun()
 
 with tabs[4]: # Registration
+    st.header("👤 Player Registration")
     with st.form("reg"):
         n_n = st.text_input("Name")
         n_p = st.text_input("4-Digit PIN", max_chars=4)
