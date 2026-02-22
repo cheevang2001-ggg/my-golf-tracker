@@ -29,7 +29,6 @@ def load_data():
     try:
         data = conn.read(ttl=0)
         df = data.dropna(how='all')
-        # Professional Column Mapping
         rename_map = {
             'Gross Score': 'Total_Score',
             'Pars': 'Pars_Count',
@@ -37,7 +36,6 @@ def load_data():
             'Eagles': 'Eagle_Count'
         }
         df = df.rename(columns=rename_map)
-        # Remove any stray "animal_pts" or duplicated "GGG_pts" from the sheet
         if 'animal_pts' in df.columns:
             df = df.drop(columns=['animal_pts'])
         return df
@@ -59,7 +57,6 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     }])
     
     if not existing_data.empty:
-        # Prevent duplicate column creation by dropping GGG_pts before saving
         if 'GGG_pts' in existing_data.columns:
             existing_data = existing_data.drop(columns=['GGG_pts'])
         updated_df = existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))]
@@ -71,11 +68,10 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING (UNIQUE COLUMN ENFORCEMENT) ---
+# --- STEP 3: DATA PROCESSING ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
-    # CRITICAL: Drop GGG_pts if it exists so we don't have duplicates
     if 'GGG_pts' in df_main.columns:
         df_main = df_main.drop(columns=['GGG_pts'])
     
@@ -84,9 +80,7 @@ if not df_main.empty and 'Player' in df_main.columns:
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
     df_main['DNF'] = df_main.get('DNF', False).astype(bool)
     
-    # Initialize a single, unique GGG_pts column
     df_main['GGG_pts'] = 0.0
-    
     for w in df_main['Week'].unique():
         if w == 0: continue
         mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
@@ -116,7 +110,6 @@ with tabs[0]: # Scorecard
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="p_sel")
         current_time = time.time()
         
-        # Check if the session is still valid for this specific player
         is_unlocked = (st.session_state["unlocked_player"] == player_select and 
                        (current_time - st.session_state["login_timestamp"]) < SESSION_TIMEOUT)
         
@@ -125,7 +118,7 @@ with tabs[0]: # Scorecard
         if not is_unlocked:
             st.info(f"🔒 {player_select} is locked.")
             pin_key = f"pin_{player_select}_{st.session_state['session_id']}"
-            user_pin_input = st.text_input("Enter PIN", type="password", key=pin_key)
+            user_pin_input = st.text_input("Enter PIN to Unlock", type="password", key=pin_key)
             if user_pin_input:
                 p_info = df_main[df_main['Player'] == player_select]
                 if not p_info.empty:
@@ -145,15 +138,24 @@ with tabs[0]: # Scorecard
                 st.session_state["session_id"] += 1
                 st.rerun()
 
-            week_select = st.selectbox("Select Week", range(1, 13))
+            # --- NEW: TOTAL STATS DISPLAY ---
+            p_data = df_main[df_main['Player'] == player_select]
+            st.markdown(f"### 📊 {player_select}'s Season Totals")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Total Pars", int(p_data['Pars_Count'].sum()))
+            m2.metric("Total Birdies", int(p_data['Birdies_Count'].sum()))
+            m3.metric("Total Eagles", int(p_data['Eagle_Count'].sum()))
+            st.divider()
+
+            week_select = st.selectbox("Select Week to Enter Score", range(1, 13))
             
             with st.form("score_entry", clear_on_submit=True):
                 score_select = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)])
                 hcp_in = st.number_input("Handicap", 0, 40, 10)
                 col1, col2, col3 = st.columns(3)
-                s_p = col1.number_input("Pars", 0, 18, 0)
-                s_b = col2.number_input("Birdies", 0, 18, 0)
-                s_e = col3.number_input("Eagles", 0, 18, 0)
+                s_p = col1.number_input("Pars this Week", 0, 18, 0)
+                s_b = col2.number_input("Birdies this Week", 0, 18, 0)
+                s_e = col3.number_input("Eagles this Week", 0, 18, 0)
                 if st.form_submit_button("Submit Score"):
                     p_info = df_main[df_main['Player'] == player_select]
                     final_pin = str(p_info.iloc[0].get('PIN', '')).split('.')[0].strip()
@@ -162,7 +164,6 @@ with tabs[0]: # Scorecard
 with tabs[1]: # Standings
     st.subheader("🏆 League Standings")
     if not df_main.empty:
-        # Ensure we only have one GGG_pts column before grouping
         standings = df_main.groupby('Player')['GGG_pts'].sum().reset_index()
         standings = standings.sort_values(by='GGG_pts', ascending=False).reset_index(drop=True)
         standings.index += 1
@@ -179,9 +180,7 @@ with tabs[2]: # History
         if p_f != "All": hist = hist[hist['Player'] == p_f]
         if w_f != "All": hist = hist[hist['Week'] == int(w_f)]
         
-        # Columns reordering: Stats first, Points middle, Counts/DNF end
         end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-        # Remove hidden/internal columns
         current_cols = [c for c in hist.columns if c not in ['PIN', 'session_id', 'animal_pts']]
         mid_cols = [c for c in current_cols if c not in end_cols and c != 'GGG_pts']
         
@@ -203,7 +202,7 @@ with tabs[4]: # Registration
         n_h = st.number_input("Handicap", 0, 36, 10)
         if st.form_submit_button("Register"):
             if n_n and len(n_p) == 4:
-                new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True}])
+                new_p = pd.DataFrame([{"Week": 0, "Player": n_n, "PIN": n_p, "Handicap": n_h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0}])
                 conn.update(data=pd.concat([df_main, new_p], ignore_index=True))
                 st.cache_data.clear()
                 st.rerun()
