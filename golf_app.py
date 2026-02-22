@@ -145,8 +145,48 @@ with tab6:
         st.session_state["authenticated"] = False
 
 # --- TAB 7: BRACKET ---
-with tab7:
-    st.write("Tournament Bracket TBD")
+    st.header("🏆 12-Man Re-Seeding Tournament")
+    st.info("Tournament starts Week 9. Bracket is re-seeded after Round 1 so top seeds play the lowest remaining seeds. Highest Seed refers to the player with the best rank (closest to 1) and the Lowest Seed refers to the player with the worst rank.")
+       
+    c1, c2, c3, c4 = st.columns(4)
+    
+    with c1:
+        st.subheader("Week 9")
+        st.caption("Round 1 (Byes)")
+        st.write("🟢 **Seed 1 (BYE)**")
+        st.write("🟢 **Seed 2 (BYE)**")
+        st.write("🟢 **Seed 3 (BYE)**")
+        st.write("🟢 **Seed 4 (BYE)**")
+        st.divider()
+        st.markdown("**Matchups:**")
+        st.write("M1: Seed 5 vs Seed 12")
+        st.write("M2: Seed 6 vs Seed 11")
+        st.write("M3: Seed 7 vs Seed 10")
+        st.write("M4: Seed 8 vs Seed 9")
+
+    with c2:
+        st.subheader("Week 10")
+        st.caption("Quarter-Finals (Re-seeded)")
+        # Logic: Top seeds play the lowest survivors
+        st.write("Seed 1 vs Lowest Remaining Seed")
+        st.write("Seed 2 vs 2nd Lowest Remaining")
+        st.divider()
+        st.write("Seed 3 vs 3rd Lowest Remaining")
+        st.write("Seed 4 vs Highest Remaining Seed")
+
+    with c3:
+        st.subheader("Week 11")
+        st.caption("Semi-Finals")
+        st.write("Top Bracket Winner")
+        st.write("vs")
+        st.write("Bottom Bracket Winner")
+
+    with c4:
+        st.subheader("Week 12")
+        st.caption("CHAMPIONSHIP")
+        st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
+        st.write("Final Match")
+
 
 # --- TAB 8: REGISTRATION ---
 with tab8:
@@ -168,3 +208,4 @@ with tab8:
                 st.cache_data.clear()
                 st.success("Registered!")
                 st.rerun()
+
