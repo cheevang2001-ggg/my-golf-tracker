@@ -8,7 +8,7 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
-REGISTRATION_KEY = "GG2026"
+REGISTRATION_KEY = "whitebass"
 SESSION_TIMEOUT = 4 * 60 * 60 
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
@@ -243,4 +243,5 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.cache_data.clear(); st.rerun()
+
 
