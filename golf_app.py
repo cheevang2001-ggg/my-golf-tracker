@@ -68,33 +68,40 @@ def save_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     st.rerun()
 
-# --- STEP 3: DATA PROCESSING (FIXED CALCULATION) ---
+# --- STEP 3: DATA PROCESSING (FINAL STABLE CALCULATION) ---
 df_main = load_data()
 
 if not df_main.empty and 'Player' in df_main.columns:
-    EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
+    # 1. Backwards Compatibility: Rename columns if they still have old names
+    rename_map = {
+        'Gross Score': 'Total_Score', 'Pars': 'Pars_Count',
+        'Birdies': 'Birdies_Count', 'Eagles': 'Eagle_Count',
+        'animal_pts': 'GGG_pts'
+    }
+    df_main = df_main.rename(columns=rename_map)
     
-    # 1. Ensure numeric types to prevent math errors
+    EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist())
     df_main['Week'] = pd.to_numeric(df_main['Week'], errors='coerce').fillna(0)
     df_main['Net_Score'] = pd.to_numeric(df_main['Net_Score'], errors='coerce').fillna(0)
+    df_main['DNF'] = df_main.get('DNF', False).astype(bool)
     
-    # 2. Initialize the column
+    # 2. Initialize point column
     df_main['GGG_pts'] = 0.0
     
-    # 3. Calculate points week-by-week
+    # 3. Calculate points week-by-week using list-conversion to avoid index errors
     for w in df_main['Week'].unique():
-        if w == 0: continue  # Skip registration week
-        
-        # Identify non-DNF players for this specific week
-        mask = (df_main['Week'] == w) & (df_main.get('DNF', False) == False)
+        if w == 0: continue
+        mask = (df_main['Week'] == w) & (df_main['DNF'] == False)
         
         if mask.any():
-            # Calculate ranks for just these specific rows
-            week_subset = df_main.loc[mask].copy()
-            week_subset['rank'] = week_subset['Net_Score'].rank(ascending=True, method='min')
-            
-            # Map ranks to points and assign directly using the row indices
-            df_main.loc[mask, 'GGG_pts'] = week_subset['rank'].map(FEDEX_POINTS).fillna(10)
+            # Get the scores for this week
+            scores = df_main.loc[mask, 'Net_Score']
+            # Calculate ranks
+            ranks = scores.rank(ascending=True, method='min')
+            # Map to points and convert to a plain list (bypasses Index matching)
+            points_list = ranks.map(FEDEX_POINTS).fillna(10).tolist()
+            # Assign the list back to the main dataframe
+            df_main.loc[mask, 'GGG_pts'] = points_list
 else:
     EXISTING_PLAYERS = []
 
@@ -178,26 +185,43 @@ with tab2:
         leaderboard.index += 1
         st.dataframe(leaderboard, use_container_width=True)
 
-# --- TAB 3: HISTORY (REARRANGED) ---
+# --- TAB 3: HISTORY ---
 with tab3:
     st.subheader("📅 Weekly History")
     if not df_main.empty:
-        # Create a filtered copy for history (Weeks 1+)
+        # Filter UI
+        f1, f2 = st.columns(2)
+        p_filter = f1.selectbox("Filter by Player", ["All"] + EXISTING_PLAYERS, key="hist_p")
+        w_filter = f2.selectbox("Filter by Week", ["All"] + list(range(1, 13)), key="hist_w")
+        
+        # Start with all weekly scores (Week 1+)
         history_df = df_main[df_main['Week'] > 0].copy()
         
+        # Apply Filters
+        if p_filter != "All":
+            history_df = history_df[history_df['Player'] == p_filter]
+        if w_filter != "All":
+            history_df = history_df[history_df['Week'] == int(w_filter)]
+
         if history_df.empty:
-            st.info("No scores recorded yet.")
+            st.info("No records found for the selected filters.")
         else:
-            # Drop the hidden columns and old column names
-            cols_to_drop = ['PIN', 'animal_pts', 'session_id']
-            cols_to_show = [c for c in history_df.columns if c not in cols_to_drop]
+            # 1. Identify which columns actually exist to avoid "KeyError"
+            available_cols = history_df.columns.tolist()
             
-            # Define the order: Move counts and DNF to the very end
+            # 2. Define our target order (Counts at the end, DNF very last)
+            # Remove internal columns like PIN and session_id
+            internal_cols = ['PIN', 'session_id', 'animal_pts']
+            
             end_cols = ['Pars_Count', 'Birdies_Count', 'Eagle_Count', 'DNF']
-            start_cols = [c for c in cols_to_show if c not in end_cols]
             
-            history_df = history_df[start_cols + end_cols]
+            # Identify columns that should go at the start
+            start_cols = [c for c in available_cols if c not in end_cols and c not in internal_cols and c != 'GGG_pts']
             
+            # Reconstruct the dataframe in order: Start -> Points -> Counts -> DNF
+            final_order = start_cols + ['GGG_pts'] + [c for c in end_cols if c in available_cols]
+            history_df = history_df[final_order]
+
             st.dataframe(
                 history_df.sort_values(["Week", "Player"], ascending=[False, True]), 
                 use_container_width=True, 
@@ -234,5 +258,6 @@ with tab8:
                 st.cache_data.clear()
                 st.success(f"Registered {new_name}!")
                 st.rerun()
+
 
 
