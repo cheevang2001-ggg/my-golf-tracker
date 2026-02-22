@@ -201,24 +201,35 @@ with tab7:
 # --- TAB 8: REGISTRATION ---
 with tab8:
     st.header("👤 Player Registration")
-    st.info("Register below to join the Summer League.")
-    with st.form("reg_form"):
-        new_name = st.text_input("Full Name")
-        new_pin = st.text_input("Create 4-Digit PIN (used for scorecard)", max_chars=4, type="password")
-        starting_hcp = st.number_input("Starting Handicap", 0, 36, 10)
+    st.info("Register below to join the Summer League. Once you click register, the page will refresh for the next person.")
+    
+    # Use a unique form key to help Streamlit manage the state
+    with st.form("reg_form", clear_on_submit=True):
+        # Adding unique keys to these inputs helps the 'clear_on_submit' feature
+        new_name = st.text_input("Full Name", key="reg_name_input")
+        new_pin = st.text_input("Create 4-Digit PIN (used for scorecard)", max_chars=4, type="password", key="reg_pin_input")
+        starting_hcp = st.number_input("Starting Handicap", 0, 36, 10, key="reg_hcp_input")
         
         if st.form_submit_button("Register Player"):
             if new_name and len(new_pin) == 4:
-                # Format to match Scorecard columns: Total_Score, Pars_Count, etc. [cite: 45, 47]
+                # Prepare the new row
                 new_reg = pd.DataFrame([{
                     "Week": 0, "Player": new_name, "PIN": new_pin, 
                     "Handicap": starting_hcp, "Total_Score": 0, "DNF": True,
                     "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Net_Score": 0
                 }])
+                
+                # Update Google Sheets
                 updated_df = pd.concat([df_main, new_reg], ignore_index=True)
                 conn.update(data=updated_df)
+                
+                # CRITICAL: Clear cache so the new player appears in Scorecard dropdown immediately
                 st.cache_data.clear()
-                st.success(f"Welcome {new_name}! You are now registered.")
+                
+                st.success(f"Welcome {new_name}! Registration successful.")
+                
+                # Force the app to restart, clearing all input fields for the next user
                 st.rerun()
             else:
                 st.error("Please provide a name and a 4-digit PIN.")
+
