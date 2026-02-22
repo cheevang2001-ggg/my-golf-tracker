@@ -162,18 +162,39 @@ with tabs[0]: # Scorecard
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
 
 with tabs[1]: # Standings
-    st.subheader("🏆 Standings")
+    st.subheader("🏆 Season Standings")
     if not df_main.empty:
-        s_df = df_main[df_main['Week'] > 0].copy()
-        s_df['Pts'] = 0.0
-        for w in s_df['Week'].unique():
-            m = (s_df['Week'] == w) & (s_df['DNF'] == False)
-            if m.any():
-                s_df.loc[m, 'R'] = s_df.loc[m, 'Net_Score'].rank(method='min')
-                for idx, row in s_df[m].iterrows(): s_df.at[idx, 'Pts'] = FEDEX_POINTS.get(int(row['R']), 10.0)
-        res = s_df.groupby('Player')['Pts'].sum().reset_index().sort_values('Pts', ascending=False).reset_index(drop=True)
-        res.index += 1
-        st.dataframe(res, use_container_width=True)
+        # 1. Filter out registration and prep data
+        valid_scores = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
+        
+        if not valid_scores.empty:
+            # 2. Calculate Weekly Points
+            valid_scores['Pts'] = 0.0
+            for w in valid_scores['Week'].unique():
+                m = (valid_scores['Week'] == w)
+                if m.any():
+                    # Rank players for that specific week (Low Net = Rank 1)
+                    valid_scores.loc[m, 'R'] = valid_scores.loc[m, 'Net_Score'].rank(method='min')
+                    for idx, row in valid_scores[m].iterrows():
+                        valid_scores.at[idx, 'Pts'] = FEDEX_POINTS.get(int(row['R']), 10.0)
+            
+            # 3. Group by Player to get Total Points and Average Net
+            summary = valid_scores.groupby('Player').agg({
+                'Pts': 'sum',
+                'Net_Score': 'mean'
+            }).reset_index()
+            
+            # 4. Clean up formatting and sorting
+            summary = summary.rename(columns={'Net_Score': 'Avg Net', 'Pts': 'Total Pts'})
+            summary['Avg Net'] = summary['Avg Net'].round(1)
+            
+            # Sort by Points (Primary) then Avg Net (Secondary - lower is better)
+            res = summary.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]).reset_index(drop=True)
+            res.index += 1
+            
+            st.dataframe(res[['Player', 'Total Pts', 'Avg Net']], use_container_width=True)
+        else:
+            st.info("No scores have been posted yet.")
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
@@ -222,3 +243,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.cache_data.clear(); st.rerun()
+
