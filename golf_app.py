@@ -68,11 +68,19 @@ def load_live_data():
 def update_live_score(player, hole, strokes):
     df_live = load_live_data()
     hole_col = str(hole)
+    
     if player in df_live['Player'].values:
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
     else:
-        new_row = {str(i): 0 for i in range(1, 10), 'Player': player}
+        # Create the dictionary for holes 1-9 first
+        new_row = {str(i): 0 for i in range(1, 10)}
+        # Then add the Player name
+        new_row['Player'] = player
+        # Then set the specific hole score
+        new_row[hole_col] = int(strokes)
+        
         df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+        
     conn.update(worksheet="LiveScores", data=df_live)
     st.cache_data.clear()
 
@@ -207,3 +215,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
