@@ -48,58 +48,63 @@ def load_data():
     except:
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
-def load_live_data():
+def load_live_data(force_refresh=False):
+    """Bypasses cache to ensure we never overwrite with old data."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
-        df = conn.read(worksheet="LiveScores", ttl=2)
+        # If we are updating, we force ttl=0 to get the REAL current data
+        fetch_ttl = 0 if force_refresh else 2
+        df = conn.read(worksheet="LiveScores", ttl=fetch_ttl)
+        
         if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
+        
+        # Clean headers
         df.columns = [str(c).strip().split('.')[0] for c in df.columns]
+        
+        # Ensure all columns are numeric and present
         for col in hole_cols:
             if col not in df.columns: df[col] = 0
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+            
         return df[['Player'] + hole_cols]
-    except:
+    except Exception as e:
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Updates a specific hole while strictly preserving all other hole scores."""
-    # 1. Load the most current data from the sheet
-    df_live = load_live_data()
+    """Strict atomic update: Loads fresh, modifies one cell, and saves."""
+    # 1. Force a clean, non-cached read of the current live scores
+    st.cache_data.clear() 
+    df_live = load_live_data(force_refresh=True)
+    
     hole_cols = [str(i) for i in range(1, 10)]
     hole_col = str(hole)
     
-    # 2. Ensure we have a clean dataframe with string headers
-    df_live.columns = [str(c) for c in df_live.columns]
-    
+    # 2. Update only the targeted player/hole
     if player in df_live['Player'].values:
-        # TARGETED UPDATE: Only change the one specific hole
-        # This ensures Hole 1 doesn't reset to 0 when you post Hole 2
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
     else:
-        # NEW PLAYER: Create a row of zeros and then set the current hole
         new_row = {col: 0 for col in hole_cols}
         new_row['Player'] = player
         new_row[hole_col] = int(strokes)
         df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
     
-    # 3. Clean up formatting before sending back to Google
-    df_live = df_live[['Player'] + hole_cols]
-    
-    # 4. Retry Loop to ensure the save sticks
+    # 3. Save back with high-priority retry logic
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            # We explicitly specify the worksheet to avoid accidental overwrites
-            conn.update(worksheet="LiveScores", data=df_live)
+            # Re-order columns to be safe
+            final_df = df_live[['Player'] + hole_cols]
+            conn.update(worksheet="LiveScores", data=final_df)
+            
+            # 4. Immediate clear to ensure the NEXT read is also fresh
             st.cache_data.clear()
-            st.toast(f"✅ Hole {hole} recorded for {player}")
+            st.toast(f"✅ Hole {hole} Saved!")
             return 
         except Exception:
-            if attempt < max_retries - 1:
-                time.sleep((2 ** attempt) + (random.random()))
-            else:
-                st.error("Score not saved. Please try again.")
+            time.sleep((2 ** attempt) + random.random())
+    
+    st.error("Connection timed out. Please check your signal and try again.")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -263,4 +268,5 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
