@@ -63,25 +63,43 @@ def load_live_data():
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
+    """Updates a specific hole while strictly preserving all other hole scores."""
+    # 1. Load the most current data from the sheet
     df_live = load_live_data()
+    hole_cols = [str(i) for i in range(1, 10)]
     hole_col = str(hole)
+    
+    # 2. Ensure we have a clean dataframe with string headers
+    df_live.columns = [str(c) for c in df_live.columns]
+    
     if player in df_live['Player'].values:
+        # TARGETED UPDATE: Only change the one specific hole
+        # This ensures Hole 1 doesn't reset to 0 when you post Hole 2
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
     else:
-        new_row = {str(i): 0 for i in range(1, 10)}
+        # NEW PLAYER: Create a row of zeros and then set the current hole
+        new_row = {col: 0 for col in hole_cols}
         new_row['Player'] = player
         new_row[hole_col] = int(strokes)
         df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
     
+    # 3. Clean up formatting before sending back to Google
+    df_live = df_live[['Player'] + hole_cols]
+    
+    # 4. Retry Loop to ensure the save sticks
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            conn.update(worksheet="LiveScores", data=df_live[[str(i) for i in range(1, 10)] + ['Player']])
+            # We explicitly specify the worksheet to avoid accidental overwrites
+            conn.update(worksheet="LiveScores", data=df_live)
             st.cache_data.clear()
-            st.toast(f"✅ Hole {hole} Updated!")
+            st.toast(f"✅ Hole {hole} recorded for {player}")
             return 
-        except:
-            time.sleep((2 ** attempt) + (random.random()))
+        except Exception:
+            if attempt < max_retries - 1:
+                time.sleep((2 ** attempt) + (random.random()))
+            else:
+                st.error("Score not saved. Please try again.")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -245,3 +263,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
