@@ -49,63 +49,55 @@ def load_data():
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data(force_refresh=False):
-    """Bypasses cache to ensure we never overwrite with old data."""
+    """Loads live tracking data with strict header cleaning."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
-        # If we are updating, we force ttl=0 to get the REAL current data
-        fetch_ttl = 0 if force_refresh else 2
-        df = conn.read(worksheet="LiveScores", ttl=fetch_ttl)
-        
+        ttl_val = 0 if force_refresh else 2
+        df = conn.read(worksheet="LiveScores", ttl=ttl_val)
         if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
         
-        # Clean headers
+        # Clean headers to prevent duplicate 1.1, 2.1 columns
         df.columns = [str(c).strip().split('.')[0] for c in df.columns]
-        
-        # Ensure all columns are numeric and present
         for col in hole_cols:
             if col not in df.columns: df[col] = 0
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-            
         return df[['Player'] + hole_cols]
-    except Exception as e:
+    except:
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Updates a single cell in Google Sheets to prevent overwriting other holes."""
-    # 1. Get the latest live data to find the player's position
+    """Updates only a SINGLE cell address to prevent wiping other holes."""
     st.cache_data.clear()
     df_live = load_live_data(force_refresh=True)
     
     if player not in df_live['Player'].values:
-        st.error("Player not found in Live Scores. Please try re-registering or contact Admin.")
+        st.error("Player not found in Live Scores. Please ensure you are registered.")
         return
 
-    # 2. Find the row and column index
-    # We add 2 to the index because: 
-    # +1 for 0-based index to 1-based index, +1 for the header row
-    row_idx = df_live.index[df_live['Player'] == player].tolist()[0] + 2
-    
-    # Map hole 1-9 to columns B-J
-    column_map = {1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J'}
-    col_letter = column_map[int(hole)]
-    cell_address = f"{col_letter}{row_idx}"
-
-    # 3. Use a direct cell update (GSpread underlying call)
+    # Find the row index (Row 1 is header, so index 0 is Row 2)
+    # Match the player and get the sheet row number
     try:
-        # Access the underlying gspread worksheet object
-        sh = conn.client._client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
-        worksheet = sh.worksheet("LiveScores")
+        player_idx = df_live.index[df_live['Player'] == player].tolist()[0]
+        row_in_sheet = player_idx + 2 
         
-        # UPDATE ONLY ONE CELL
-        worksheet.update_acell(cell_address, int(strokes))
+        # Map hole numbers to Google Sheet columns (Player is A, 1 is B, 2 is C...)
+        column_map = {1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J'}
+        col_letter = column_map[int(hole)]
+        cell_address = f"{col_letter}{row_in_sheet}"
+
+        # Get the gspread worksheet object directly for atomic cell update
+        # We use the internal gspread client to target the specific cell
+        sh = conn.client._client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
+        ws = sh.worksheet("LiveScores")
+        
+        # ATOMIC UPDATE: Only touches one cell
+        ws.update_acell(cell_address, int(strokes))
         
         st.cache_data.clear()
         st.toast(f"✅ Hole {hole} set to {strokes}!")
     except Exception as e:
         st.error(f"Failed to update cell: {e}")
-    
-    st.error("Connection timed out. Please check your signal and try again.")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -148,7 +140,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
-with tabs[0]: # Scorecard & Dashboard
+with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: st.warning("No players registered yet.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
@@ -165,7 +157,6 @@ with tabs[0]: # Scorecard & Dashboard
                     st.rerun()
                 else: st.error("❌ Incorrect PIN.")
         else:
-            # DASHBOARD SECTION
             p_data = df_main[df_main['Player'] == player_select]
             w_s = st.selectbox("Select Week", range(1, 15))
             current_hcp = calculate_rolling_handicap(p_data, w_s)
@@ -180,23 +171,15 @@ with tabs[0]: # Scorecard & Dashboard
             m3.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
             m4.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
 
-            # LINE CHART SECTION
             if not played_rounds.empty:
-                st.markdown("#### Net Score Trend")
                 chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
-                    x=alt.X('Week:O', title='Week'),
-                    y=alt.Y('Net_Score:Q', title='Net Score', scale=alt.Scale(reverse=True, zero=False)),
-                    tooltip=['Week', 'Total_Score', 'Net_Score']
-                ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(
-                    x='Week:O', y='Net_Score:Q'
-                )
+                    x=alt.X('Week:O'),
+                    y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))
+                ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
-            else:
-                st.info("Performance graph will appear after your first posted score.")
 
             st.divider()
             with st.form("score_entry"):
-                st.write(f"Posting Score for **Week {w_s}**")
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
                 h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp))
                 c1, c2, c3 = st.columns(3)
@@ -240,14 +223,10 @@ with tabs[2]: # Live Round
         st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
 
 with tabs[3]: # History
-    st.subheader("📅 League History")
+    st.subheader("📅 History")
     h_df = df_main[df_main['Week'] > 0].copy()
     if not h_df.empty:
-        # Format the display for history
-        h_df['HCP'] = h_df['Handicap'].apply(lambda x: f"+{abs(x)}" if x < 0 else f"{x}")
-        st.dataframe(h_df[['Week', 'Player', 'Total_Score', 'Net_Score', 'HCP']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
-    else:
-        st.info("Historical rounds will be listed here as they are submitted.")
+        st.dataframe(h_df[['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
@@ -257,23 +236,19 @@ with tabs[5]: # Registration
     else:
         with st.form("r"):
             n, p, h = st.text_input("Name"), st.text_input("PIN", max_chars=4), st.number_input("HCP", -10.0, 40.0, 10.0)
-if st.form_submit_button("Register"):
-    if n and len(p) == 4:
-        # Update Main Data
-        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
-        conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
-        
-        # ADD THIS: Initialize the Live Score row immediately
-        live_df = load_live_data(force_refresh=True)
-        if n not in live_df['Player'].values:
-            new_live_row = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
-            updated_live = pd.concat([live_df, new_live_row], ignore_index=True)
-            conn.update(worksheet="LiveScores", data=updated_live)
-            
-        st.cache_data.clear()
-        time.sleep(1)
-        st.session_state["reg_access"] = False
-        st.rerun()
+            if st.form_submit_button("Register"):
+                if n and len(p) == 4:
+                    # 1. Update Main League Sheet
+                    new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+                    conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
+                    
+                    # 2. SEEDED LIVE SCORE: Initialize the player's row in LiveScores immediately
+                    l_df = load_live_data(force_refresh=True)
+                    if n not in l_df['Player'].values:
+                        new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
+                        conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
+                    
+                    st.cache_data.clear(); time.sleep(1); st.session_state["reg_access"] = False; st.rerun()
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
@@ -281,6 +256,3 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
-
-
-
