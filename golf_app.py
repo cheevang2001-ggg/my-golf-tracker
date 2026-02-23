@@ -48,8 +48,8 @@ def load_data():
     except:
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
-def load_live_data(force_refresh=False):
-    """Loads live tracking data with strict header cleaning."""
+def load_live_data(force_refresh=True):
+    """Loads live tracking data with zero cache to ensure absolute accuracy."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
         ttl_val = 0 if force_refresh else 2
@@ -57,7 +57,6 @@ def load_live_data(force_refresh=False):
         if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
         
-        # Clean headers to prevent duplicate 1.1, 2.1 columns
         df.columns = [str(c).strip().split('.')[0] for c in df.columns]
         for col in hole_cols:
             if col not in df.columns: df[col] = 0
@@ -67,37 +66,34 @@ def load_live_data(force_refresh=False):
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Updates only a SINGLE cell address to prevent wiping other holes."""
-    st.cache_data.clear()
-    df_live = load_live_data(force_refresh=True)
-    
-    if player not in df_live['Player'].values:
-        st.error("Player not found in Live Scores. Please ensure you are registered.")
-        return
-
-    # Find the row index (Row 1 is header, so index 0 is Row 2)
-    # Match the player and get the sheet row number
+    """Targeted Cell Update: Changes ONLY the specific hole for the player."""
     try:
-        player_idx = df_live.index[df_live['Player'] == player].tolist()[0]
-        row_in_sheet = player_idx + 2 
+        st.cache_data.clear()
+        # Force fresh load to find current player row position
+        df_live = load_live_data(force_refresh=True)
         
-        # Map hole numbers to Google Sheet columns (Player is A, 1 is B, 2 is C...)
+        if player not in df_live['Player'].values:
+            st.error(f"❌ '{player}' not found in LiveScores. Re-registering might fix this.")
+            return
+
+        # Find row: index + 2 (1 for header, 1 for 0-based index)
+        player_row_idx = df_live.index[df_live['Player'] == player].tolist()[0]
+        sheet_row = player_row_idx + 2 
+        
+        # Map holes to Columns B through J
         column_map = {1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J'}
         col_letter = column_map[int(hole)]
-        cell_address = f"{col_letter}{row_in_sheet}"
+        cell_addr = f"{col_letter}{sheet_row}"
 
-        # Get the gspread worksheet object directly for atomic cell update
-        # We use the internal gspread client to target the specific cell
+        # Direct API Call to update just that cell
         sh = conn.client._client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
         ws = sh.worksheet("LiveScores")
-        
-        # ATOMIC UPDATE: Only touches one cell
-        ws.update_acell(cell_address, int(strokes))
+        ws.update_acell(cell_addr, int(strokes))
         
         st.cache_data.clear()
-        st.toast(f"✅ Hole {hole} set to {strokes}!")
+        st.toast(f"✅ Hole {hole} Updated!")
     except Exception as e:
-        st.error(f"Failed to update cell: {e}")
+        st.error(f"🚨 Google Sheets Write Error: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -207,16 +203,22 @@ with tabs[1]: # Standings
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
+    
+    if st.button("🔄 Refresh Table"):
+        st.cache_data.clear()
+        st.rerun()
+
     curr_p = st.session_state.get("unlocked_player")
     if curr_p:
         with st.expander(f"Update Score for {curr_p}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
             h_u = c1.selectbox("Hole", range(1, 10))
             s_u = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post"):
+            if c3.button("Post", use_container_width=True):
                 update_live_score(curr_p, h_u, s_u)
                 st.rerun()
-    l_df = load_live_data()
+    
+    l_df = load_live_data(force_refresh=True)
     if not l_df.empty:
         h_cols = [str(i) for i in range(1, 10)]
         l_df['Total'] = l_df[h_cols].sum(axis=1)
@@ -238,17 +240,24 @@ with tabs[5]: # Registration
             n, p, h = st.text_input("Name"), st.text_input("PIN", max_chars=4), st.number_input("HCP", -10.0, 40.0, 10.0)
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
-                    # 1. Update Main League Sheet
-                    new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
-                    conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
-                    
-                    # 2. SEEDED LIVE SCORE: Initialize the player's row in LiveScores immediately
-                    l_df = load_live_data(force_refresh=True)
-                    if n not in l_df['Player'].values:
-                        new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
-                        conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
-                    
-                    st.cache_data.clear(); time.sleep(1); st.session_state["reg_access"] = False; st.rerun()
+                    try:
+                        # 1. Update League Sheet
+                        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+                        conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
+                        
+                        # 2. SEED LIVE SCORE: Create the row immediately
+                        l_df = load_live_data(force_refresh=True)
+                        if n not in l_df['Player'].values:
+                            new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
+                            conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
+                        
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.session_state["reg_access"] = False
+                        st.success("Registration Successful!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Registration Error: {e}")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
