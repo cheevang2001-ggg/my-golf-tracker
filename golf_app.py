@@ -66,34 +66,30 @@ def load_live_data(force_refresh=True):
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Targeted Cell Update: Changes ONLY the specific hole for the player."""
+    """Updates the player's row in LiveScores using the proven conn.update method."""
     try:
+        # 1. Clear cache and get the latest live data
         st.cache_data.clear()
-        # Force fresh load to find current player row position
         df_live = load_live_data(force_refresh=True)
         
         if player not in df_live['Player'].values:
-            st.error(f"❌ '{player}' not found in LiveScores. Re-registering might fix this.")
+            st.error(f"❌ Player '{player}' not found. Please re-register.")
             return
 
-        # Find row: index + 2 (1 for header, 1 for 0-based index)
-        player_row_idx = df_live.index[df_live['Player'] == player].tolist()[0]
-        sheet_row = player_row_idx + 2 
+        # 2. Modify only the specific hole for this player in our local copy
+        hole_col = str(hole)
+        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         
-        # Map holes to Columns B through J
-        column_map = {1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J'}
-        col_letter = column_map[int(hole)]
-        cell_addr = f"{col_letter}{sheet_row}"
-
-        # Direct API Call to update just that cell
-        sh = conn.client._client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
-        ws = sh.worksheet("LiveScores")
-        ws.update_acell(cell_addr, int(strokes))
+        # 3. Use the same logic that works in Registration to save the whole table
+        # This is more reliable than cell-level updates for st.connection
+        conn.update(worksheet="LiveScores", data=df_live)
         
         st.cache_data.clear()
-        st.toast(f"✅ Hole {hole} Updated!")
+        st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
+        time.sleep(0.5) # Short buffer for Google API
+        
     except Exception as e:
-        st.error(f"🚨 Google Sheets Write Error: {e}")
+        st.error(f"🚨 Update Failed: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -265,3 +261,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
