@@ -72,37 +72,38 @@ def load_live_data(force_refresh=False):
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Strict atomic update: Loads fresh, modifies one cell, and saves."""
-    # 1. Force a clean, non-cached read of the current live scores
-    st.cache_data.clear() 
+    """Updates a single cell in Google Sheets to prevent overwriting other holes."""
+    # 1. Get the latest live data to find the player's position
+    st.cache_data.clear()
     df_live = load_live_data(force_refresh=True)
     
-    hole_cols = [str(i) for i in range(1, 10)]
-    hole_col = str(hole)
+    if player not in df_live['Player'].values:
+        st.error("Player not found in Live Scores. Please try re-registering or contact Admin.")
+        return
+
+    # 2. Find the row and column index
+    # We add 2 to the index because: 
+    # +1 for 0-based index to 1-based index, +1 for the header row
+    row_idx = df_live.index[df_live['Player'] == player].tolist()[0] + 2
     
-    # 2. Update only the targeted player/hole
-    if player in df_live['Player'].values:
-        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
-    else:
-        new_row = {col: 0 for col in hole_cols}
-        new_row['Player'] = player
-        new_row[hole_col] = int(strokes)
-        df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
-    
-    # 3. Save back with high-priority retry logic
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            # Re-order columns to be safe
-            final_df = df_live[['Player'] + hole_cols]
-            conn.update(worksheet="LiveScores", data=final_df)
-            
-            # 4. Immediate clear to ensure the NEXT read is also fresh
-            st.cache_data.clear()
-            st.toast(f"✅ Hole {hole} Saved!")
-            return 
-        except Exception:
-            time.sleep((2 ** attempt) + random.random())
+    # Map hole 1-9 to columns B-J
+    column_map = {1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J'}
+    col_letter = column_map[int(hole)]
+    cell_address = f"{col_letter}{row_idx}"
+
+    # 3. Use a direct cell update (GSpread underlying call)
+    try:
+        # Access the underlying gspread worksheet object
+        sh = conn.client._client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
+        worksheet = sh.worksheet("LiveScores")
+        
+        # UPDATE ONLY ONE CELL
+        worksheet.update_acell(cell_address, int(strokes))
+        
+        st.cache_data.clear()
+        st.toast(f"✅ Hole {hole} set to {strokes}!")
+    except Exception as e:
+        st.error(f"Failed to update cell: {e}")
     
     st.error("Connection timed out. Please check your signal and try again.")
 
@@ -256,11 +257,23 @@ with tabs[5]: # Registration
     else:
         with st.form("r"):
             n, p, h = st.text_input("Name"), st.text_input("PIN", max_chars=4), st.number_input("HCP", -10.0, 40.0, 10.0)
-            if st.form_submit_button("Register"):
-                if n and len(p) == 4:
-                    new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
-                    conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
-                    st.cache_data.clear(); time.sleep(1); st.session_state["reg_access"] = False; st.rerun()
+if st.form_submit_button("Register"):
+    if n and len(p) == 4:
+        # Update Main Data
+        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+        conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
+        
+        # ADD THIS: Initialize the Live Score row immediately
+        live_df = load_live_data(force_refresh=True)
+        if n not in live_df['Player'].values:
+            new_live_row = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
+            updated_live = pd.concat([live_df, new_live_row], ignore_index=True)
+            conn.update(worksheet="LiveScores", data=updated_live)
+            
+        st.cache_data.clear()
+        time.sleep(1)
+        st.session_state["reg_access"] = False
+        st.rerun()
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
@@ -268,5 +281,6 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
