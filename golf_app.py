@@ -258,7 +258,7 @@ with tab4:
 
     elif info_page == "Prizes":
         st.header("Season Prize & Expense Breakdown")
-        st.write("Total Pot: **$780** (13 Players x $60)")
+        st.write("Total Pot: **$720** (12 Players x $60)")
         
         # 1. Cash Payout Table
         st.subheader("Cash Payouts")
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
