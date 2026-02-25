@@ -272,7 +272,7 @@ with tab4:
         # 2. Expenses Table
         st.subheader("League Expenses")
         expense_data = {
-            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance", "Donation BD Committee Dale Vang"],
+            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance"],
             "Cost": ["$80.00", "$100.00", "$40.00","$60.00"],
             "Total": ["", "", "$280.00"]
         }
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
