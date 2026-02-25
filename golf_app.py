@@ -150,7 +150,17 @@ with tabs[0]: # Scorecard
                 else: st.error("❌ Incorrect PIN.")
         else:
             p_data = df_main[df_main['Player'] == player_select]
-            w_s = st.selectbox("Select Week", range(1, 15))
+            # Starting May 31, 2026, for 12 weeks
+            league_start = pd.to_datetime("2026-05-31")
+            schedule_options = {}
+            for i in range(1, 13):
+            start_date = league_start + pd.Timedelta(weeks=i-1)
+            end_date = start_date + pd.Timedelta(days=6)
+            schedule_options[f"Week {i} ({start_date.strftime('%b %d')} - {end_date.strftime('%b %d')})"] = i
+
+        # Display the user-friendly date but store the integer week number (w_s)
+            selected_week_label = st.selectbox("Select Week", options=list(schedule_options.keys()))
+            w_s = schedule_options[selected_week_label]
             current_hcp = calculate_rolling_handicap(p_data, w_s)
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             
@@ -261,4 +271,5 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
