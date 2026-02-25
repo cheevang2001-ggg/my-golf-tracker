@@ -263,17 +263,17 @@ with tab4:
         # 1. Cash Payout Table
         st.subheader("Cash Payouts")
         payout_data = {
-            "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash"],
+            "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "Total Cash Payout"],
             "Amount": ["$200.00", "$140.00", "$100.00", "$60.00", "$500.00"],
-            "Note": ["+ Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Cash Prize Pool"]
+            "Note": ["+ Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Total Purse Pool"]
         }
         st.table(pd.DataFrame(payout_data))
 
         # 2. Expenses Table
         st.subheader("League Expenses")
         expense_data = {
-            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance", "BD Committee - Dale"],
-            "Cost": ["$80.00", "$100.00", "$40.00", "$60.00"],
+            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance", "BD Committee Donation - Dale"],
+            "Cost": ["-$80.00", "-$100.00", "+$40.00", "+$60.00"],
             "Total": ["", "", "", "$280.00"]
         }
         st.table(pd.DataFrame(expense_data))
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
