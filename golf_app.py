@@ -265,7 +265,7 @@ with tab4:
         payout_data = {
             "Rank": ["1st Place", "2nd Place", "3rd Place", "4th Place", "", "Total Cash Payout"],
             "Amount": ["$200.00", "$140.00", "$100.00", "$60.00", "", "$500.00"],
-            "Note": ["Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "Total Purse Pool"]
+            "Note": ["Championship Trophy", "Runner Up", "Third Place", "Fourth Place", "", "Total Purse Pool"]
         }
         st.table(pd.DataFrame(payout_data))
 
@@ -374,6 +374,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
