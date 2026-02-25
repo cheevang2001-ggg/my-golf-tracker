@@ -150,7 +150,7 @@ with tabs[0]: # Scorecard
                 else: st.error("❌ Incorrect PIN.")
         else:
             p_data = df_main[df_main['Player'] == player_select]
-            w_s = st.selectbox("Select Week", range(l, 15))
+            w_s = st.selectbox("Select Week", range(1, 15))
             current_hcp = calculate_rolling_handicap(p_data, w_s)
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
 
@@ -261,6 +261,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
