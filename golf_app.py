@@ -253,17 +253,39 @@ with tabs[4]: # League Info
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         
-        # Build the schedule table with single dates
+        # 1. Define the course list (13 weeks total)
+        courses = [
+            "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", 
+            "Dretzka", "Currie", "TBD", "Whitnall", "Oakwood", 
+            "Dretzka", "TBD", "TBD"
+        ]
+
+        # 2. Build the schedule table
         league_start = pd.to_datetime("2026-05-31")
         schedule_data = []
-        for i in range(1, 14): # Covers May 31 to Aug 23
+        
+        for i in range(1, 14): # i goes from 1 to 13
             current_date = league_start + pd.Timedelta(weeks=i-1)
+            
+            # i-1 matches the week number to the 0-indexed course list
+            course_name = courses[i-1] 
+            
             schedule_data.append({
                 "Week": f"Week {i}",
                 "Date": current_date.strftime('%B %d, %Y'),
-                "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event",
-                "Course": "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "TBD", "Whitnall", "Oakwood", "Dretzka", "TBD", "TBD" 
+                "Course": course_name,
+                "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event"
             })
+        
+        # 3. Add the Finale Row (Manually appended at the end)
+        schedule_data.append({
+            "Week": "FINALE",
+            "Date": "August 28, 2026",
+            "Course": "TBD",
+            "Note": "GGGolf Finale & Friends & Family Picnic 🍔"
+        })
+        
+        st.table(pd.DataFrame(schedule_data))
         
         # Add the Finale Row
         schedule_data.append({
@@ -317,6 +339,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
