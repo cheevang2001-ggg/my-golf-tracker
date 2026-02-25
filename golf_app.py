@@ -334,6 +334,7 @@ with tab5:
 with tab6:
     st.header("🏆 12-Man Re-Seeding Tournament")
     st.info("Tournament starts Week 9. Bracket is re-seeded after Round 1 so top seeds play the lowest remaining seeds. Highest Seed refers to the player with the best rank (closest to 1) and the Lowest Seed refers to the player with the worst rank.")
+    st.info("Win or Go Home Play. League handicap will be used")
        
     c1, c2, c3, c4 = st.columns(4)
     
@@ -373,6 +374,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
