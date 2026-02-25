@@ -278,7 +278,7 @@ with tab4:
         st.table(pd.DataFrame(expense_data))
 
         # 3. Cash Remaining Table
-        st.subheader("Cash Remaining")
+        st.subheader("Cash On-Hand")
         remaining_data = {
             "Description": ["League Remaining", "BD Committee Donation - Dale"],
             "Gain": ["$40.00", "$60.00"]            
@@ -291,9 +291,10 @@ with tab4:
         **Total Accounting:**
         * Total Cash Payouts: **$500**
         * Total League Expenses: **$180**
+        * Total Cash-Onhand: **$100**
         * **Grand Total: $780**
         """)
-        st.info("$100 remaining will be used for in season tournament.")
+        st.info("$100 remaining will be used for in season tournament prize.")
 
 # --- TAB 5: ADMIN ---
 with tab5:
@@ -372,6 +373,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
