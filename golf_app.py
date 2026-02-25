@@ -256,8 +256,8 @@ with tabs[4]: # League Info
         # 1. Define the course list (13 weeks total)
         courses = [
             "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", 
-            "Dretzka", "Currie", "TBD", "Whitnall", "Oakwood", 
-            "Dretzka", "TBD", "TBD"
+            "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", 
+            "Dretzka", "Brown Deer", "TBD"
         ]
 
         # 2. Build the schedule table
@@ -269,13 +269,35 @@ with tabs[4]: # League Info
             
             # i-1 matches the week number to the 0-indexed course list
             course_name = courses[i-1] 
-            
+
+            # Start
+            # Custom Notes for specific weeks
+            if i == 4:
+                note = "GGG Event- 2 Man Scramble Team (18 holes)"
+            elif i == 8:
+                note = "GGG Event- 4 Man Team Battle (18 holes)"
+            elif i == 12:
+                note = "GGG Event- Double Points (18 holes)"
+            elif i in [4, 8, 12]: # Catch-all for other event formatting if needed
+                note = "GGG Event"
+            else:
+                note = "Regular Round"
+                
             schedule_data.append({
                 "Week": f"Week {i}",
                 "Date": current_date.strftime('%B %d, %Y'),
                 "Course": course_name,
-                "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event"
+                "Note": note
             })
+
+
+            # End
+            # schedule_data.append({
+                # "Week": f"Week {i}",
+                # "Date": current_date.strftime('%B %d, %Y'),
+                # "Course": course_name,
+                # "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event"
+            # })
         
         # 3. Add the Finale Row (Manually appended at the end)
         schedule_data.append({
@@ -284,8 +306,24 @@ with tabs[4]: # League Info
             "Course": "TBD",
             "Note": "GGGolf Finale & Friends & Family Picnic 🍔"
         })
+
+        df_schedule = pd.DataFrame(schedule_data)
+
+        # 3. Apply Highlighting Logic
+        def highlight_events(row):
+            # If the Note contains "GGG Event", color the whole row light green
+            if "GGG Event" in str(row["Note"]):
+                return ['background-color: #d4edda'] * len(row) # Hex code for light green
+            return [''] * len(row)
+
+        styled_df = df_schedule.style.apply(highlight_events, axis=1)
+
+        # Display as a styled dataframe (use_container_width makes it look like a table)
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+
         
-        st.table(pd.DataFrame(schedule_data))
+         # st.table(pd.DataFrame(schedule_data))
         
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
@@ -330,6 +368,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
