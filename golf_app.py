@@ -316,10 +316,21 @@ with tabs[4]: # League Info
                 return ['background-color: #d4edda'] * len(row) # Hex code for light green
             return [''] * len(row)
 
-        styled_df = df_schedule.style.apply(highlight_events, axis=1)
+        #styled_df = df_schedule.style.apply(highlight_events, axis=1)
 
         # Display as a styled dataframe (use_container_width makes it look like a table)
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        #st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+    # Apply styling and set a fixed height to prevent scrolling
+        # 550 pixels is usually enough to show 14 rows without a scrollbar
+        st.dataframe(
+            df_schedule.style.apply(highlight_events, axis=1),
+            use_container_width=True,
+            hide_index=True,
+            height=530 
+        )
+        
+        st.caption("Note: Major events are highlighted in green.")
 
 
         
@@ -368,6 +379,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
