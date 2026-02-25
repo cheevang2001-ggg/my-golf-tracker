@@ -261,8 +261,8 @@ with tabs[4]: # League Info
             schedule_data.append({
                 "Week": f"Week {i}",
                 "Date": current_date.strftime('%B %d, %Y'),
-                "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event"
-                "Couse": "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "TBD", "Whitnall", "Oakwood", "Dretzka", "TBD", "TBD" 
+                "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event",
+                "Course": "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "TBD", "Whitnall", "Oakwood", "Dretzka", "TBD", "TBD" 
             })
         
         # Add the Finale Row
@@ -317,6 +317,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
