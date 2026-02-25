@@ -267,7 +267,7 @@ with tabs[4]: # League Info
             schedule_data.append({
                 "Week": f"Week {i}",
                 "Date Range": f"{start_date.strftime('%b %d')} — {end_date.strftime('%b %d')}",
-                "Status": "Regular Season" if i not in [4, 8, 12] else "Major/Review Week"
+                "Status": "Regular Season" if i not in [4, 8, 12] else "GGG Event"
             })
         
         st.table(pd.DataFrame(schedule_data))
@@ -322,6 +322,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
