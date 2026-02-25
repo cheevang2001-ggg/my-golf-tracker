@@ -287,15 +287,6 @@ with tabs[4]: # League Info
         
         st.table(pd.DataFrame(schedule_data))
         
-        # Add the Finale Row
-        schedule_data.append({
-            "Week": "FINALE",
-            "Date": "August 28, 2026",
-            "Event": "GGGolf Finale & Friends & Family Picnic 🍔"
-        })
-        
-        st.table(pd.DataFrame(schedule_data))
-
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
@@ -339,6 +330,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
