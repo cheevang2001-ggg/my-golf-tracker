@@ -272,9 +272,9 @@ with tab4:
         # 2. Expenses Table
         st.subheader("League Expenses")
         expense_data = {
-            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance", "BD Committee Donation - Dale"],
-            "Cost": ["-$80.00", "-$100.00", "+$40.00", "+$60.00"],
-            "Total": ["", "", "", "$280.00"]
+            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Total Expense", "Remaining Balance", "BD Committee Donation - Dale"],
+            "Cost": ["-$80.00", "-$100.00", "$180", "+$40.00", "+$60.00"],
+            "Total": ["", "", "", "", "$180.00"]
         }
         st.table(pd.DataFrame(expense_data))
 
@@ -283,7 +283,7 @@ with tab4:
         st.markdown(f"""
         **Total Accounting:**
         * Total Cash Payouts: **$500**
-        * Total League Expenses: **$280**
+        * Total League Expenses: **$180**
         * **Grand Total: $780**
         """)
         st.info("$100 remaining will be used for in season tournament.")
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
