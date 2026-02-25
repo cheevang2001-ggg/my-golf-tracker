@@ -272,8 +272,16 @@ with tab4:
         # 2. Expenses Table
         st.subheader("League Expenses")
         expense_data = {
-            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Total Expense", "", "Remaining Balance", "BD Committee Donation - Dale"],
-            "Cost": ["-$80.00", "-$100.00", "$180", "", "+$40.00", "+$60.00"]            
+            "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Total Expense"],
+            "Cost": ["-$80.00", "-$100.00", "$180", ""]            
+        }
+        st.table(pd.DataFrame(expense_data))
+
+                # 3. Cash Remaining Table
+        st.subheader("Cash Remaining")
+        expense_data = {
+            "Item": ["After Expense + Payouts", "BD Committee Donation - Dale"],
+            "Gain": ["$40.00", "$60.00"]            
         }
         st.table(pd.DataFrame(expense_data))
 
@@ -364,6 +372,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
