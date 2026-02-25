@@ -240,52 +240,46 @@ with tabs[4]: # League Info
 
     if info_category == "General Info":
         st.subheader("⛳ GGGolf Summer League 2026")
-        st.write("""
-        Welcome to the 2026 season! This league is designed for competitive yet 
-        friendly play. Use the 'Live Round' tab during your game and post your 
-        final score in the 'Scorecard' tab.
-        """)
+        st.write("Welcome to the 2026 season! Use the 'Live Round' tab during play and post final scores in the 'Scorecard' tab.")
 
     elif info_category == "Rules":
         st.subheader("📜 League Rules")
         st.markdown("""
         * **Handicaps:** Rolling average of the best 3 of the last 4 rounds.
         * **Gimmies:** Inside the leather (standard putter length).
-        * **DNFs:** If you cannot finish, mark 'DNF' in the scorecard.
-        * **Score Posting:** Must be posted within 24 hours of the round.
+        * **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         
-        # Build the schedule table
+        # Build the schedule table with single dates
         league_start = pd.to_datetime("2026-05-31")
         schedule_data = []
-        for i in range(1, 13):
-            start_date = league_start + pd.Timedelta(weeks=i-1)
-            end_date = start_date + pd.Timedelta(days=6)
+        for i in range(1, 14): # Covers May 31 to Aug 23
+            current_date = league_start + pd.Timedelta(weeks=i-1)
             schedule_data.append({
                 "Week": f"Week {i}",
-                "Date Range": f"{start_date.strftime('%b %d')} — {end_date.strftime('%b %d')}",
-                "Status": "Regular Season" if i not in [4, 8, 12] else "GGG Event"
+                "Date": current_date.strftime('%B %d, %Y'),
+                "Event": "Regular Season Round" if i not in [4, 8, 12] else "Major / Review Week"
             })
+        
+        # Add the Finale Row
+        schedule_data.append({
+            "Week": "FINALE",
+            "Date": "August 28, 2026",
+            "Event": "GGGolf Finale & Friends & Family Picnic 🍔"
+        })
         
         st.table(pd.DataFrame(schedule_data))
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.write("Details for the 2026 Prize Pool will be announced soon.")
-        st.info("Prizes are based on FedEx Point standings at the end of Week 12.")
+        st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
-        st.write("Breakdown of league fees and administrative costs:")
-        # You can add a simple breakdown here
-        st.json({
-            "League Entry Fee": "$XX.XX",
-            "Website/Domain": "$XX.XX",
-            "Trophy/Prizes": "$XX.XX"
-        })
+        st.write("Breakdown of league fees and administrative costs.")
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
@@ -322,6 +316,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
