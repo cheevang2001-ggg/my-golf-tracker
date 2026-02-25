@@ -274,7 +274,7 @@ with tab4:
         expense_data = {
             "Item": ["Championship Trophy", "2 Dozen Golf Balls", "Remaining Balance", "BD Committee - Dale"],
             "Cost": ["$80.00", "$100.00", "$40.00", "$60.00"],
-            "Total": ["", "", "", "", "$280.00"]
+            "Total": ["", "", "", "$280.00"]
         }
         st.table(pd.DataFrame(expense_data))
 
@@ -365,6 +365,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
