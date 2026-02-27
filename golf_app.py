@@ -255,7 +255,7 @@ with tabs[4]: # League Info
 
         # Code of Conduct
         st.divider() # Adds a clean visual linest
-        st.subheader("**Code of Conduct**"
+        st.subheader("**Code of Conduct**")
         st.markdown("""
         * Follow golf rules and be honest in scoring.
         * Arrive promptly for matches and events.
@@ -403,6 +403,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
