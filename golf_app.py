@@ -279,7 +279,7 @@ with tabs[4]: # League Info
         
 
 
-    elif info_category == "Rules":
+elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
         * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36.
@@ -418,6 +418,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
