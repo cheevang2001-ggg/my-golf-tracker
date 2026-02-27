@@ -242,8 +242,10 @@ with tabs[4]: # League Info
     if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
         st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition"
-                 "and welcomes all skill levels. Members gain experience to prepare for community tournaments and events,"
-                 "while maintaining high standards of integrity in the game.")
+                 "and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, "
+                 "while maintaining high standards of integrity in the game."
+                )
+        
         st.divider() # Adds a clean visual line
         
         # League Officers and Committees
@@ -408,6 +410,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
