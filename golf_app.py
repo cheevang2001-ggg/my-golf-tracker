@@ -50,7 +50,6 @@ def load_data():
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data(force_refresh=True):
-    """Loads live tracking data with zero cache to ensure absolute accuracy."""
     hole_cols = [str(i) for i in range(1, 10)]
     try:
         ttl_val = 0 if force_refresh else 2
@@ -67,28 +66,19 @@ def load_live_data(force_refresh=True):
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
-    """Updates the player's row in LiveScores using the proven conn.update method."""
     try:
-        # 1. Clear cache and get the latest live data
         st.cache_data.clear()
         df_live = load_live_data(force_refresh=True)
-        
         if player not in df_live['Player'].values:
-            st.error(f"❌ Player '{player}' not found. Please re-register.")
+            st.error(f"❌ Player '{player}' not found.")
             return
 
-        # 2. Modify only the specific hole for this player in our local copy
         hole_col = str(hole)
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
-        
-        # 3. Use the same logic that works in Registration to save the whole table
-        # This is more reliable than cell-level updates for st.connection
         conn.update(worksheet="LiveScores", data=df_live)
-        
         st.cache_data.clear()
         st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
-        time.sleep(0.5) # Short buffer for Google API
-        
+        time.sleep(0.5) 
     except Exception as e:
         st.error(f"🚨 Update Failed: {e}")
 
@@ -154,7 +144,6 @@ with tabs[0]: # Scorecard
             w_s = st.selectbox("Select Week", range(1, 15))
             current_hcp = calculate_rolling_handicap(p_data, w_s)
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
-
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
             st.markdown(f"### 📊 {player_select}'s Season Dashboard")
@@ -200,7 +189,6 @@ with tabs[1]: # Standings
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
-    
     if st.button("🔄 Refresh Table"):
         st.cache_data.clear()
         st.rerun()
@@ -230,7 +218,6 @@ with tabs[3]: # History
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
     
-    # Category Selection
     info_category = st.radio(
         "Select a Category:",
         ["About Us", "Rules", "Schedule", "Prizes", "Expenses"],
@@ -240,27 +227,34 @@ with tabs[4]: # League Info
     st.divider()
 
     if info_category == "About Us":
-    st.subheader("GGGolf Summer League 2026")
-    st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition"
-                 "and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, "
-                 "while maintaining high standards of integrity in the game."
-                )
+        st.subheader("GGGolf Summer League 2026")
+        st.write(
+            "Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition "
+            "and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, "
+            "while maintaining high standards of integrity in the game."
+        )
 
         st.divider()
 
-    # League Officers and Committees
-    st.subheader("👥 League Officers and Committees")
-    st.markdown("""
-    * **President**: Txoovnom Vang
-    * **Vice President**: Cory Vue
-    * **Finance**: Mike Yang
-    * **Rules Committee**: Lex Vue
-    * **Players Committee**: Long Lee and Deng Kue
-    """)
+        # League Officers and Committees in Two Columns
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("👥 League Officers")
+            st.markdown("""
+            * **President**: Txoovnom Vang
+            * **Vice President**: Cory Vue
+            * **Finance**: Mike Yang
+            """)
+        
+        with col2:
+            st.subheader("⚖️ Committees")
+            st.markdown("""
+            * **Rules Committee**: Lex Vue
+            * **Players Committee**: Long Lee and Deng Kue
+            """)
 
-        # Code of Conduct
-        st.divider() # Adds a clean visual linest
-        st.subheader("**Code of Conduct**")
+        st.divider()
+        st.subheader("📜 Code of Conduct")
         st.markdown("""
         * Follow golf rules and be honest in scoring.
         * Arrive promptly for matches and events.
@@ -268,8 +262,6 @@ with tabs[4]: # League Info
         * Cooperate for a successful league.
         * Comply with all policies and guidelines.
         """)
-        
-
 
     elif info_category == "Rules":
         st.subheader("League Game Play Format")
@@ -278,41 +270,28 @@ with tabs[4]: # League Info
         * **Tee Box:** All Players 
         * **Gimmies:** Inside the leather (standard putter length).
         * **DNFs:** If you cannot finish, mark 'DNF'.
-        
         """)
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         
-        # 1. Define the course list (13 weeks total)
         courses = [
             "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", 
             "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", 
             "Dretzka", "Brown Deer", "TBD"
         ]
 
-        # 2. Build the schedule table
         league_start = pd.to_datetime("2026-05-31")
         schedule_data = []
         
-        for i in range(1, 14): # i goes from 1 to 13
+        for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
-            
-            # i-1 matches the week number to the 0-indexed course list
             course_name = courses[i-1] 
-
-            # Start
-            # Custom Notes for specific weeks
-            if i == 4:
-                note = "GGG Event- 2 Man Scramble Team (18 holes)"
-            elif i == 8:
-                note = "GGG Event- 4 Man Team Battle (18 holes)"
-            elif i == 12:
-                note = "GGG Event- Double Points (18 holes)"
-            elif i in [4, 8, 12]: # Catch-all for other event formatting if needed
-                note = "GGG Event"
-            else:
-                note = "Regular Round"
+            
+            if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
+            elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
+            elif i == 12: note = "GGG Event- Double Points (18 holes)"
+            else: note = "Regular Round"
                 
             schedule_data.append({
                 "Week": f"Week {i}",
@@ -321,52 +300,28 @@ with tabs[4]: # League Info
                 "Note": note
             })
 
-
-            # End
-            # schedule_data.append({
-                # "Week": f"Week {i}",
-                # "Date": current_date.strftime('%B %d, %Y'),
-                # "Course": course_name,
-                # "Note": "Regular Round" if i not in [4, 8, 12] else "GGG Event"
-            # })
-        
-        # 3. Add the Finale Row (Manually appended at the end)
         schedule_data.append({
             "Week": "FINALE",
             "Date": "August 28, 2026",
             "Course": "TBD",
-            "Note": "GGGolf Finale & Friends & Family Picnic 🍔"
+            "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic 🍔"
         })
 
         df_schedule = pd.DataFrame(schedule_data)
 
-        # 3. Apply Highlighting Logic
         def highlight_events(row):
-            # If the Note contains "GGG Event", color the whole row light green
             if "GGG Event" in str(row["Note"]):
-                return ['background-color: #d4edda'] * len(row) # Hex code for light green
+                return ['background-color: #d4edda'] * len(row)
             return [''] * len(row)
 
-        #styled_df = df_schedule.style.apply(highlight_events, axis=1)
-
-        # Display as a styled dataframe (use_container_width makes it look like a table)
-        #st.dataframe(styled_df, use_container_width=True, hide_index=True)
-
-    # Apply styling and set a fixed height to prevent scrolling
-        # 550 pixels is usually enough to show 14 rows without a scrollbar
         st.dataframe(
             df_schedule.style.apply(highlight_events, axis=1),
             use_container_width=True,
             hide_index=True,
             height=530 
         )
-        
         st.caption("Note: Major events are highlighted in green.")
 
-
-        
-         # st.table(pd.DataFrame(schedule_data))
-        
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
@@ -386,16 +341,12 @@ with tabs[5]: # Registration
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
-                        # 1. Update League Sheet
                         new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
                         conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
-                        
-                        # 2. SEED LIVE SCORE: Create the row immediately
                         l_df = load_live_data(force_refresh=True)
                         if n not in l_df['Player'].values:
                             new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
                             conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
-                        
                         st.cache_data.clear()
                         time.sleep(1)
                         st.session_state["reg_access"] = False
@@ -410,38 +361,3 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
