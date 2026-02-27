@@ -246,11 +246,11 @@ with tabs[4]: # League Info
         # League Officers and Committees
         st.subheader("**League Officers and Committees**")
         st.markdown("""
-        * **President**: Txoovnom
-        * **Arrive promptly for matches and events.**
-        * **Communicate clearly about schedules and issues.**
-        * **Cooperate for a successful league.**
-        * **Comply with all policies and guidelines.**
+        * **President**: Txoovnom aka: Tx, Dicktator, Trump, Mr.President, Donald, Chee 
+        * **Vice President**: Cory
+        * **Finance**: Mike aka Topdog
+        * **Rules Comittee**: Lex
+        * **Players Committee:** Long Lee and Deng
         """)
 
         # Code of Conduct
@@ -403,6 +403,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
