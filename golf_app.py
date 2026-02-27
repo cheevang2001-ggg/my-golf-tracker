@@ -239,7 +239,7 @@ with tabs[4]: # League Info
         # League Officers and Committees in Two Columns
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("👥 League Officers")
+            st.subheader("League Officers")
             st.markdown("""
             * **President**: Txoovnom Vang
             * **Vice President**: Cory Vue
@@ -247,14 +247,14 @@ with tabs[4]: # League Info
             """)
         
         with col2:
-            st.subheader("⚖️ Committees")
+            st.subheader("Committees")
             st.markdown("""
             * **Rules Committee**: Lex Vue
             * **Players Committee**: Long Lee and Deng Kue
             """)
 
         st.divider()
-        st.subheader("📜 Code of Conduct")
+        st.subheader("Code of Conduct")
         st.markdown("""
         * Follow golf rules and be honest in scoring.
         * Arrive promptly for matches and events.
@@ -361,3 +361,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
