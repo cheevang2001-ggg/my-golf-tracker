@@ -240,8 +240,15 @@ with tabs[4]: # League Info
 
     if info_category == "General Info":
         st.subheader("GGGolf Summer League 2026")
-        st.write("This league promotes camaraderie through friendly golf competition and welcomes all skill levels. 
-        Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
+        st.write("This league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
+        st.divider() # Adds a clean visual line
+        st.markdown("""
+        * **Follow golf rules and be honest in scoring.**
+        * **Arrive promptly for matches and events.**
+        * **Communicate clearly about schedules and issues.**
+        * **Cooperate for a successful league.**
+        * **Comply with all policies and guidelines.**
+        """)
 
     elif info_category == "Rules":
         st.subheader("📜 League Rules")
@@ -380,6 +387,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
