@@ -26,7 +26,8 @@ MASTER_COLUMNS = [
 
 FEDEX_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
-    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 18, 13: 16
+    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 16, 13: 13, 14: 9,
+    15: 5, 16: 3, 17: 1 
 }
 
 # --- 2. CORE FUNCTIONS ---
@@ -221,7 +222,7 @@ with tabs[2]: # Live Round
         st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
 
 with tabs[3]: # History
-    st.subheader("📅 History")
+    st.subheader("📅 Weekly Scores")
     h_df = df_main[df_main['Week'] > 0].copy()
     if not h_df.empty:
         st.dataframe(h_df[['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
@@ -246,11 +247,11 @@ with tabs[4]: # League Info
         # League Officers and Committees
         st.subheader("**League Officers and Committees**")
         st.markdown("""
-        * **President**: Txoovnom Vang
-        * **Vice President**: Cory Vue
-        * **Finance**: Mike Yang
-        * **Rules Comittee**: Lex Vue
-        * **Players Committee:** Long Lee and Deng Kue
+        **President**: Txoovnom Vang
+        **Vice President**: Cory Vue
+        **Finance**: Mike Yang
+        **Rules Comittee**: Lex Vue
+        **Players Committee:** Long Lee and Deng Kue
         """)
         
         # Code of Conduct
@@ -269,8 +270,7 @@ with tabs[4]: # League Info
     elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
-        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36
-        st.write("Example:")
+        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36.
         * **Gimmies:** Inside the leather (standard putter length).
         * **DNFs:** If you cannot finish, mark 'DNF'.
         """)
@@ -404,6 +404,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
