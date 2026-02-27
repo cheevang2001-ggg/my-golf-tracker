@@ -249,6 +249,15 @@ with tabs[4]: # League Info
         * **Cooperate for a successful league.**
         * **Comply with all policies and guidelines.**
         """)
+        st.divider() # Adds a clean visual line
+        st.subheader("**League Officers and Committees**")
+        st.markdown("""
+        * **President**: Txoovnom
+        * **Arrive promptly for matches and events.**
+        * **Communicate clearly about schedules and issues.**
+        * **Cooperate for a successful league.**
+        * **Comply with all policies and guidelines.**
+        """)
 
     elif info_category == "Rules":
         st.subheader("📜 League Rules")
@@ -387,6 +396,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
