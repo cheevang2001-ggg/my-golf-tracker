@@ -245,25 +245,6 @@ with tabs[4]: # League Info
                  "and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, "
                  "while maintaining high standards of integrity in the game."
                 )
-    # Create two columns
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Executive Board")
-        st.markdown("""
-        * **President**: Txoovnom Vang
-        * **Vice President**: Cory Vue
-        * **Finance**: Mike Yang
-        """)
-
-    with col2:
-        st.subheader("Committees")
-        st.markdown("""
-        * **Rules Committee**: Lex Vue
-        * **Players Committee**: Long Lee & Deng Kue
-        """)    
-    st.divider() # Adds a clean visual line
-        
 
         
         # Code of Conduct
@@ -418,6 +399,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
