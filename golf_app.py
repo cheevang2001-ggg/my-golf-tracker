@@ -233,7 +233,7 @@ with tabs[4]: # League Info
     # Category Selection
     info_category = st.radio(
         "Select a Category:",
-        ["General Info", "Rules", "Schedule", "Prizes", "Expenses"],
+        ["About Us", "Rules", "Schedule", "Prizes", "Expenses"],
         horizontal=True
     )
     
@@ -408,6 +408,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
