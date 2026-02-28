@@ -341,16 +341,16 @@ with tab6:
     with c1:
         st.subheader("Week 9")
         st.caption("Round 1 (Byes)")
-        st.write("🟢 **Seed 1 (BYE)**")
-        st.write("🟢 **Seed 2 (BYE)**")
-        st.write("🟢 **Seed 3 (BYE)**")
-        st.write("🟢 **Seed 4 (BYE)**")
+        st.write("🟢 **Xuka 1 (BYE)**")
+        st.write("🟢 **Matt 2 (BYE)**")
+        st.write("🟢 **Beef 3 (BYE)**")
+        st.write("🟢 **VaMeng 4 (BYE)**")
         st.divider()
         st.markdown("**Matchups:**")
-        st.write("M1: Seed 5 vs Seed 12")
-        st.write("M2: Seed 6 vs Seed 11")
-        st.write("M3: Seed 7 vs Seed 10")
-        st.write("M4: Seed 8 vs Seed 9")
+        st.write("M1: Long 5 vs Carter 12")
+        st.write("M2: Txv 6 vs Cory 11")
+        st.write("M3: Dale 7 vs Mike 10")
+        st.write("M4: NomThai 8 vs Lex 9")
 
     with c2:
         st.subheader("Week 10")
@@ -374,6 +374,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
