@@ -347,7 +347,7 @@ with tab6:
         st.write("🟢 **Beef 3 (BYE)**")
         st.write("🟢 **VaMeng 4 (BYE)**")
         st.divider()
-        st.markdown("**Matchups:**")
+        st.markdown("**Round 1 Matchups:**")
         st.write("M1: Long 5 vs Carter 12")
         st.write("M2: Txv 6 vs Cory 11")
         st.write("M3: Dale 7 vs Mike 10")
@@ -355,7 +355,7 @@ with tab6:
         st.divider()
 
     with c2:
-        st.subheader("Week 10")
+        st.subheader("Week 10 - Round 2")
         st.caption("Quarter-Finals (Re-seeded)")
         # Logic: Top seeds play the lowest survivors
         st.write("Seed 1 vs Lowest Remaining Seed")
@@ -366,19 +366,19 @@ with tab6:
         st.divider()
 
     with c3:
-        st.subheader("Week 11")
+        st.subheader("Week 11 - Round 3")
         st.caption("Semi-Finals")
-        st.write("Top Bracket Winner")
-        st.write("vs")
-        st.write("Bottom Bracket Winner")
-
+        st.write("Lowest Seed vs Highest Seed")
+        st.write("Second Lowest Seed vs Second Highest Seed")
+        
         st.divider()
 
     with c4:
-        st.subheader("Week 12")
+        st.subheader("Week 12 - Round 4")
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
