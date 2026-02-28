@@ -352,6 +352,7 @@ with tab6:
         st.write("M2: Txv 6 vs Cory 11")
         st.write("M3: Dale 7 vs Mike 10")
         st.write("M4: NomThai 8 vs Lex 9")
+        st.divider()
 
     with c2:
         st.subheader("Week 10")
@@ -378,6 +379,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
