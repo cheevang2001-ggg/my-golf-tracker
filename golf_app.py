@@ -359,9 +359,10 @@ with tab6:
         # Logic: Top seeds play the lowest survivors
         st.write("Seed 1 vs Lowest Remaining Seed")
         st.write("Seed 2 vs 2nd Lowest Remaining")
-        st.divider()
         st.write("Seed 3 vs 3rd Lowest Remaining")
         st.write("Seed 4 vs Highest Remaining Seed")
+
+     st.divider()
 
     with c3:
         st.subheader("Week 11")
@@ -370,11 +371,14 @@ with tab6:
         st.write("vs")
         st.write("Bottom Bracket Winner")
 
+    st.divider()
+
     with c4:
         st.subheader("Week 12")
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
