@@ -362,7 +362,7 @@ with tab6:
         st.write("Seed 3 vs 3rd Lowest Remaining")
         st.write("Seed 4 vs Highest Remaining Seed")
 
-     st.divider()
+        st.divider()
 
     with c3:
         st.subheader("Week 11")
@@ -371,13 +371,14 @@ with tab6:
         st.write("vs")
         st.write("Bottom Bracket Winner")
 
-    st.divider()
+        st.divider()
 
     with c4:
         st.subheader("Week 12")
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
