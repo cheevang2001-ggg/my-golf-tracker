@@ -243,15 +243,15 @@ with tabs[4]: # League Info
             st.subheader("League Officers")
             st.markdown("""
             **President**: Txoovnom Vang\n\n
-            **Vice President**: Cory Vue
+            **Vice President**: Cory Vue\n\n
             **Finance**: Mike Yang
             """)
         
         with col2:
             st.subheader("Committees")
             st.markdown("""
-            * **Rules Committee**: Lex Vue
-            * **Players Committee**: Long Lee and Deng Kue
+            **Rules Committee**: Lex Vue\n\n
+            **Players Committee**: Long Lee and Deng Kue
             """)
 
         st.divider()
@@ -362,6 +362,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
