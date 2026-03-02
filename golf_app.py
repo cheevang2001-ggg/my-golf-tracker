@@ -280,10 +280,11 @@ with tabs[4]: # League Info
         Currie: Black - 6444 yd\n
         **Gimmies/Putting:** Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***\n
-        * Your group is holding up the playing field pickup gimme - within putter blade length. Example: Putting for par, finish hole with Gimme Par
-        * Your group is holding up the playing field, pickup with an extra 1 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey
-        * Your group is holding up the playing field, pickup with an extra 2 stroke from 30+ feet about 10 full putter length.. Example: Putting for par, finish hole with Gimme Double Bogey
-        * **DNFs:** If you cannot finish, mark 'DNF'.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup gimme - within putter blade length. Example: Putting for par, finish hole with Gimme Par
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with an extra 1 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with an extra 2 stroke from 30+ feet about 10 full putter length.. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        
+        **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
     elif info_category == "Schedule":
@@ -375,6 +376,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
