@@ -267,8 +267,9 @@ with tabs[4]: # League Info
     elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
-        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36.
-        * **Tee Box:** All Players 
+        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
+        * **Default Tee Box:** All players will play from one front tee box from the tip tee box.\n\n
+        Blueasdfdsafsadfasdf
         * **Gimmies:** Inside the leather (standard putter length).
         * **DNFs:** If you cannot finish, mark 'DNF'.
         """)
@@ -362,6 +363,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
