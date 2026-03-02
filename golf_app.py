@@ -268,11 +268,11 @@ with tabs[4]: # League Info
         st.subheader("League Game Play Format")
         st.markdown("""
         * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
-        * **Tee Box:** All players will play from tee box as stated below.  
-        Brown Deer: Blue - 6306 yd\n\n
-        Dretzka: Blue - 6538 yd\n\n
-        Oakwood: Blue - 6737 yd\n\n
-        Whitnall: Blue - 6308 yd\n\n
+        * **Tee Box:** All players will play from tee box as stated below.\n  
+        Brown Deer: Blue - 6306 yd\n
+        Dretzka: Blue - 6538 yd\n
+        Oakwood: Blue - 6737 yd\n
+        Whitnall: Blue - 6308 yd\n
         Currie: Black - 6444 yd\n\n\n\n
         ***Unless you meet the requirements or have approval from the players committee to play from another tee box.***
         
@@ -373,6 +373,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
