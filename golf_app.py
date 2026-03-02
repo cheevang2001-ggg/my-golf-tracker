@@ -273,7 +273,7 @@ with tabs[4]: # League Info
         Dretzka: Blue - 6538 yd\n\n
         Oakwood: Blue - 6737 yd\n\n
         Whitnall: Blue - 6308 yd\n\n
-        Currie: Black - 6444yp\n\n
+        Currie: Black - 6444 yd\n\n
         
         
         * **Gimmies:** Inside the leather (standard putter length).
@@ -369,6 +369,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
