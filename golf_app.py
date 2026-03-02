@@ -270,14 +270,15 @@ with tabs[4]: # League Info
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
         
         **Tee Box:** All players will play from tee box as stated below.\n  
+        ***Unless you meet the criteria below or have approval from the players committee to play from another tee box:***
+        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the tee box mentioned above
+        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1
         Brown Deer: Blue - 6306 yd\n
         Dretzka: Blue - 6538 yd\n
         Oakwood: Blue - 6737 yd\n
         Whitnall: Blue - 6308 yd\n
         Currie: Black - 6444 yd\n
-        ***Unless you meet the criteria below or have approval from the players committee to play from another tee box:***
-        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the tee box mentioned above
-        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1
+
         
         **Gimmies:** Inside the leather (standard putter length).
         * **DNFs:** If you cannot finish, mark 'DNF'.
@@ -372,6 +373,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
