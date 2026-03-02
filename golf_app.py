@@ -282,8 +282,13 @@ with tabs[4]: # League Info
         ***Unless one of the below scenario***\n
         * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup gimme - within putter blade length. Example: Putting for par, finish hole with Gimme Par
         * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with an extra 1 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with an extra 2 stroke from 30+ feet about 10 full putter length.. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-        
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with an extra 2 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
+        * 3 Minutes ball search max.\n
+        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
+        * Help your playing partners spot and search for their ball.\n
+        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
+        *
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
@@ -376,6 +381,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
