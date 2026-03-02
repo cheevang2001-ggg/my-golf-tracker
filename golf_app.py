@@ -274,12 +274,10 @@ with tabs[4]: # League Info
         Oakwood: Blue - 6737 yd\n
         Whitnall: Blue - 6308 yd\n
         Currie: Black - 6444 yd\n\n\n\n
-        ***Unless you meet the requirements or have approval from the players committee to play from another tee box.***
-        
-
-        
-        
-        
+        ***Unless you meet the criteria below or have approval from the players committee to play from another tee box:***
+        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the tee box mentioned above
+        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1
+        st.divider()             
         * **Gimmies:** Inside the leather (standard putter length).
         * **DNFs:** If you cannot finish, mark 'DNF'.
         """)
@@ -373,6 +371,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
