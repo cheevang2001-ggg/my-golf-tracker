@@ -258,11 +258,10 @@ with tabs[4]: # League Info
         st.subheader("Code of Conduct")
         st.markdown("""
         * Follow the governing GGG and USGA Golf rules.
-        * Honest in scoring.
-        * Arrive promptly.
         * Communicate clearly about schedules and issues.
-        * Respect with proper etiruette for othe members and non members.
+        * Have etiquette and respect other league members and non members.
         * Comply with GGG and the respected golf course policies and guidelines.
+        * Honest scoring, Arrive promptly, Play golf, Have fun.
         """)
 
     elif info_category == "Rules":
@@ -384,6 +383,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
