@@ -220,7 +220,7 @@ with tabs[4]: # League Info
     
     info_category = st.radio(
         "Select a Category:",
-        ["About Us", "Rules", "Schedule", "Prizes", "Expenses"],
+        ["About Us", "Rules","Schedule", "Events", "Prizes", "Expenses"],
         horizontal=True
     )
 
@@ -344,6 +344,68 @@ with tabs[4]: # League Info
         )
         st.caption("Note: Major events are highlighted in green.")
 
+    
+    st.divider()
+
+    if info_category == "Events":
+        st.subheader("GGGolf League 2026 - EVENTS")
+        st.write(
+            "2026 GGG events with explaination and rules on how each event will be played and scored. "
+            "MORE INFO TO COME."
+            "MORE INFO TO COME. "
+            "MORE INFO TO COME."
+        )
+
+        st.divider()
+
+        st.subheader("2-Man Scramble")
+        st.write(
+            "2-Man Scramble. "
+            "MORE INFO TO COME."
+            "MORE INFO TO COME. "
+            "MORE INFO TO COME."
+        )
+
+        # League Officers and Committees in Two Columns
+        col1, col2, col3, col4 = st.columns(4)
+        with col1: 
+            st.subheader("2-Man Scramble Teams")
+            st.markdown("""
+            **Team 1**: TBD\n\n
+            **Team 2**: TBD\n\n
+            **Team 3**: TBD
+            """)
+        
+        with col2:
+            st.subheader("2-Man Scramble Teams")
+            st.markdown("""
+            **Team 4**: TBD\n\n
+            **Team 5**: TBD\n\n
+            **Team 6**: TBD
+            """)
+        
+        with col3: 
+            st.subheader("2-Man Scramble Teams")
+            st.markdown("""
+            **Team 6**: TBD\n\n
+            **Team 7**: TBD\n\n
+            **Team 8**: TBD
+            """)
+        
+        with col4:
+            st.subheader("2-Man Scramble Teams")
+            st.markdown("""
+            **Team 9**: TBD\n\n
+            **Team 10**: TBD\n\n
+            **Team 11**: TBD
+            """)
+
+        st.divider()
+        st.subheader("Finale")
+        st.markdown("""
+        * FINALE INFO HERE
+        """)
+
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
@@ -383,6 +445,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
