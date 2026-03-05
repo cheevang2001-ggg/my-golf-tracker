@@ -149,7 +149,15 @@ with tabs[0]: # Scorecard
         else:
             p_data = df_main[df_main['Player'] == player_select]
             w_s = st.selectbox("Select Week", range(1, 15))
-            current_hcp = calculate_rolling_handicap(p_data, w_s)
+            
+            # --- UPDATED HANDICAP APPLICATION LOGIC ---
+            # If it's a GGG Event week, force HCP to 0.0. Otherwise, calculate as normal.
+            if w_s in [4, 8, 12]:
+                current_hcp = 0.0
+                st.info("💡 GGG Event: No handicap applied for this round.")
+            else:
+                current_hcp = calculate_rolling_handicap(p_data, w_s)
+            
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
@@ -170,12 +178,16 @@ with tabs[0]: # Scorecard
 
             st.divider()
             with st.form("score_entry", clear_on_submit=True):
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
-                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_input_{w_s}")
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
+                
+                # The input is pre-filled with 0.0 for event weeks and disabled/read-only for clarity
+                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
+                
                 c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
-                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
-                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_{w_s}")
+                p_c = c1.number_input("Pars", 0, 18, key=f"pars_in_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_in_{w_s}")
+                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_in_{w_s}")
+                
                 if st.form_submit_button("Submit Score"):
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
@@ -409,6 +421,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
