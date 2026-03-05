@@ -342,7 +342,7 @@ with tabs[4]: # League Info
         
         st.subheader("📜 Code of Conduct")
         st.markdown("""
-        * Follow the universal golf etiqutte and rules.
+        * Practice common golfing etiquette and rules.
         * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
         * Arrive promptly and timely.
         * Communicate clearly about schedules and issues.
@@ -473,6 +473,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
