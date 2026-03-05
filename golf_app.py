@@ -167,8 +167,8 @@ with tabs[0]: # Scorecard
             elif w_s == 12:
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
                 st.info("🔥 GGG Double Points Event: Rolling handicap is active!")
-        else:
-            current_hcp = calculate_rolling_handicap(p_data, w_s)
+            else:
+                current_hcp = calculate_rolling_handicap(p_data, w_s)
             
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
@@ -441,6 +441,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
