@@ -308,7 +308,7 @@ with tabs[4]: # League Info
             """)
         with col2:
             st.subheader("Committees")
-            st.markdown("* **Rules and Players Committee**: Lex Vue\n Long Lee\n Deng Kue\n*")
+            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lee, Deng Kue*")
             st.markdown("""
             **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
             They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** 
@@ -461,6 +461,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
