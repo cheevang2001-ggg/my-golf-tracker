@@ -319,19 +319,35 @@ with tabs[4]: # League Info
             They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.
             """)
         with col2:
-            st.subheader("⚖️ Committees")
+            st.subheader("Committees")
             st.markdown("* **Rules Committee**: Lex Vue\n* **Players Committee**: Long Lee and Deng Kue")
             st.markdown("""
-            **Player Advocacy:** The Committee serves as the formal link between the membership and leadership. They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
+            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** 
+            Their role ensures that the evolution of the league is always informed by the needs of the players.
+            """)
+        
+        st.divider()
+        
+        with st.expander("GGGolf Organizational Protocol", expanded=False):
+            st.markdown("""
+            To ensure the effective administration of GGGolf, we operate under a dual-branch governance model:
+            
+            1. **Administrative Authority:** All final decisions regarding league expansion, financial allocations, and external partnerships reside with the **League Officers**.
+            2. **Consultative Feedback:** Players seeking to implement change or address concerns must follow the established chain of command by bringing matters to the **Players Committee**. The Committee evaluates these proposals before presenting them to the Officers for executive review.
+            
+            This professional hierarchy is established to protect the integrity of the league and ensure that the voice of the player is represented within a disciplined administrative framework.
             """)
         st.divider()
+        
         st.subheader("📜 Code of Conduct")
         st.markdown("""
-        * Follow golf rules and be honest in scoring.
-        * Arrive promptly for matches and events.
+        * Follow the universal golf etiqutte and rules.
+        * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
+        * Arrive promptly and timely.
         * Communicate clearly about schedules and issues.
-        * Cooperate for a successful league.
         * Comply with all policies and guidelines.
+        * Follow the structural chain
         """)
 
     elif info_category == "Rules":
@@ -457,6 +473,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
