@@ -252,10 +252,31 @@ with tabs[4]: # League Info
     elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
-        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36.
-        * **Tee Box:** All Players 
-        * **Gimmies:** Inside the leather (standard putter length).
-        * **DNFs:** If you cannot finish, mark 'DNF'.
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
+        
+        **Tee Box:** All players will play from tee box as stated below.\n  
+        ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
+        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
+        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1.\n
+        Brown Deer: Blue - 6306 yd\n
+        Dretzka: Blue - 6538 yd\n
+        Oakwood: Blue - 6737 yd\n
+        Whitnall: Blue - 6308 yd\n
+        Currie: Black - 6444 yd\n
+        **Gimmies/Putting:** Promote competition of fair play, Putt out\n
+        ***Unless one of the below scenario***\n
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 2 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 3 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
+        * 2 Minutes ball search.\n
+        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
+        * Help your playing partners spot and search for their ball.\n
+        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
+        * Play ready golf.
+        * Move off the greens and record score at the next tee box.
+        
+        **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
     elif info_category == "Schedule":
@@ -314,3 +335,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
