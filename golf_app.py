@@ -214,7 +214,12 @@ with tabs[1]: # Standings
             for w in v['Week'].unique():
                 m = v['Week'] == w
                 v.loc[m, 'R'] = v.loc[m, 'Net_Score'].rank(method='min')
-                for idx, row in v[m].iterrows(): v.at[idx, 'Pts'] = GGG_POINTS.get(int(row['R']), 10.0)
+                for idx, row in v[m].iterrows():
+                    base_pts = GGG_POINTS.get(int(row['R']), 10.0)
+                    # Apply Double Points for Week 12
+                    final_pts = base_pts * 2 if w == 12 else base_pts
+                    v.at[idx, 'Pts'] = final_pts
+                    #v.at[idx, 'Pts'] = GGG_POINTS.get(int(row['R']), 10.0)###<<<<<<OLD DELETE WHEN WORKING
             res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
             res['Avg Net'] = res['Avg Net'].round(1)
             st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
@@ -254,7 +259,10 @@ with tabs[3]: # History
             mask = h_df['Week'] == w
             h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
             for idx, row in h_df[mask].iterrows():
-                h_df.at[idx, 'Points'] = GGG_POINTS.get(int(row['Rank']), 10.0)
+                base_pts = GGG_POINTS.get(int(row['Rank']), 10.0)
+                # Reflect Double Points in History
+                h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
+                ######h_df.at[idx, 'Points'] = GGG_POINTS.get(int(row['Rank']), 10.0)###<<<<<<OLD DELETE WHEN WORKING
         
         # 2. Add Filter UI
         f_col1, f_col2 = st.columns(2)
@@ -433,6 +441,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
