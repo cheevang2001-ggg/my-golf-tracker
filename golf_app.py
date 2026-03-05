@@ -218,22 +218,42 @@ with tabs[2]: # Live Round
         st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
 
 with tabs[3]: # History
-    st.subheader("📅 Weekly Scores & Points")
+    st.subheader("📅 Weekly Scores & GGG Points")
+    
+    # 1. Prepare the base data with GGG Points calculation
     h_df = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
     
     if not h_df.empty:
-        # Calculate Points for each week in the history view
+        # Calculate Points for each week
         h_df['Points'] = 0.0
         for w in h_df['Week'].unique():
             mask = h_df['Week'] == w
-            # Rank players for that specific week by Net Score
             h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
-            # Map the rank to your GGG_POINTS dictionary
             for idx, row in h_df[mask].iterrows():
                 h_df.at[idx, 'Points'] = GGG_POINTS.get(int(row['Rank']), 10.0)
         
-        # Format for display
-        display_df = h_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
+        # 2. Add Filter UI
+        f_col1, f_col2 = st.columns(2)
+        
+        # Player Filter
+        all_players = ["All Players"] + sorted(h_df['Player'].unique().tolist())
+        sel_player = f_col1.selectbox("Filter by Player", all_players)
+        
+        # Week Filter
+        all_weeks = ["All Weeks"] + sorted(h_df['Week'].unique().tolist())
+        sel_week = f_col2.selectbox("Filter by Week", all_weeks)
+        
+        # 3. Apply Filters to the dataframe
+        filtered_df = h_df.copy()
+        
+        if sel_player != "All Players":
+            filtered_df = filtered_df[filtered_df['Player'] == sel_player]
+            
+        if sel_week != "All Weeks":
+            filtered_df = filtered_df[filtered_df['Week'] == sel_week]
+            
+        # 4. Format and Display
+        display_df = filtered_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
         display_df = display_df.sort_values(['Week', 'Points'], ascending=[False, False])
         
         st.dataframe(
@@ -241,7 +261,8 @@ with tabs[3]: # History
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Points": st.column_config.NumberColumn("GGG Points", format="%d pts")
+                "Points": st.column_config.NumberColumn("GGG Points", format="%d pts"),
+                "Week": st.column_config.NumberColumn("Week", format="Wk %d")
             }
         )
     else:
@@ -388,6 +409,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
