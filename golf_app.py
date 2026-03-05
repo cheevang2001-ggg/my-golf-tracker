@@ -70,9 +70,8 @@ def update_live_score(player, hole, strokes):
         st.cache_data.clear()
         df_live = load_live_data(force_refresh=True)
         if player not in df_live['Player'].values:
-            st.error(f"❌ Player '{player}' not found.")
+            st.error(f"❌ Player '{player}' not found. Please re-register.")
             return
-
         hole_col = str(hole)
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         conn.update(worksheet="LiveScores", data=df_live)
@@ -84,34 +83,25 @@ def update_live_score(player, hole, strokes):
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # Exclude Registration (0) and GGG Events (4, 8, 12)
         excluded_weeks = [0, 4, 8, 12]
-        
-        # Get all completed rounds before the target week
         rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) & 
             (player_df['DNF'] == False) & 
             (player_df['Week'] < target_week)
         ].sort_values('Week', ascending=False)
         
-        # Requirement: If no rounds played yet (Week 1), HCP is 0 until score is entered
-        if len(rounds) == 0:
+        if len(rounds) == 0: 
             return 0.0
             
-        # Get up to the last 4 scores
         last_scores = rounds.head(4)['Total_Score'].tolist()
         
         if len(last_scores) >= 4:
-            # Rolling average: Best 3 of last 4
             last_scores.sort()
             hcp = round(sum(last_scores[:3]) / 3 - 36, 1)
         else:
-            # Weeks 1-3: Simple average of all available scores
             hcp = round(sum(last_scores) / len(last_scores) - 36, 1)
-            
         return float(hcp)
-    except:
-        return 0.0
+    except: return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
@@ -164,7 +154,7 @@ with tabs[0]: # Scorecard
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
             st.markdown(f"### 📊 {player_select}'s Season Dashboard")
-            m1, m2, m3, m4, m5 = st.columns(5) 
+            m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric("Current HCP", h_disp)
             m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "N/A")
             m3.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
@@ -181,7 +171,7 @@ with tabs[0]: # Scorecard
             st.divider()
             with st.form("score_entry", clear_on_submit=True):
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
-                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_{w_s}")
+                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_input_{w_s}")
                 c1, c2, c3 = st.columns(3)
                 p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
                 b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
@@ -235,34 +225,64 @@ with tabs[3]: # History
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Category:", ["About Us", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
-        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels.")
+        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
         st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            st.subheader("👥 Officers")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("👥 League Officers")
             st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
-        with c2:
+        with col2:
             st.subheader("⚖️ Committees")
-            st.markdown("* **Rules**: Lex Vue\n* **Players**: Long Lee & Deng Kue")
+            st.markdown("* **Rules Committee**: Lex Vue\n* **Players Committee**: Long Lee and Deng Kue")
+        st.divider()
+        st.subheader("📜 Code of Conduct")
+        st.markdown("""
+        * Follow golf rules and be honest in scoring.
+        * Arrive promptly for matches and events.
+        * Communicate clearly about schedules and issues.
+        * Cooperate for a successful league.
+        * Comply with all policies and guidelines.
+        """)
+
+    elif info_category == "Rules":
+        st.subheader("League Game Play Format")
+        st.markdown("""
+        * **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36.
+        * **Tee Box:** All Players 
+        * **Gimmies:** Inside the leather (standard putter length).
+        * **DNFs:** If you cannot finish, mark 'DNF'.
+        """)
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "TBD"]
+        league_start = pd.to_datetime("2026-05-31")
         schedule_data = []
         for i in range(1, 14):
-            note = "Regular Round"
+            current_date = league_start + pd.Timedelta(weeks=i-1)
+            course_name = courses[i-1] 
             if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
             elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
-            schedule_data.append({"Week": f"Week {i}", "Date": (pd.to_datetime("2026-05-31") + pd.Timedelta(weeks=i-1)).strftime('%B %d, %Y'), "Course": courses[i-1], "Note": note})
-        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Picnic 🍔"})
+            else: note = "Regular Round"
+            schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic 🍔"})
         df_schedule = pd.DataFrame(schedule_data)
         st.dataframe(df_schedule.style.apply(lambda r: ['background-color: #d4edda']*len(r) if "GGG Event" in str(r["Note"]) else ['']*len(r), axis=1), use_container_width=True, hide_index=True, height=530)
+        st.caption("Note: Major events are highlighted in green.")
+
+    elif info_category == "Prizes":
+        st.subheader("🏆 Prize Pool")
+        st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
+
+    elif info_category == "Expenses":
+        st.subheader("💵 League Expenses")
+        st.write("Breakdown of league fees and administrative costs.")
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
@@ -271,12 +291,10 @@ with tabs[5]: # Registration
             if st.button("Unlock"): st.session_state["reg_access"] = True; st.rerun()
     else:
         with st.form("r"):
-            # Removed HCP input as requested
             n, p = st.text_input("Name"), st.text_input("PIN", max_chars=4)
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
-                        # Initial baseline HCP is set to 0.0 until Week 1 is played
                         new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
                         conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
                         l_df = load_live_data(force_refresh=True)
@@ -288,7 +306,7 @@ with tabs[5]: # Registration
                         st.session_state["reg_access"] = False
                         st.success("Registration Successful!")
                         st.rerun()
-                    except Exception as e: st.error(f"Error: {e}")
+                    except Exception as e: st.error(f"Registration Error: {e}")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
