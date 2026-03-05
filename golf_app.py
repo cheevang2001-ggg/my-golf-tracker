@@ -330,12 +330,15 @@ with tabs[4]: # League Info
         st.subheader("League Game Play Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
-        ** Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. *** Failure to do so can result in a DNF round and not receive GGG points.***\n
+        
+        **Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
         * GGG Points will be automatically applied.\n
         * Any mis-aligned score please consult your Rules/Players Committee
+        
         **Tee Box:** All players will play from tee box as stated below.\n  
+        
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
         * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
         * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1.\n
@@ -344,6 +347,7 @@ with tabs[4]: # League Info
         Oakwood: Blue - 6737 yd\n
         Whitnall: Blue - 6308 yd\n
         Currie: Black - 6444 yd\n
+        
         **Gimmies/Putting:** Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***\n
         * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
@@ -445,6 +449,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
