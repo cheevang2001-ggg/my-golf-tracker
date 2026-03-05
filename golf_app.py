@@ -147,11 +147,13 @@ with tabs[0]: # Scorecard
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
             st.markdown(f"### 📊 {player_select}'s Season Dashboard")
-            m1, m2, m3, m4 = st.columns(4)
+            # Changed to 5 columns to include Eagles
+            m1, m2, m3, m4, m5 = st.columns(5) 
             m1.metric("Current HCP", h_disp)
             m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "N/A")
-            m3.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
-            m4.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
+            m3.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
+            m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
+            m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum())) # New Eagle Metric
 
             if not played_rounds.empty:
                 chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
@@ -161,17 +163,22 @@ with tabs[0]: # Scorecard
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
 
             st.divider()
-            with st.form("score_entry"):
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
-                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp))
+            # Form with keys added to ensure reset on rerun
+            with st.form("score_entry", clear_on_submit=True):
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
+                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_input_{w_s}")
+                
                 c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18)
-                b_c = c2.number_input("Birdies", 0, 18)
-                e_c = c3.number_input("Eagles", 0, 18)
+                p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
+                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_{w_s}")
+                
                 if st.form_submit_button("Submit Score"):
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
+                    # The save_weekly_data function already contains st.rerun(), 
+                    # which will reset the form because of the unique keys used above.
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
@@ -445,6 +452,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
