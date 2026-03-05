@@ -218,10 +218,34 @@ with tabs[2]: # Live Round
         st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
 
 with tabs[3]: # History
-    st.subheader("📅 Weekly Scores")
-    h_df = df_main[df_main['Week'] > 0].copy()
+    st.subheader("📅 Weekly Scores & Points")
+    h_df = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
+    
     if not h_df.empty:
-        st.dataframe(h_df[['Week', 'Player', 'Total_Score', 'Net_Score', 'Handicap']].sort_values(['Week', 'Net_Score'], ascending=[False, True]), use_container_width=True, hide_index=True)
+        # Calculate Points for each week in the history view
+        h_df['Points'] = 0.0
+        for w in h_df['Week'].unique():
+            mask = h_df['Week'] == w
+            # Rank players for that specific week by Net Score
+            h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
+            # Map the rank to your FEDEX_POINTS dictionary
+            for idx, row in h_df[mask].iterrows():
+                h_df.at[idx, 'Points'] = FEDEX_POINTS.get(int(row['Rank']), 10.0)
+        
+        # Format for display
+        display_df = h_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
+        display_df = display_df.sort_values(['Week', 'Points'], ascending=[False, False])
+        
+        st.dataframe(
+            display_df, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Points": st.column_config.NumberColumn("FedEx Points", format="%d pts")
+            }
+        )
+    else:
+        st.info("No completed rounds recorded yet.")
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
@@ -364,6 +388,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
