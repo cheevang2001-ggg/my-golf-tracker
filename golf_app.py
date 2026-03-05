@@ -330,7 +330,11 @@ with tabs[4]: # League Info
         st.subheader("League Game Play Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
-        
+        ** Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. *** Failure to do so can result in a DNF round and not receive GGG points.***\n
+        * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
+        * The Net score will be automatically applied using the handicap.\n
+        * GGG Points will be automatically applied.\n
+        * Any mis-aligned score please consult your Rules/Players Committee
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
         * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
@@ -441,6 +445,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
