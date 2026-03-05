@@ -340,7 +340,7 @@ with tabs[4]: # League Info
             """)
         st.divider()
         
-        st.subheader("📜 Code of Conduct")
+        st.subheader("Code of Conduct")
         st.markdown("""
         * Practice common golfing etiquette and rules.
         * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
@@ -401,7 +401,7 @@ with tabs[4]: # League Info
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
             else: note = "Regular Round"
             schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
-        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic 🍔"})
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
         df_schedule = pd.DataFrame(schedule_data)
         st.dataframe(df_schedule.style.apply(lambda r: ['background-color: #d4edda']*len(r) if "GGG Event" in str(r["Note"]) else ['']*len(r), axis=1), use_container_width=True, hide_index=True, height=530)
         st.caption("Note: Major events are highlighted in green.")
@@ -473,6 +473,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
