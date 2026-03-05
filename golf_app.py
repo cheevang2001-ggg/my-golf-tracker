@@ -146,7 +146,7 @@ with tabs[0]: # Scorecard
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
-            st.markdown(f"### 📊 {player_select}'s Season Dashboard")
+            st.markdown(f"### 📊 {player_select}'s Season Stats")
             # Changed to 5 columns to include Eagles
             m1, m2, m3, m4, m5 = st.columns(5) 
             m1.metric("Current HCP", h_disp)
@@ -452,6 +452,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
