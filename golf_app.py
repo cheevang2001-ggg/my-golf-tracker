@@ -84,17 +84,34 @@ def update_live_score(player, hole, strokes):
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
+        # Exclude Registration (0) and GGG Events (4, 8, 12)
         excluded_weeks = [0, 4, 8, 12]
-        rounds = player_df[(~player_df['Week'].isin(excluded_weeks)) & (player_df['DNF'] == False) & (player_df['Week'] < target_week)].sort_values('Week', ascending=False)
-        starting_hcp = 10.0
-        reg_row = player_df[player_df['Week'] == 0]
-        if not reg_row.empty: starting_hcp = float(reg_row['Handicap'].iloc[0])
-        if len(rounds) == 0: return float(starting_hcp)
-        last_4 = rounds.head(4)['Total_Score'].tolist()
-        last_4.sort()
-        hcp = round(sum(last_4[:3]) / 3 - 36, 1) if len(last_4) >= 4 else round(sum(last_4)/len(last_4)-36, 1)
+        
+        # Get all completed rounds before the target week
+        rounds = player_df[
+            (~player_df['Week'].isin(excluded_weeks)) & 
+            (player_df['DNF'] == False) & 
+            (player_df['Week'] < target_week)
+        ].sort_values('Week', ascending=False)
+        
+        # Requirement: If no rounds played yet (Week 1), HCP is 0 until score is entered
+        if len(rounds) == 0:
+            return 0.0
+            
+        # Get up to the last 4 scores
+        last_scores = rounds.head(4)['Total_Score'].tolist()
+        
+        if len(last_scores) >= 4:
+            # Rolling average: Best 3 of last 4
+            last_scores.sort()
+            hcp = round(sum(last_scores[:3]) / 3 - 36, 1)
+        else:
+            # Weeks 1-3: Simple average of all available scores
+            hcp = round(sum(last_scores) / len(last_scores) - 36, 1)
+            
         return float(hcp)
-    except: return 10.0
+    except:
+        return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
@@ -146,14 +163,13 @@ with tabs[0]: # Scorecard
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
-            st.markdown(f"### 📊 {player_select}'s Season Stats")
-            # Changed to 5 columns to include Eagles
+            st.markdown(f"### 📊 {player_select}'s Season Dashboard")
             m1, m2, m3, m4, m5 = st.columns(5) 
             m1.metric("Current HCP", h_disp)
             m2.metric("Avg Net", f"{played_rounds['Net_Score'].mean():.1f}" if not played_rounds.empty else "N/A")
             m3.metric("Total Pars", int(played_rounds['Pars_Count'].sum()))
             m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
-            m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum())) # New Eagle Metric
+            m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum()))
 
             if not played_rounds.empty:
                 chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
@@ -163,22 +179,17 @@ with tabs[0]: # Scorecard
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
 
             st.divider()
-            # Form with keys added to ensure reset on rerun
             with st.form("score_entry", clear_on_submit=True):
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
-                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_input_{w_s}")
-                
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{w_s}")
+                h_r = st.number_input("HCP to Apply", -10.0, 40.0, value=float(current_hcp), key=f"hcp_{w_s}")
                 c1, c2, c3 = st.columns(3)
                 p_c = c1.number_input("Pars", 0, 18, key=f"pars_{w_s}")
                 b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_{w_s}")
                 e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_{w_s}")
-                
                 if st.form_submit_button("Submit Score"):
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
-                    # The save_weekly_data function already contains st.rerun(), 
-                    # which will reset the form because of the unique keys used above.
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
@@ -224,202 +235,34 @@ with tabs[3]: # History
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
-    
-    info_category = st.radio(
-        "Select a Category:",
-        ["About Us", "Rules","Schedule", "Events", "Prizes", "Expenses"],
-        horizontal=True
-    )
-
+    info_category = st.radio("Category:", ["About Us", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
-        st.write(
-            "Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition "
-            "and welcomes all skill levels."
-            "Members gain experience to prepare for community tournaments and events, "
-            "while maintaining high standards of integrity in the game."
-        )
-
+        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels.")
         st.divider()
-
-        # League Officers and Committees in Two Columns
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("League Officers")
-            st.markdown("""
-            **President**: Txoovnom Vang\n\n
-            **Vice President**: Cory Vue\n\n
-            **Finance**: Mike Yang
-            """)
-        
-        with col2:
-            st.subheader("Committees")
-            st.markdown("""
-            **Rules Committee**: Lex Vue\n\n
-            **Players Committee**: Long Lee and Deng Kue
-            """)
-
-        st.divider()
-        st.subheader("Code of Conduct")
-        st.markdown("""
-        * Follow the governing GGG and USGA Golf rules.
-        * Communicate clearly about schedules and issues.
-        * Have etiquette and respect other league members and non members.
-        * Comply with GGG and the respected golf course policies and guidelines.
-        * Honest scoring, Arrive promptly, Play golf, Have fun.
-        """)
-
-    elif info_category == "Rules":
-        st.subheader("League Game Play Format")
-        st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
-        
-        **Tee Box:** All players will play from tee box as stated below.\n  
-        ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
-        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
-        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1
-        Brown Deer: Blue - 6306 yd\n
-        Dretzka: Blue - 6538 yd\n
-        Oakwood: Blue - 6737 yd\n
-        Whitnall: Blue - 6308 yd\n
-        Currie: Black - 6444 yd\n
-        **Gimmies/Putting:** Promote competition of fair play, Putt out\n
-        ***Unless one of the below scenario***\n
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 2 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 3 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
-        * 2 Minutes ball search.\n
-        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
-        * Help your playing partners spot and search for their ball.\n
-        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
-        * Play ready golf.
-        * Move off the greens and record score at the next tee box.
-        
-        **DNFs:** If you cannot finish, mark 'DNF'.
-        """)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.subheader("👥 Officers")
+            st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
+        with c2:
+            st.subheader("⚖️ Committees")
+            st.markdown("* **Rules**: Lex Vue\n* **Players**: Long Lee & Deng Kue")
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
-        
-        courses = [
-            "Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", 
-            "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", 
-            "Dretzka", "Brown Deer", "TBD"
-        ]
-
-        league_start = pd.to_datetime("2026-05-31")
+        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "TBD"]
         schedule_data = []
-        
         for i in range(1, 14):
-            current_date = league_start + pd.Timedelta(weeks=i-1)
-            course_name = courses[i-1] 
-            
+            note = "Regular Round"
             if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
             elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
-            else: note = "Regular Round"
-                
-            schedule_data.append({
-                "Week": f"Week {i}",
-                "Date": current_date.strftime('%B %d, %Y'),
-                "Course": course_name,
-                "Note": note
-            })
-
-        schedule_data.append({
-            "Week": "FINALE",
-            "Date": "August 28, 2026",
-            "Course": "TBD",
-            "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic 🍔"
-        })
-
+            schedule_data.append({"Week": f"Week {i}", "Date": (pd.to_datetime("2026-05-31") + pd.Timedelta(weeks=i-1)).strftime('%B %d, %Y'), "Course": courses[i-1], "Note": note})
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Picnic 🍔"})
         df_schedule = pd.DataFrame(schedule_data)
-
-        def highlight_events(row):
-            if "GGG Event" in str(row["Note"]):
-                return ['background-color: #d4edda'] * len(row)
-            return [''] * len(row)
-
-        st.dataframe(
-            df_schedule.style.apply(highlight_events, axis=1),
-            use_container_width=True,
-            hide_index=True,
-            height=530 
-        )
-        st.caption("Note: Major events are highlighted in green.")
-
-    
-    st.divider()
-
-    if info_category == "Events":
-        st.subheader("GGGolf League 2026 - EVENTS")
-        st.write(
-            "2026 GGG events with explaination and rules on how each event will be played and scored. "
-            "MORE INFO TO COME."
-            "MORE INFO TO COME. "
-            "MORE INFO TO COME."
-        )
-
-        st.divider()
-
-        st.subheader("2-Man Scramble")
-        st.write(
-            "2-Man Scramble. "
-            "MORE INFO TO COME."
-            "MORE INFO TO COME. "
-            "MORE INFO TO COME."
-        )
-
-        # League Officers and Committees in Two Columns
-        col1, col2, col3, col4 = st.columns(4)
-        with col1: 
-            st.subheader("2-Man Scramble Teams")
-            st.markdown("""
-            **Team 1**: TBD\n\n
-            **Team 2**: TBD\n\n
-            **Team 3**: TBD
-            """)
-        
-        with col2:
-            st.subheader("2-Man Scramble Teams")
-            st.markdown("""
-            **Team 4**: TBD\n\n
-            **Team 5**: TBD\n\n
-            **Team 6**: TBD
-            """)
-        
-        with col3: 
-            st.subheader("2-Man Scramble Teams")
-            st.markdown("""
-            **Team 6**: TBD\n\n
-            **Team 7**: TBD\n\n
-            **Team 8**: TBD
-            """)
-        
-        with col4:
-            st.subheader("2-Man Scramble Teams")
-            st.markdown("""
-            **Team 9**: TBD\n\n
-            **Team 10**: TBD\n\n
-            **Team 11**: TBD
-            """)
-
-        st.divider()
-        st.subheader("Finale")
-        st.markdown("""
-        * FINALE INFO HERE
-        """)
-
-    elif info_category == "Prizes":
-        st.subheader("🏆 Prize Pool")
-        st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
-
-    elif info_category == "Expenses":
-        st.subheader("💵 League Expenses")
-        st.write("Breakdown of league fees and administrative costs.")
+        st.dataframe(df_schedule.style.apply(lambda r: ['background-color: #d4edda']*len(r) if "GGG Event" in str(r["Note"]) else ['']*len(r), axis=1), use_container_width=True, hide_index=True, height=530)
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
@@ -428,11 +271,13 @@ with tabs[5]: # Registration
             if st.button("Unlock"): st.session_state["reg_access"] = True; st.rerun()
     else:
         with st.form("r"):
-            n, p, h = st.text_input("Name"), st.text_input("PIN", max_chars=4), st.number_input("HCP", -10.0, 40.0, 10.0)
+            # Removed HCP input as requested
+            n, p = st.text_input("Name"), st.text_input("PIN", max_chars=4)
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
-                        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": h, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+                        # Initial baseline HCP is set to 0.0 until Week 1 is played
+                        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
                         conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
                         l_df = load_live_data(force_refresh=True)
                         if n not in l_df['Player'].values:
@@ -443,8 +288,7 @@ with tabs[5]: # Registration
                         st.session_state["reg_access"] = False
                         st.success("Registration Successful!")
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Registration Error: {e}")
+                    except Exception as e: st.error(f"Error: {e}")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
@@ -452,30 +296,3 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
