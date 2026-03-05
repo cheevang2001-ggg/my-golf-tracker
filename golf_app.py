@@ -311,11 +311,15 @@ with tabs[4]: # League Info
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("👥 League Officers")
+            st.subheader("League Officers")
             st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
+            st.info("**Role:** The Officers hold primary responsibility for the league’s operational backbone. Their focus is on **growth, financial oversight, and external promotion.** They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.")
         with col2:
             st.subheader("⚖️ Committees")
             st.markdown("* **Rules Committee**: Lex Vue\n* **Players Committee**: Long Lee and Deng Kue")
+            st.markdown("""
+            **Player Advocacy:** The Committee serves as the formal link between the membership and leadership. They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            """
         st.divider()
         st.subheader("📜 Code of Conduct")
         st.markdown("""
@@ -335,7 +339,7 @@ with tabs[4]: # League Info
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
         * GGG Points will be automatically applied.\n
-        * Any mis-aligned score please consult your Rules/Players Committee
+        * Any mis-aligned score please consult your Rules/Players Committee.
         
         **Tee Box:** All players will play from tee box as stated below.\n  
         
@@ -449,6 +453,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
