@@ -150,16 +150,6 @@ with tabs[0]: # Scorecard
             p_data = df_main[df_main['Player'] == player_select]
             w_s = st.selectbox("Select Week", range(1, 15))
 
-            ##################OLD LOGIC########################
-            # --- UPDATED HANDICAP APPLICATION LOGIC ---
-            # If it's a GGG Event week, force HCP to 0.0. Otherwise, calculate as normal.
-            #if w_s in [4, 8, 12]:
-                #current_hcp = 0.0
-                #st.info("💡 GGG Event: No handicap applied for this round.")
-            #else:
-                #current_hcp = calculate_rolling_handicap(p_data, w_s)
-            ##################OLD LOGIC########################
-
             # Scorecard logic:
             if w_s in [4, 8]:
                 current_hcp = 0.0
@@ -218,8 +208,7 @@ with tabs[1]: # Standings
                     base_pts = GGG_POINTS.get(int(row['R']), 10.0)
                     # Apply Double Points for Week 12
                     final_pts = base_pts * 2 if w == 12 else base_pts
-                    v.at[idx, 'Pts'] = final_pts
-                    #v.at[idx, 'Pts'] = GGG_POINTS.get(int(row['R']), 10.0)###<<<<<<OLD DELETE WHEN WORKING
+                    v.at[idx, 'Pts'] = final_pts                    
             res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
             res['Avg Net'] = res['Avg Net'].round(1)
             st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
@@ -262,8 +251,7 @@ with tabs[3]: # History
                 base_pts = GGG_POINTS.get(int(row['Rank']), 10.0)
                 # Reflect Double Points in History
                 h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
-                ######h_df.at[idx, 'Points'] = GGG_POINTS.get(int(row['Rank']), 10.0)###<<<<<<OLD DELETE WHEN WORKING
-        
+                        
         # 2. Add Filter UI
         f_col1, f_col2 = st.columns(2)
         
@@ -320,7 +308,7 @@ with tabs[4]: # League Info
             """)
         with col2:
             st.subheader("Committees")
-            st.markdown("* **Rules Committee**: Lex Vue\n* **Players Committee**: Long Lee and Deng Kue")
+            st.markdown("* **Rules and Players Committee**: Lex Vue\n Long Lee\n Deng Kue\n*")
             st.markdown("""
             **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
             They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** 
@@ -473,6 +461,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
