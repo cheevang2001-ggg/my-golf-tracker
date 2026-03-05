@@ -313,13 +313,17 @@ with tabs[4]: # League Info
         with col1:
             st.subheader("League Officers")
             st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
-            st.info("**Role:** The Officers hold primary responsibility for the league’s operational backbone. Their focus is on **growth, financial oversight, and external promotion.** They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.")
+            st.markdown("""
+            **Executive Team:** The Officers hold primary responsibility for the league’s operational backbone. 
+            Their focus is on **growth, financial oversight, and external promotion.** 
+            They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.
+            """)
         with col2:
             st.subheader("⚖️ Committees")
             st.markdown("* **Rules Committee**: Lex Vue\n* **Players Committee**: Long Lee and Deng Kue")
             st.markdown("""
             **Player Advocacy:** The Committee serves as the formal link between the membership and leadership. They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
-            """
+            """)
         st.divider()
         st.subheader("📜 Code of Conduct")
         st.markdown("""
@@ -453,6 +457,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
