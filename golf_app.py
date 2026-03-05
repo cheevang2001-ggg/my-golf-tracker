@@ -307,27 +307,42 @@ with tabs[4]: # League Info
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
+    # KEEPING YOUR PASSWORD LOCK LOGIC
     if not st.session_state["reg_access"]:
         if st.text_input("League Key", type="password") == REGISTRATION_KEY:
-            if st.button("Unlock"): st.session_state["reg_access"] = True; st.rerun()
+            if st.button("Unlock"):
+                st.session_state["reg_access"] = True
+                st.rerun()
     else:
         with st.form("r"):
-            n, p = st.text_input("Name"), st.text_input("PIN", max_chars=4)
+            # REMOVED HCP INPUT - ONLY NAME AND PIN REMAIN
+            n = st.text_input("Name")
+            p = st.text_input("PIN", max_chars=4)
+            
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
-                        new_reg = pd.DataFrame([{"Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0}])
+                        # Initial baseline is hardcoded to 0.0 here so players don't input it
+                        new_reg = pd.DataFrame([{
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, 
+                            "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, 
+                            "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
+                        }])
+                        
                         conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
+                        
                         l_df = load_live_data(force_refresh=True)
                         if n not in l_df['Player'].values:
                             new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
                             conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
+                        
                         st.cache_data.clear()
                         time.sleep(1)
                         st.session_state["reg_access"] = False
                         st.success("Registration Successful!")
                         st.rerun()
-                    except Exception as e: st.error(f"Registration Error: {e}")
+                    except Exception as e:
+                        st.error(f"Registration Error: {e}")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
@@ -335,4 +350,5 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
