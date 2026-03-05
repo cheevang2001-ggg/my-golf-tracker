@@ -307,30 +307,43 @@ with tabs[4]: # League Info
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
-    # KEEPING YOUR PASSWORD LOCK LOGIC
+    
+    # Automatic Unlock Logic: No separate 'Unlock' button needed
     if not st.session_state["reg_access"]:
-        if st.text_input("League Key", type="password") == REGISTRATION_KEY:
-            if st.button("Unlock"):
-                st.session_state["reg_access"] = True
-                st.rerun()
+        user_key = st.text_input("League Key", type="password")
+        if user_key == REGISTRATION_KEY:
+            st.session_state["reg_access"] = True
+            st.rerun() # Immediately refreshes to show the form once the key is correct
     else:
+        # Form for player details - Registration Key has been accepted
         with st.form("r"):
-            # REMOVED HCP INPUT - ONLY NAME AND PIN REMAIN
             n = st.text_input("Name")
-            p = st.text_input("PIN", max_chars=4)
+            p = st.text_input("PIN", max_chars=4, help="Create a 4-digit PIN for your scorecard")
+            
+            # Note: Handicap input (h) has been removed. 
+            # It defaults to 0.0 until Week 1 scores are entered.
             
             if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
-                        # Initial baseline is hardcoded to 0.0 here so players don't input it
+                        # Create the initial row (Week 0) with a 0.0 Handicap
                         new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, 
-                            "DNF": True, "Pars_Count": 0, "Birdies_Count": 0, 
-                            "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
+                            "Week": 0, 
+                            "Player": n, 
+                            "PIN": p, 
+                            "Handicap": 0.0, 
+                            "DNF": True, 
+                            "Pars_Count": 0, 
+                            "Birdies_Count": 0, 
+                            "Eagle_Count": 0, 
+                            "Total_Score": 0, 
+                            "Net_Score": 0
                         }])
                         
+                        # Append to main data
                         conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
                         
+                        # Initialize the Live Board entry for the new player
                         l_df = load_live_data(force_refresh=True)
                         if n not in l_df['Player'].values:
                             new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
@@ -338,17 +351,19 @@ with tabs[5]: # Registration
                         
                         st.cache_data.clear()
                         time.sleep(1)
-                        st.session_state["reg_access"] = False
-                        st.success("Registration Successful!")
+                        st.session_state["reg_access"] = False # Re-locks for the next user
+                        st.success(f"✅ {n} registered successfully!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Registration Error: {e}")
-
+                else:
+                    st.warning("Please enter a name and a 4-digit PIN.")
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
