@@ -24,7 +24,7 @@ MASTER_COLUMNS = [
     'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF'
 ]
 
-FEDEX_POINTS = {
+GGG_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 16, 13: 13, 14: 9,
     15: 5, 16: 3, 17: 1 
@@ -190,7 +190,7 @@ with tabs[1]: # Standings
             for w in v['Week'].unique():
                 m = v['Week'] == w
                 v.loc[m, 'R'] = v.loc[m, 'Net_Score'].rank(method='min')
-                for idx, row in v[m].iterrows(): v.at[idx, 'Pts'] = FEDEX_POINTS.get(int(row['R']), 10.0)
+                for idx, row in v[m].iterrows(): v.at[idx, 'Pts'] = GGG_POINTS.get(int(row['R']), 10.0)
             res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
             res['Avg Net'] = res['Avg Net'].round(1)
             st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
@@ -228,9 +228,9 @@ with tabs[3]: # History
             mask = h_df['Week'] == w
             # Rank players for that specific week by Net Score
             h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
-            # Map the rank to your FEDEX_POINTS dictionary
+            # Map the rank to your GGG_POINTS dictionary
             for idx, row in h_df[mask].iterrows():
-                h_df.at[idx, 'Points'] = FEDEX_POINTS.get(int(row['Rank']), 10.0)
+                h_df.at[idx, 'Points'] = GGG_POINTS.get(int(row['Rank']), 10.0)
         
         # Format for display
         display_df = h_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
@@ -241,7 +241,7 @@ with tabs[3]: # History
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Points": st.column_config.NumberColumn("FedEx Points", format="%d pts")
+                "Points": st.column_config.NumberColumn("GGG Points", format="%d pts")
             }
         )
     else:
@@ -323,7 +323,7 @@ with tabs[4]: # League Info
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.write("Prizes are based on FedEx Point standings at the end of Week 13.")
+        st.write("Prizes are based on GGG Point standings at the end of Week 13.")
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
@@ -388,6 +388,7 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+
 
 
 
