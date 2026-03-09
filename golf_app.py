@@ -348,20 +348,20 @@ with tab6:
         st.write("🟢 **VaMeng 4 (BYE)**")
         st.divider()
         st.markdown("**Round 1 Matchups:**")
-        st.write("M1: Long 5 vs Carter 12")
-        st.write("M2: Txv 6 vs Cory 11")
-        st.write("M3: Dale 7 vs Mike 10")
-        st.write("M4: NomThai 8 vs Lex 9")
+        st.write("M1: 5 Long : **37** vs 12 Carter : **34**")
+        st.write("M2: 6 Txv : **42** vs 11 Cory : **46**")
+        st.write("M3: 7 Dale : **47** vs 10 Mike : **39**")
+        st.write("M4: 9 NomThai : **48** vs 9 Lex : **54**")
         st.divider()
 
     with c2:
         st.subheader("Week 10 - Round 2")
         st.caption("Quarter-Finals (Re-seeded)")
         # Logic: Top seeds play the lowest survivors
-        st.write("Seed 1 vs Lowest Remaining Seed")
-        st.write("Seed 2 vs 2nd Lowest Remaining")
-        st.write("Seed 3 vs 3rd Lowest Remaining")
-        st.write("Seed 4 vs Highest Remaining Seed")
+        st.write("1 Xuka vs 12 Carter")
+        st.write("2 Matt vs 10 Mike")
+        st.write("3 Beef vs 8 NomThai")
+        st.write("4 VaMeng vs 6 Txv")
 
         st.divider()
 
@@ -378,6 +378,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
