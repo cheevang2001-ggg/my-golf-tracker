@@ -348,10 +348,10 @@ with tab6:
         st.write("🟢 **VaMeng 4 (BYE)**")
         st.divider()
         st.markdown("**Round 1 Matchups:**")
-        st.write("M1: 5 Long : **37** vs 12 Carter : **34**")
-        st.write("M2: 6 Txv : **42** vs 11 Cory : **46**")
-        st.write("M3: 7 Dale : **47** vs 10 Mike : **39**")
-        st.write("M4: 9 NomThai : **48** vs 9 Lex : **54**")
+        st.write("5 Long **37** vs 12 Carter **34**")
+        st.write("6 Txv **42** vs 11 Cory **46**")
+        st.write("7 Dale **47** vs 10 Mike **39**")
+        st.write("9 NomThai **48** vs 9 Lex **54**")
         st.divider()
 
     with c2:
@@ -378,6 +378,7 @@ with tab6:
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
         st.write("Final Match")
+
 
 
 
