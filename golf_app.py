@@ -358,18 +358,18 @@ with tab6:
         st.subheader("Week 10 - Round 2")
         st.caption("Quarter-Finals (Re-seeded)")
         # Logic: Top seeds play the lowest survivors
-        st.write("1 Xuka vs 12 Carter")
-        st.write("2 Matt vs 10 Mike")
-        st.write("3 Beef vs 8 NomThai")
-        st.write("4 VaMeng vs 6 Txv")
+        st.write("1 Xuka **38** vs 12 Carter **32**")
+        st.write("2 Matt **37** vs 10 Mike **88**")
+        st.write("3 Beef **43** vs 8 NomThai **35**")
+        st.write("4 VaMeng **38** vs 6 Txv **37**")
 
         st.divider()
 
     with c3:
         st.subheader("Week 11 - Round 3")
         st.caption("Semi-Finals")
-        st.write("Lowest Seed vs Highest Seed")
-        st.write("Second Lowest Seed vs Second Highest Seed")
+        st.write("2 Matt vs 12 Carter")
+        st.write("6 Txv vs 8 NomThai")
         
         st.divider()
 
