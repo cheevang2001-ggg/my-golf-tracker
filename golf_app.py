@@ -377,7 +377,7 @@ with tab6:
         st.subheader("Week 12 - Round 4")
         st.caption("CHAMPIONSHIP")
         st.markdown("<h2 style='text-align: center;'>🏆</h2>", unsafe_allow_html=True)
-        st.write("Final Match")
+        st.write("2 Matt vs 6 Txv")
 
 
 
