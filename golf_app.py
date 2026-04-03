@@ -298,7 +298,7 @@ with tabs[4]: # League Info
     info_category = st.radio("Select a Category:", ["About Us", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
-        if info_category == "About Us":
+if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
         st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
         st.divider()
