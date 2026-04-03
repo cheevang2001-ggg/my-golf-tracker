@@ -343,7 +343,7 @@ if info_category == "About Us":
         * Follow the structural chain
         """)
 
-    elif info_category == "Rules":
+elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
