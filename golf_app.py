@@ -428,31 +428,36 @@ elif info_category == "Schedule":
                 
                 with col2:
                     # Provide specific rules based on the event type
-                    if "2 Man Scramble" in entry['Note']:
+                    if "2 Man Greensomes" in entry['Note']:
                         st.info("""
-                        **2-Man Scramble Rules:**
-                        * Both players tee off and select the best shot.
-                        * Both players play from that selected spot.
-                        * Repeat until the ball is holed out.
-                        * **Handicap:** No handicap applied for this round[cite: 15].
+                        **2-Man Greensomes Rules:**
+                        * Both players tee off and select the desire Drive to play from.
+                        * The player's whose drive was not choosen, hits the second shot. Alternate through until the hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
                         """)
-                    elif "4 Man Team" in entry['Note']:
+                    elif "4 Man Team Scramble" in entry['Note']:
                         st.info("""
                         **4-Man Team Battle Rules:**
-                        * Scoring format determined by the Rules Committee[cite: 46].
-                        * **Handicap:** No handicap applied for this round[cite: 15].
+                        * All players tee off and selects the desired drive of the team.
+                        * All players continue play from best desired shot until hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
                         """)
                     elif "Double Points" in entry['Note']:
                         st.success("""
                         **Double Points Event:**
-                        * Regular individual stroke play rules apply[cite: 45].
-                        * **Rolling Handicap:** Active for this round[cite: 16].
-                        * **Rewards:** All GGG Points earned today are doubled[cite: 24, 56].
+                        * Regular individual stroke play with your current GGG handicap.
+                        * Front 9 - Example: With your handicap you come in 1st you get 100 GGG points
+                        * Back 9  - Example: With your handicap you come in last you get 1 GGG point
+                        * Your total GGG point for this week will be 101
+                        * Leaving after front 9 you will receive the front 9 points only, forfeiting the back 9 points.
+                        * Players must play front 9 to be eligible for back 9 points.                                                
                         """)
                     elif "Finale" in entry['Note']:
-                        st.warning("Season finale and trophy presentation. Details to be announced[cite: 57, 58].")
+                        st.warning("Season finale and trophy presentation. Details to be announced.")
                     else:
-                        st.write("Standard league play rules and rolling handicaps apply[cite: 44, 45].")
+                        st.write("Standard league play rules and rolling handicaps apply.")
 
 elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
