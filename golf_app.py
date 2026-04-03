@@ -10,7 +10,7 @@ st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
 REGISTRATION_KEY = "goatpigcowfishduck2026"
-SESSION_TIMEOUT = 4 * 60 * 60 
+SESSION_TIMEOUT = 30 * 60 
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
