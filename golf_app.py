@@ -381,23 +381,78 @@ with tabs[4]: # League Info
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
-    elif info_category == "Schedule":
+elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "TBD"]
         league_start = pd.to_datetime("2026-05-31")
+        
+        # Build the schedule data list
         schedule_data = []
         for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
             course_name = courses[i-1] 
+            
             if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
             elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
             else: note = "Regular Round"
-            schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
-        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
-        df_schedule = pd.DataFrame(schedule_data)
-        st.dataframe(df_schedule.style.apply(lambda r: ['background-color: #d4edda']*len(r) if "GGG Event" in str(r["Note"]) else ['']*len(r), axis=1), use_container_width=True, hide_index=True, height=530)
-        st.caption("Note: Major events are highlighted in green.")
+            
+            schedule_data.append({
+                "Week": f"Week {i}", 
+                "Date": current_date.strftime('%B %d, %Y'), 
+                "Course": course_name, 
+                "Note": note
+            })
+        
+        # Add the Finale
+        schedule_data.append({
+            "Week": "FINALE", 
+            "Date": "August 28, 2026", 
+            "Course": "TBD", 
+            "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"
+        })
+
+        # Display Interactive Schedule with Expanders
+        st.write("Click a week to view specific event rules and details.")
+        
+        for entry in schedule_data:
+            # Create a label that highlights GGG Events
+            is_event = "GGG Event" in entry['Note']
+            header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
+            
+            with st.expander(header):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.write(f"**Date:** {entry['Date']}")
+                    st.write(f"**Format:** {entry['Note']}")
+                
+                with col2:
+                    # Provide specific rules based on the event type
+                    if "2 Man Scramble" in entry['Note']:
+                        st.info("""
+                        **2-Man Scramble Rules:**
+                        * Both players tee off and select the best shot.
+                        * Both players play from that selected spot.
+                        * Repeat until the ball is holed out.
+                        * **Handicap:** No handicap applied for this round[cite: 15].
+                        """)
+                    elif "4 Man Team" in entry['Note']:
+                        st.info("""
+                        **4-Man Team Battle Rules:**
+                        * Scoring format determined by the Rules Committee[cite: 46].
+                        * **Handicap:** No handicap applied for this round[cite: 15].
+                        """)
+                    elif "Double Points" in entry['Note']:
+                        st.success("""
+                        **Double Points Event:**
+                        * Regular individual stroke play rules apply[cite: 45].
+                        * **Rolling Handicap:** Active for this round[cite: 16].
+                        * **Rewards:** All GGG Points earned today are doubled[cite: 24, 56].
+                        """)
+                    elif "Finale" in entry['Note']:
+                        st.warning("Season finale and trophy presentation. Details to be announced[cite: 57, 58].")
+                    else:
+                        st.write("Standard league play rules and rolling handicaps apply[cite: 44, 45].")
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
