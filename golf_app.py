@@ -9,7 +9,7 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
-REGISTRATION_KEY = "goatpigcowfishduck2026"
+REGISTRATION_KEY = "Food!2026"
 SESSION_TIMEOUT = 30 * 60 
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
