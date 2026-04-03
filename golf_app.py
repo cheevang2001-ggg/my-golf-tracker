@@ -225,8 +225,13 @@ with tabs[2]: # Live Round
             c1, c2, c3 = st.columns([2, 1, 1])
             h_u = c1.selectbox("Hole", range(1, 10))
             s_u = c2.number_input("Strokes", 1, 15, 4)
+            
             if c3.button("Post", use_container_width=True):
                 update_live_score(curr_p, h_u, s_u)
+                
+                # --- RESET TIMESTAMP HERE ---
+                st.session_state["login_timestamp"] = time.time()
+                
                 st.rerun()
     
     l_df = load_live_data(force_refresh=True)
