@@ -339,12 +339,11 @@ with tabs[4]: # League Info
         st.subheader("Establishing Your Handicap")
         st.info("""
         **Pre-Season Requirement:**
-        To have an accurate handicap for Week 1, players are encouraged to log **3 Pre-Season rounds**.
-        Play with one or more 2026 GGG member
-        Play from the Tee Box you feel is fair per your skill level
+        To have an accurate handicap for Week 1, players are encouraged to log 3 Pre-Season rounds. Play with one or more 2026 GGG member and play from the Tee Box you feel is fair per your skill level.
+        You may play at any course on the 2026 GGG Schedule, once you've logged a pre-season round it will be locked in for calculation for Week 1.
         
         * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
-        * **Option B:** If you do not complete 3 rounds (9 holes), you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
+        * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
         """)
 
     elif info_category == "Rules":
