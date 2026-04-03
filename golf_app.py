@@ -454,7 +454,7 @@ elif info_category == "Schedule":
                     else:
                         st.write("Standard league play rules and rolling handicaps apply[cite: 44, 45].")
 
-    elif info_category == "Prizes":
+elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
 
