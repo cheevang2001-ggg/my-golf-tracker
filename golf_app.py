@@ -291,20 +291,49 @@ with tabs[3]: # History
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
-        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels.")
+        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("League Officers")
             st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
+            st.markdown("""
+            **Executive Team:** The Officers hold primary responsibility for the league’s operational backbone. 
+            Their focus is on **growth, financial oversight, and external promotion.** They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.
+            """)
         with col2:
             st.subheader("Committees")
-            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lex, Deng Kue")
+            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lex, Deng Kue\n")
+            st.markdown("""
+            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
+            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            """)
+        
+        st.divider()
+        with st.expander("GGGolf Organizational Protocol", expanded=False):
+            st.markdown("""
+            To ensure the effective administration of GGGolf, we operate under a dual-branch governance model:
+            
+            1. **Administrative Authority:** All final decisions regarding league expansion, financial allocations, and external partnerships reside with the **League Officers**.
+            2. **Consultative Feedback:** Players seeking to implement change or address concerns must follow the established chain of command by bringing matters to the **Players Committee**. The Committee evaluates these proposals before presenting them to the Officers for executive review.
+            
+            This professional hierarchy is established to protect the integrity of the league and ensure that the voice of the player is represented within a disciplined administrative framework.
+            """)
+        st.divider()
+        st.subheader("Code of Conduct")
+        st.markdown("""
+        * Practice common golfing etiquette and rules.
+        * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
+        * Arrive promptly and timely.
+        * Communicate clearly about schedules and issues.
+        * Comply with all policies and guidelines.
+        * Follow the structural chain
+        """)
 
     elif info_category == "Handicaps":
         st.subheader("🏁 Establishing Your Handicap")
@@ -316,9 +345,47 @@ with tabs[4]: # League Info
         * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
         """)
 
+    elif info_category == "Rules":
+        st.subheader("League Game Play Format")
+        st.markdown("""
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
+        
+        **Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
+        * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
+        * The Net score will be automatically applied using the handicap.\n
+        * GGG Points will be automatically applied.\n
+        * Any mis-aligned score please consult your Rules/Players Committee.
+        
+        **Tee Box:** All players will play from tee box as stated below.\n  
+        
+        ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
+        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
+        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1.\n
+        Brown Deer: Blue - 6306 yd\n
+        Dretzka: Blue - 6538 yd\n
+        Oakwood: Blue - 6737 yd\n
+        Whitnall: Blue - 6308 yd\n
+        Currie: Black - 6444 yd\n
+        
+        **Gimmies/Putting:** Promote competition of fair play, Putt out\n
+        ***Unless one of the below scenario***\n
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 2 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 3 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
+        * 2 Minutes ball search.\n
+        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
+        * Help your playing partners spot and search for their ball.\n
+        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
+        * Play ready golf.
+        * Move off the greens and record score at the next tee box.
+        
+        **DNFs:** If you cannot finish, mark 'DNF'.
+        """)
+
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
-        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "TBD"]
+        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
         league_start = pd.to_datetime("2026-05-31")
         
         schedule_data = []
@@ -330,16 +397,87 @@ with tabs[4]: # League Info
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
             else: note = "Regular Round"
             schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
+        
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
 
         for entry in schedule_data:
             is_event = "GGG Event" in entry['Note']
             header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
             with st.expander(header):
-                st.write(f"**Date:** {entry['Date']} | **Format:** {entry['Note']}")
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.write(f"**Date:** {entry['Date']}")
+                    st.write(f"**Format:** {entry['Note']}")
+                with col2:
+                    if "2 Man Scramble" in entry['Note']:
+                        st.info("""
+                        **2-Man Greensomes Rules:**
+                        * Both players tee off and select the desire Drive to play from.
+                        * The player's whose drive was not choosen, hits the second shot. Alternate through until the hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
+                        """)
+                    elif "4 Man Team Battle" in entry['Note']:
+                        st.info("""
+                        **4-Man Team Battle Rules:**
+                        * All players tee off and selects the desired drive of the team.
+                        * All players continue play from best desired shot until hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
+                        """)
+                    elif "Double Points" in entry['Note']:
+                        st.success("""
+                        **Double Points Event:**
+                        * Regular individual stroke play with your current GGG handicap.
+                        * Front 9 - Example: 1st place gets 100 GGG points.
+                        * Back 9 - Example: Last place gets 1 GGG point.
+                        * Your total GGG point for this week will be 101.
+                        """)
+                    elif "Finale" in entry['Note']:
+                        st.warning("Season finale and trophy presentation. Details to be announced.")
+                    else:
+                        st.write("Standard league play rules and rolling handicaps apply.")
+
+    elif info_category == "Prizes":
+        st.subheader("🏆 Prize Pool")
+        st.write("Prizes are based on GGG Point standings at the end of Week 13.")
+
+    elif info_category == "Expenses":
+        st.subheader("💵 League Expenses")
+        st.write("Breakdown of league fees and administrative costs.")
 
 with tabs[5]: # Registration
-    st.subheader("👤 Player Registration")
-    # ... Registration logic remains as per original code ...
+    st.header("👤 Registration")
+    if not st.session_state["reg_access"]:
+        user_key = st.text_input("League Key", type="password")
+        if user_key == REGISTRATION_KEY:
+            st.session_state["reg_access"] = True
+            st.rerun()
+    else:
+        with st.form("r"):
+            n = st.text_input("Name")
+            p = st.text_input("PIN", max_chars=4, help="Create a 4-digit PIN for your scorecard")
+            if st.form_submit_button("Register"):
+                if n and len(p) == 4:
+                    try:
+                        new_reg = pd.DataFrame([{
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
+                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
+                        }])
+                        conn.update(data=pd.concat([df_main, new_reg], ignore_index=True)[MASTER_COLUMNS])
+                        l_df = load_live_data(force_refresh=True)
+                        if n not in l_df['Player'].values:
+                            new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
+                            conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.session_state["reg_access"] = False
+                        st.success(f"✅ {n} registered successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Registration Error: {e}")
+                else:
+                    st.warning("Please enter a name and a 4-digit PIN.")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
