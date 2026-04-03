@@ -458,7 +458,7 @@ elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
 
-    elif info_category == "Expenses":
+elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
