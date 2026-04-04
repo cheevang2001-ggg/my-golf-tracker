@@ -235,7 +235,7 @@ with tabs[0]: # Scorecard
 
             # 5. Score Entry Form
             with st.form("score_entry", clear_on_submit=True):
-                st.subheader("📤 Submit Weekly Round")
+                st.subheader("Submit Weekly Round")
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
                 h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
                 
