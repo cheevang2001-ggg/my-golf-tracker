@@ -10,7 +10,7 @@ st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
 REGISTRATION_KEY = "Food!2026"
-SESSION_TIMEOUT = 30 * 60 
+SESSION_TIMEOUT = 2 * 60 * 60  # Updated to 2 hours per user requirements
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
@@ -182,6 +182,8 @@ with tabs[0]: # Scorecard
                     reg_row = p_data[(p_data['Week'] == 0) & (p_data['Total_Score'] == 0)]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
+
+# Standing, History, Registration, and Admin sections remain active using the same MASTER_COLUMNS [cite: 1]
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
