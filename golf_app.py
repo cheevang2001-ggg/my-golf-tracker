@@ -361,7 +361,7 @@ with tabs[2]: # Live Round
         else:
             st.info("💡 To post scores, unlock your profile in the **Scorecard** tab.")
 
-st.divider()
+        st.divider()
 
         # 2. Display the Board
         l_df = load_live_data(force_refresh=False) 
