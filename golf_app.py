@@ -34,35 +34,6 @@ GGG_POINTS = {
 
 # --- 2. CORE FUNCTIONS ---
 
-def safe_conn_read(worksheet=None, ttl=300):
-    """
-    A safer read function with a 5-minute (300s) default cache.
-    This prevents 20 players from hitting the API every few seconds.
-    """
-    try:
-        # Check if we are in a mandatory cooling period
-        cooling_until = st.session_state.get("api_cooling_until", 0)
-        if time.time() < cooling_until:
-            return None # Return nothing if we are cooling down
-            
-        if worksheet:
-            return conn.read(worksheet=worksheet, ttl=ttl)
-        return conn.read(ttl=ttl)
-    except Exception as e:
-        if "429" in str(e):
-            # If we hit a 429, force a 30-second wait for THIS user session
-            st.session_state["api_cooling_until"] = time.time() + 30 
-        return None
-
-def is_api_cooling():
-    """Checks if the API is currently resting and shows a countdown."""
-    cooling_until = st.session_state.get("api_cooling_until", 0)
-    if time.time() < cooling_until:
-        remaining = int(cooling_until - time.time())
-        st.warning(f"⏳ Google is busy. Leaderboard will refresh in {remaining}s...")
-        return True
-    return False
-
 def load_data():
     try:
         # Increase TTL to 10 seconds to reduce API hits
@@ -79,48 +50,6 @@ def load_data():
         if "429" in str(e):
             st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
         return pd.DataFrame(columns=MASTER_COLUMNS)
-
-def load_live_data(force_refresh=False):
-    hole_cols = [str(i) for i in range(1, 10)]
-    try:
-        # If player hits 'Sync', we bypass the 5-minute cache
-        ttl_val = 0 if force_refresh else 300
-        
-        # Use our new safe read function
-        df = safe_conn_read(worksheet="LiveScores", ttl=ttl_val)
-        
-        if df is None or df.empty:
-            return pd.DataFrame(columns=['Player'] + hole_cols)
-            
-        # Clean numeric data
-        for col in hole_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-            
-        return df[['Player'] + hole_cols]
-    except Exception:
-        return pd.DataFrame(columns=['Player'] + hole_cols)
-
-def update_live_score(player, hole, strokes):
-    try:
-        # 1. Read the sheet
-        df_live = conn.read(worksheet="LiveScores", ttl=0)
-        
-        # 2. Update the specific cell (since the row is guaranteed to exist)
-        if player in df_live['Player'].values:
-            df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
-            conn.update(worksheet="LiveScores", data=df_live)
-            st.cache_data.clear()
-            st.toast("Score Posted!")
-        else:
-            # Fallback: If they aren't there, add them on the fly
-            new_row = {'Player': player, **{str(i): 0 for i in range(1, 10)}}
-            new_row[str(hole)] = int(strokes)
-            df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
-            conn.update(worksheet="LiveScores", data=df_live)
-            st.cache_data.clear()
-            
-    except Exception as e:
-        st.error(f"Sync error: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -198,7 +127,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -324,60 +253,8 @@ with tabs[1]: # Standings
             res['Avg Net'] = res['Avg Net'].round(1)
             st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
 
-with tabs[2]: # Live Round
-    st.subheader("🔴 Live Round Tracking")
-    
-    # 1. Manual Sync Button (The only way to get fresh data before 5 mins)
-    if st.button("🔄 Sync Leaderboard", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
 
-    # Check for API health
-    if not is_api_cooling():
-        curr_p = st.session_state.get("unlocked_player")
-        
-        if curr_p:
-            # Using a Form ensures NO API calls happen until 'Post' is clicked
-            with st.form("live_score_entry"):
-                st.markdown(f"⛳ **Logged in as: {curr_p}**")
-                c1, c2 = st.columns(2)
-                h_u = c1.selectbox("Hole", range(1, 10), key="live_hole")
-                s_u = c2.number_input("Strokes", 1, 15, 4, key="live_strokes")
-                
-                if st.form_submit_button("Post Score", use_container_width=True, type="primary"):
-                    update_live_score(curr_p, h_u, s_u)
-                    st.rerun()
-        else:
-            st.info("💡 To post scores, unlock your profile in the **Scorecard** tab.")
-
-        st.divider()
-
-        # 2. Display the Board
-        l_df = load_live_data(force_refresh=False) 
-        
-        # DEBUG: Check if data exists
-        if l_df is not None and not l_df.empty and 'Player' in l_df.columns:
-            h_cols = [str(i) for i in range(1, 10)]
-            
-            # Ensure columns are numbers so we can sum them
-            for col in h_cols:
-                l_df[col] = pd.to_numeric(l_df[col], errors='coerce').fillna(0)
-            
-            # Calculate total
-            l_df['Total'] = l_df[h_cols].sum(axis=1)
-            
-            st.write("### 📊 Current Standings")
-            # Sort by total score (lowest to highest)
-            st.dataframe(
-                l_df.sort_values("Total", ascending=True), 
-                use_container_width=True, 
-                hide_index=True
-            )
-        else:
-            # If the table is empty, we show a placeholder so the user knows it's working
-            st.info("No scores have been posted yet. Be the first to start the round!")
-
-with tabs[3]: # History
+with tabs[2]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
     h_df = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
     if not h_df.empty:
@@ -416,7 +293,7 @@ with tabs[3]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[4]: # League Info
+with tabs[3]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
@@ -576,7 +453,7 @@ with tabs[4]: # League Info
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
-with tabs[5]: # Registration
+with tabs[4]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -618,19 +495,6 @@ with tabs[5]: # Registration
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
-                        # 2. PRE-POPULATE LIVE SCORES (Nested Safety)
-                        try:
-                            l_df = conn.read(worksheet="LiveScores", ttl=0)
-                            hole_cols = [str(i) for i in range(1, 10)]
-                            
-                            if n not in l_df['Player'].values:
-                                new_live_row = pd.DataFrame([{'Player': n, **{col: 0 for col in hole_cols}}])
-                                updated_live = pd.concat([l_df, new_live_row], ignore_index=True)
-                                conn.update(worksheet="LiveScores", data=updated_live)
-                            st.success(f"Live board prepared for {n}!")
-                        except Exception as live_err:
-                            st.warning(f"Note: Registration saved, but Live Board sync missed: {live_err}")
-
                         # 3. FINALIZE
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
@@ -643,7 +507,7 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     # --- STEP 1: Secure Login Form ---
