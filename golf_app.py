@@ -393,9 +393,7 @@ with tabs[3]: # League Info
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
-    st.info("""
-        The League Committee reserves the right to amend these rules during the season to improve league operations or address emerging procedural issues. 
-        """)
+
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
