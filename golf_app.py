@@ -394,7 +394,8 @@ with tabs[3]: # League Info
         """)
         
         # This replaces the old Live Round warning with a relevant Rules Note
-        st.info("**Note:** The League Committee reserves the right to amend these rules during the season to improve league operations or address emerging procedural issues. All players are expected to uphold the spirit of the game. For scoring disputes, please notify the Rules Committee before leaving the course.")
+        st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary.\n
+        All players are expected to uphold the integrity of the game. For any disputes, please contact the Rules Committee.")
 
 
     elif info_category == "Schedule":
