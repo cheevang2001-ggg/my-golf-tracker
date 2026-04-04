@@ -10,7 +10,7 @@ st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
 REGISTRATION_KEY = "Food!2026"
-SESSION_TIMEOUT = 2 * 60 * 60  # 2-hour session limit
+SESSION_TIMEOUT = 2 * 60 * 60  # Updated to 2 hours per user requirements
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
@@ -69,15 +69,13 @@ def update_live_score(player, hole, strokes):
         st.cache_data.clear()
         df_live = load_live_data(force_refresh=True)
         if player not in df_live['Player'].values:
-            # If player doesn't exist in live sheet, add them
-            new_row = pd.DataFrame([{'Player': player, **{str(i): 0 for i in range(1, 10)}}])
-            df_live = pd.concat([df_live, new_row], ignore_index=True)
-        
-        df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
+            return
+        hole_col = str(hole)
+        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         conn.update(worksheet="LiveScores", data=df_live)
         st.cache_data.clear()
-        st.success(f"✅ Live score updated for Hole {hole}")
-        time.sleep(1)
+        st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
+        time.sleep(0.5) 
     except Exception as e:
         st.error(f"🚨 Update Failed: {e}")
 
@@ -152,7 +150,7 @@ tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 His
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: st.warning("No players registered yet.")
     else:
-        player_select = st.selectbox("Select Player", EXISTING_PLAYERS, key="scorecard_player")
+        player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         is_unlocked = (st.session_state["unlocked_player"] == player_select and (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or st.session_state["authenticated"]
         
         if not is_unlocked:
@@ -170,7 +168,17 @@ with tabs[0]: # Scorecard
             week_options = list(range(-2, 1)) + list(range(1, 15))
             w_s = st.selectbox("Select Week", week_options, format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}")
 
-            current_hcp = calculate_rolling_handicap(p_data, w_s) if w_s not in [0, 4, 8] else 0.0
+            if w_s <= 0:
+                current_hcp = 0.0
+                st.info("🛠️ Pre-Season: Logging rounds to establish Week 1 handicap.")
+            elif w_s in [4, 8]:
+                current_hcp = 0.0
+                st.info("💡 GGG Event: No handicap applied for this round.")
+            elif w_s == 12:
+                current_hcp = calculate_rolling_handicap(p_data, w_s)
+                st.info("🔥 GGG Double Points Event: Rolling handicap is active!")
+            else:
+                current_hcp = calculate_rolling_handicap(p_data, w_s)
             
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
@@ -216,31 +224,21 @@ with tabs[1]: # Standings
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
-    
-    # 1. Update Section
-    curr_p = st.session_state.get("unlocked_player")
-    if curr_p:
-        with st.form("live_score_form", clear_on_submit=True):
-            st.markdown(f"#### Update Score for **{curr_p}**")
-            c1, c2 = st.columns(2)
-            h_u = c1.selectbox("Hole", range(1, 10))
-            s_u = c2.number_input("Strokes", 1, 15, 4)
-            
-            # The "Enter" button for Live Round
-            if st.form_submit_button("Submit Live Score", use_container_width=True):
-                update_live_score(curr_p, h_u, s_u)
-                st.session_state["login_timestamp"] = time.time()
-                st.rerun()
-    else:
-        st.info("💡 Log in via the **Scorecard** tab to update your live scores.")
-
-    st.divider()
-
-    # 2. Display Section
-    if st.button("🔄 Refresh Leaderboard"):
+    if st.button("🔄 Refresh Table"):
         st.cache_data.clear()
         st.rerun()
 
+    curr_p = st.session_state.get("unlocked_player")
+    if curr_p:
+        with st.expander(f"Update Score for {curr_p}", expanded=True):
+            c1, c2, c3 = st.columns([2, 1, 1])
+            h_u = c1.selectbox("Hole", range(1, 10))
+            s_u = c2.number_input("Strokes", 1, 15, 4)
+            if c3.button("Post", use_container_width=True):
+                update_live_score(curr_p, h_u, s_u)
+                st.session_state["login_timestamp"] = time.time()
+                st.rerun()
+    
     l_df = load_live_data(force_refresh=True)
     if not l_df.empty:
         h_cols = [str(i) for i in range(1, 10)]
@@ -299,19 +297,142 @@ with tabs[4]: # League Info
         with col1:
             st.subheader("League Officers")
             st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
-            st.markdown("Administrative Authority: All final decisions regarding league expansion, financial allocations, and external partnerships reside with the League Officers.")
+            st.markdown("""
+            **Executive Team:** The Officers hold primary responsibility for the league’s operational backbone. 
+            Their focus is on **growth, financial oversight, and external promotion.** They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.
+            """)
         with col2:
             st.subheader("Committees")
             st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lex, Deng Kue\n")
-            st.markdown("Player Advocacy: This Committee serves as the formal link between the membership and leadership.")
+            st.markdown("""
+            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
+            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            """)
+        
+        st.divider()
+        with st.expander("GGGolf Organizational Protocol", expanded=False):
+            st.markdown("""
+            To ensure the effective administration of GGGolf, we operate under a dual-branch governance model:
+            
+            1. **Administrative Authority:** All final decisions regarding league expansion, financial allocations, and external partnerships reside with the **League Officers**.
+            2. **Consultative Feedback:** Players seeking to implement change or address concerns must follow the established chain of command by bringing matters to the **Players Committee**. The Committee evaluates these proposals before presenting them to the Officers for executive review.
+            
+            This professional hierarchy is established to protect the integrity of the league and ensure that the voice of the player is represented within a disciplined administrative framework.
+            """)
+        st.divider()
+        st.subheader("Code of Conduct")
+        st.markdown("""
+        * Practice common golfing etiquette and rules.
+        * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
+        * Arrive promptly and timely.
+        * Communicate clearly about schedules and issues.
+        * Comply with all policies and guidelines.
+        * Follow the structural chain
+        """)
+
+    elif info_category == "Handicaps":
+        st.subheader("Establishing Your Handicap")
+        st.info("""
+        **Pre-Season Requirement:**
+        To have an accurate handicap for Week 1, players are encouraged to log 3 Pre-Season rounds. Play with one or more 2026 GGG member and play from the Tee Box you feel is fair per your skill level.
+        You may play at any course on the 2026 GGG Schedule, once you've logged a pre-season round it will be locked in for calculation for Week 1.
+        
+        * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
+        * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
+        """)
+
+    elif info_category == "Rules":
+        st.subheader("League Game Play Format")
+        st.markdown("""
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
+        
+        **Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
+        * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
+        * The Net score will be automatically applied using the handicap.\n
+        * GGG Points will be automatically applied.\n
+        * Any mis-aligned score please consult your Rules/Players Committee.
+        
+        **Tee Box:** All players will play from tee box as stated below.\n  
+        
+        ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
+        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
+        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1.\n
+        Brown Deer: Blue - 6306 yd\n
+        Dretzka: Blue - 6538 yd\n
+        Oakwood: Blue - 6737 yd\n
+        Whitnall: Blue - 6308 yd\n
+        Currie: Black - 6444 yd\n
+        
+        **Gimmies/Putting:** Promote competition of fair play, Putt out\n
+        ***Unless one of the below scenario***\n
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 2 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 3 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
+        * 2 Minutes ball search.\n
+        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
+        * Help your playing partners spot and search for their ball.\n
+        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
+        * Play ready golf.
+        * Move off the greens and record score at the next tee box.
+        
+        **DNFs:** If you cannot finish, mark 'DNF'.
+        """)
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
         league_start = pd.to_datetime("2026-05-31")
+        
+        schedule_data = []
         for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
-            st.write(f"**Week {i}:** {current_date.strftime('%B %d')} at {courses[i-1]}")
+            course_name = courses[i-1] 
+            if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
+            elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
+            elif i == 12: note = "GGG Event- Double Points (18 holes)"
+            else: note = "Regular Round"
+            schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
+        
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
+
+        for entry in schedule_data:
+            is_event = "GGG Event" in entry['Note']
+            header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
+            with st.expander(header):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.write(f"**Date:** {entry['Date']}")
+                    st.write(f"**Format:** {entry['Note']}")
+                with col2:
+                    if "2 Man Scramble" in entry['Note']:
+                        st.info("""
+                        **2-Man Greensomes Rules:**
+                        * Both players tee off and select the desire Drive to play from.
+                        * The player's whose drive was not choosen, hits the second shot. Alternate through until the hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
+                        """)
+                    elif "4 Man Team Battle" in entry['Note']:
+                        st.info("""
+                        **4-Man Team Battle Rules:**
+                        * All players tee off and selects the desired drive of the team.
+                        * All players continue play from best desired shot until hole is complete.
+                        * Team members receives the same GGG points for the week.
+                        * **Handicap:** No handicap applied for this round.
+                        """)
+                    elif "Double Points" in entry['Note']:
+                        st.success("""
+                        **Double Points Event:**
+                        * Regular individual stroke play with your current GGG handicap.
+                        * Front 9 - Example: 1st place gets 100 GGG points.
+                        * Back 9 - Example: Last place gets 1 GGG point.
+                        * Your total GGG point for this week will be 101.
+                        """)
+                    elif "Finale" in entry['Note']:
+                        st.warning("Season finale and trophy presentation. Details to be announced.")
+                    else:
+                        st.write("Standard league play rules and rolling handicaps apply.")
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
@@ -321,10 +442,10 @@ with tabs[5]: # Registration
             st.session_state["reg_access"] = True
             st.rerun()
     else:
-        with st.form("registration_form"):
-            n = st.text_input("Full Name")
-            p = st.text_input("Create 4-digit PIN", max_chars=4, type="password")
-            if st.form_submit_button("Register Player"):
+        with st.form("r"):
+            n = st.text_input("Name")
+            p = st.text_input("PIN", max_chars=4, help="Create a 4-digit PIN for your scorecard")
+            if st.form_submit_button("Register"):
                 if n and len(p) == 4:
                     try:
                         new_reg = pd.DataFrame([{
