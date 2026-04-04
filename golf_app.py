@@ -102,36 +102,40 @@ def load_live_data(force_refresh=False):
 
 def update_live_score(player, hole, strokes):
     try:
-        # 1. Load the most current data from Google (forcing refresh to be accurate)
-        # We use a 2-second TTL here specifically for the 'Write' action to prevent collisions
-        df_live = conn.read(worksheet="LiveScores", ttl=2)
+        # 1. Define the exact columns we expect
         hole_cols = [str(i) for i in range(1, 10)]
+        required_columns = ['Player'] + hole_cols
         
-        # 2. Safety: If the sheet is totally empty/null, create the structure
-        if df_live is None or df_live.empty:
-            df_live = pd.DataFrame(columns=['Player'] + hole_cols)
-
-        # 3. APPEND OR UPDATE logic
-        if player not in df_live['Player'].values:
-            # Create a new row for the new player (Goat or Beer)
-            new_row = {col: 0 for col in hole_cols}
-            new_row['Player'] = player
-            new_row[str(hole)] = int(strokes)
-            df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+        # 2. Get current data (Read)
+        df_live = conn.read(worksheet="LiveScores", ttl=0) # Fresh read for the write
+        
+        # 3. If sheet is a mess or empty, start fresh with correct headers
+        if df_live is None or df_live.empty or 'Player' not in df_live.columns:
+            df_live = pd.DataFrame(columns=required_columns)
         else:
-            # Update the existing player's specific hole
+            # Force existing data into our required columns only (drops extra junk)
+            df_live = df_live[required_columns]
+
+        # 4. Update or Add
+        if player not in df_live['Player'].values:
+            # New Player: Create a clean row of zeros
+            new_row_data = {col: 0 for col in hole_cols}
+            new_row_data['Player'] = player
+            new_row_data[str(hole)] = int(strokes)
+            df_live = pd.concat([df_live, pd.DataFrame([new_row_data])], ignore_index=True)
+        else:
+            # Existing Player: Find row and hole, update value
             df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
 
-        # 4. Push the FULL table back to Google Sheets
-        # This ensures Goat stays there when Beer updates, and vice versa.
+        # 5. Push to GSheet (Write)
         conn.update(worksheet="LiveScores", data=df_live)
         
-        # 5. Clear cache so the local app sees the new merged table
+        # 6. Clear local cache so the leaderboard shows it
         st.cache_data.clear()
-        st.toast(f"✅ {player}: Hole {hole} updated!")
+        st.toast(f"✅ {player}: Hole {hole} saved.")
         
     except Exception as e:
-        st.error(f"Failed to update live score: {e}")
+        st.error(f"Streamlining error: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
