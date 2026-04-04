@@ -393,8 +393,8 @@ with tabs[4]: # League Info
         for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
             course_name = courses[i-1] 
-            if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
-            elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
+            if i == 4: note = "GGG Event- 2 Man Team Greensome (18 holes)"
+            elif i == 8: note = "GGG Event- 4 Man Team Scramble (18 holes)"
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
             else: note = "Regular Round"
             schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
@@ -418,10 +418,10 @@ with tabs[4]: # League Info
                         * Team members receives the same GGG points for the week.
                         * **Handicap:** No handicap applied for this round.
                         """)
-                    elif "4 Man Team Battle" in entry['Note']:
+                    elif "4 Man Team Scramble" in entry['Note']:
                         st.info("""
-                        **4-Man Team Battle Rules:**
-                        * All players tee off and selects the desired drive of the team.
+                        **4-Man Team Battle Scramble:**
+                        * All players tee off and selects the desired drive.
                         * All players continue play from best desired shot until hole is complete.
                         * Team members receives the same GGG points for the week.
                         * **Handicap:** No handicap applied for this round.
@@ -430,9 +430,11 @@ with tabs[4]: # League Info
                         st.success("""
                         **Double Points Event:**
                         * Regular individual stroke play with your current GGG handicap.
-                        * Front 9 - Example: 1st place gets 100 GGG points.
-                        * Back 9 - Example: Last place gets 1 GGG point.
-                        * Your total GGG point for this week will be 101.
+                        * Front 9 points + Back 9 Point
+                        * **Example 1:** You win the front But you end up last place in back. Your front GGG point is 100 points front and your back GGG points is 1 point. Total 101 points
+                        * **Example 2:** You come in Third in the front and in the back you came in Second. Front GGG points for Third is 64 points and for Second points is 77 points. You get total 141
+                        * **Example 3:** You win front and back. You get 100 for front and 100 for back, total 200 points
+                        * **Example 4:** You are last front and back. You get 1 for front and 1 for back, total 2 points                        
                         """)
                     elif "Finale" in entry['Note']:
                         st.warning("Season finale and trophy presentation. Details to be announced.")
