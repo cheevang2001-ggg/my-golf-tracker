@@ -197,8 +197,9 @@ with tabs[0]: # Scorecard
                 ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
 
-            st.divider()
+        st.divider()
             with st.form("score_entry", clear_on_submit=True):
+                st.subheader("📤 Submit Weekly Round") # Added subheader for visual cue
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
                 h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
                 
@@ -207,10 +208,16 @@ with tabs[0]: # Scorecard
                 b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_in_{w_s}")
                 e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_in_{w_s}")
                 
-                if st.form_submit_button("Submit Score"):
+                # Updated: use_container_width=True makes the button easier to hit on mobile
+                submit_score = st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary")
+                
+                if submit_score:
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
+                    st.success("Round Submitted Successfully!") # Visual confirmation
+                    time.sleep(1)
+                    st.rerun()
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
@@ -460,9 +467,11 @@ with tabs[5]: # Registration
             st.rerun()
     else:
         with st.form("r"):
+            st.subheader("📝 New Player Details")
             n = st.text_input("Name")
             p = st.text_input("PIN", max_chars=4, help="Create a 4-digit PIN for your scorecard")
-            if st.form_submit_button("Register"):
+            
+            if submit_reg:
                 if n and len(p) == 4:
                     try:
                         new_reg = pd.DataFrame([{
@@ -474,15 +483,16 @@ with tabs[5]: # Registration
                         if n not in l_df['Player'].values:
                             new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
                             conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
+                        
+                        st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
-                        time.sleep(1)
+                        time.sleep(1.5)
                         st.session_state["reg_access"] = False
-                        st.success(f"✅ {n} registered successfully!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Registration Error: {e}")
                 else:
-                    st.warning("Please enter a name and a 4-digit PIN.")
+                    st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
 with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
