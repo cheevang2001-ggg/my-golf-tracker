@@ -508,47 +508,50 @@ with tabs[4]: # League Info
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
+    
+    # --- PRE-STEP: League Code Verification ---
     if not st.session_state.get("reg_access"):
-        # We use a unique key here to avoid conflicts
-        user_key = st.text_input("League Key", type="password", key="reg_gate_key")
-        if user_key == REGISTRATION_KEY:
-            st.session_state["reg_access"] = True
-            st.rerun()
+        st.info("Please enter the League Registration Key provided by the League Officers to begin.")
+        
+        with st.form("league_key_form"):
+            user_key = st.text_input("League Key", type="password", key="reg_gate_key_input")
+            
+            # The new Unlock/Submit button for the pre-step
+            submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary")
+            
+            if submit_key:
+                if user_key == REGISTRATION_KEY:
+                    st.session_state["reg_access"] = True
+                    st.success("Key Accepted! Please provide your details below.")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid League Key. Please contact an Officer.")
+
+    # --- STEP 2: Player Details (Only shows after Key is correct) ---
     else:
-        # Define the form
         with st.form("registration_form", clear_on_submit=True):
             st.subheader("📝 New Player Details")
             
-            # Use specific keys for these widgets to ensure they don't collide with Scorecard
             n = st.text_input("Full Name", key="reg_name_input")
             p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input")
             
-            # The submit button MUST be inside the 'with st.form' block
+            # Final submission button
             submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
             
-            # The logic for what happens when clicked should also be INSIDE the 'with' block
             if submit_reg:
                 if n and len(p) == 4:
                     try:
-                        # Create the initial registration row (Week 0)
+                        # Logic to add player to GSheets
                         new_reg = pd.DataFrame([{
-                            "Week": 0, 
-                            "Player": n, 
-                            "PIN": p, 
-                            "Handicap": 0.0, 
-                            "DNF": True, 
-                            "Pars_Count": 0, 
-                            "Birdies_Count": 0, 
-                            "Eagle_Count": 0, 
-                            "Total_Score": 0, 
-                            "Net_Score": 0
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
+                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
                         }])
                         
-                        # Update the Main Sheet
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
                         conn.update(data=updated_main[MASTER_COLUMNS])
                         
-                        # Update the Live Scores Sheet so they appear on the leaderboard immediately
+                        # Ensure they appear on Live Board
                         l_df = load_live_data(force_refresh=True)
                         if n not in l_df['Player'].values:
                             new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
@@ -557,9 +560,8 @@ with tabs[5]: # Registration
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
                         
-                        # Reset reg access and refresh app
                         time.sleep(1.5)
-                        st.session_state["reg_access"] = False
+                        st.session_state["reg_access"] = False # Reset for next person
                         st.rerun()
                         
                     except Exception as e:
