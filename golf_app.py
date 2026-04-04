@@ -84,38 +84,53 @@ def update_live_score(player, hole, strokes):
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # --- PRE-SEASON LOGIC FOR WEEK 1 ---
+        # --- PHASE 1: WEEK 1 STARTING HANDICAP (PRE-SEASON) ---
         if target_week == 1:
+            # Look for all pre-season entries where a score was actually recorded
             pre_season_rounds = player_df[
                 (player_df['Week'] <= 0) & 
-                (player_df['DNF'] == False)
+                (player_df['DNF'] == False) &
+                (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
             
-            if len(pre_season_rounds) >= 3:
+            if not pre_season_rounds.empty:
+                # Take up to the 3 most recent pre-season rounds
                 scores = pre_season_rounds.head(3)['Total_Score'].tolist()
-                hcp = round(sum(scores) / 3 - 36, 1)
+                # Average the available scores and subtract par (36)
+                hcp = round((sum(scores) / len(scores)) - 36, 1)
                 return float(hcp)
+            
+            # If absolutely no pre-season rounds found, start at 0.0
+            return 0.0
 
-        # --- STANDARD ROLLING LOGIC ---
-        excluded_weeks = [0, 4, 8, 12]
+        # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
+        # Exclude specific event weeks (0 is registration/pre-season, 4/8 are scrambles)
+        excluded_weeks = [0, 4, 8] 
+        
         rounds = player_df[
+            (player_df['Week'] > 0) & 
             (~player_df['Week'].isin(excluded_weeks)) & 
             (player_df['DNF'] == False) & 
             (player_df['Week'] < target_week)
         ].sort_values('Week', ascending=False)
         
-        if len(rounds) == 0: 
-            return 0.0
+        # If no regular season rounds played yet (e.g., it's Week 2 but they missed Week 1),
+        # keep using the Pre-Season average as the baseline.
+        if rounds.empty:
+            return calculate_rolling_handicap(player_df, 1)
             
         last_scores = rounds.head(4)['Total_Score'].tolist()
         
+        # Standard "Best 3 of last 4" logic
         if len(last_scores) >= 4:
             last_scores.sort()
-            hcp = round(sum(last_scores[:3]) / 3 - 36, 1)
+            hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
         else:
-            hcp = round(sum(last_scores) / len(last_scores) - 36, 1)
+            # Average of whatever is available (1, 2, or 3 rounds)
+            hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
+            
         return float(hcp)
-    except Exception as e: # Updated: Catch specific exception
+    except Exception as e:
         return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
