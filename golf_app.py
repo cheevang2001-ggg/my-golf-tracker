@@ -68,19 +68,31 @@ def load_live_data(force_refresh=True):
 
 def update_live_score(player, hole, strokes):
     try:
-        # Updated: Removed st.cache_data.clear() here
+        # 1. Load the current live data
         df_live = load_live_data(force_refresh=True)
+        hole_cols = [str(i) for i in range(1, 10)]
+        
+        # 2. AUTOMATION: If player isn't in the Live sheet, add them now
         if player not in df_live['Player'].values:
-            st.error(f"❌ Player '{player}' not found. Please re-register.")
-            return
+            new_row = pd.DataFrame([{'Player': player, **{str(i): 0 for i in range(1, 10)}}])
+            df_live = pd.concat([df_live, new_row], ignore_index=True)
+        
+        # 3. Update the specific hole
         hole_col = str(hole)
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
+        
+        # 4. Push back to Google Sheets
         conn.update(worksheet="LiveScores", data=df_live)
-        # Updated: Removed st.cache_data.clear() here
+        
         st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
+        # Small sleep to prevent double-taps from triggering API limits
         time.sleep(0.5) 
+        
     except Exception as e:
-        st.error(f"🚨 Update Failed: {e}")
+        if "429" in str(e):
+            st.error("🚨 Google API Limit Hit. Please wait 60 seconds before trying again.")
+        else:
+            st.error(f"🚨 Live Update Failed: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -292,7 +304,7 @@ with tabs[2]: # Live Round
 
     curr_p = st.session_state.get("unlocked_player")
     if curr_p:
-        with st.expander(f"Update Score for {curr_p}", expanded=True):
+        with st.expander(f"Post Score: {curr_p}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
             h_u = c1.selectbox("Hole", range(1, 10))
             s_u = c2.number_input("Strokes", 1, 15, 4)
@@ -573,5 +585,8 @@ with tabs[6]: # Admin
     if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
         if st.button("🚨 Reset Live Board"):
-            conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
+            empty_live = pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
+            conn.update(worksheet="LiveScores", data=empty_live)
+            st.success("Live Board Cleared! It will repopulate as players enter scores.")
             st.rerun()
+            
