@@ -218,7 +218,7 @@ with tabs[2]: # Live Round
                 st.rerun()
     
     l_df = load_live_data(force_refresh=True)
-    if not l_df.empty:
+if not l_df.empty:
         h_cols = [str(i) for i in range(1, 10)]
         l_df['Total'] = l_df[h_cols].sum(axis=1)
         st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
