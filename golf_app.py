@@ -370,8 +370,8 @@ with tabs[3]: # League Info
         Currie: **Black - 6444 yd\n**
         
         * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
-        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.\n
-        * C3: If you are of Senior Age (60+), you may play from the forward tee. 
+        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
+        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n
         
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
