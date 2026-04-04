@@ -12,6 +12,8 @@ ADMIN_PASSWORD = "!@#Seahawks6145!@#"
 REGISTRATION_KEY = "@Food2026#"
 SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
+if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
+if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
@@ -32,6 +34,35 @@ GGG_POINTS = {
 
 # --- 2. CORE FUNCTIONS ---
 
+def safe_conn_read(worksheet=None, ttl=300):
+    """
+    A safer read function with a 5-minute (300s) default cache.
+    This prevents 20 players from hitting the API every few seconds.
+    """
+    try:
+        # Check if we are in a mandatory cooling period
+        cooling_until = st.session_state.get("api_cooling_until", 0)
+        if time.time() < cooling_until:
+            return None # Return nothing if we are cooling down
+            
+        if worksheet:
+            return conn.read(worksheet=worksheet, ttl=ttl)
+        return conn.read(ttl=ttl)
+    except Exception as e:
+        if "429" in str(e):
+            # If we hit a 429, force a 30-second wait for THIS user session
+            st.session_state["api_cooling_until"] = time.time() + 30 
+        return None
+
+def is_api_cooling():
+    """Checks if the API is currently resting and shows a countdown."""
+    cooling_until = st.session_state.get("api_cooling_until", 0)
+    if time.time() < cooling_until:
+        remaining = int(cooling_until - time.time())
+        st.warning(f"⏳ Google is busy. Leaderboard will refresh in {remaining}s...")
+        return True
+    return False
+
 def load_data():
     try:
         # Increase TTL to 10 seconds to reduce API hits
@@ -50,19 +81,23 @@ def load_data():
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data(force_refresh=False):
+    hole_cols = [str(i) for i in range(1, 10)]
     try:
-        # Increase TTL to 20 seconds. 
-        # This means the leaderboard only hits the API 3 times per minute maximum.
-        ttl_val = 0 if force_refresh else 20 
-        df = conn.read(worksheet="LiveScores", ttl=ttl_val)
-      
+        # If player hits 'Sync', we bypass the 5-minute cache
+        ttl_val = 0 if force_refresh else 300
         
-        if df is None or df.empty or 'Player' not in df.columns:
+        # Use our new safe read function
+        df = safe_conn_read(worksheet="LiveScores", ttl=ttl_val)
+        
+        if df is None or df.empty:
             return pd.DataFrame(columns=['Player'] + hole_cols)
-        
-        # ... (keep your existing column cleaning code) ...
+            
+        # Clean numeric data
+        for col in hole_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
         return df[['Player'] + hole_cols]
-    except Exception as e:
+    except Exception:
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
@@ -297,60 +332,46 @@ with tabs[1]: # Standings
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
     
-    # 1. Sync Button with "Cooldown"
+    # 1. Manual Sync Button (The only way to get fresh data before 5 mins)
     if st.button("🔄 Sync Leaderboard", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-    curr_p = st.session_state.get("unlocked_player")
-    
-    if curr_p:
-        # We define the form for the logged-in player
-        with st.form("live_score_form", clear_on_submit=False):
-            st.markdown(f"⛳ **Updating Score for: {curr_p}**")
-            c1, c2 = st.columns(2)
-            h_u = c1.selectbox("Hole", range(1, 10), key="live_hole_select")
-            s_u = c2.number_input("Strokes", 1, 15, 4, key="live_stroke_input")
-            
-            submit_live = st.form_submit_button("Post Score", use_container_width=True, type="primary")
-            
-            if submit_live:
-                # We call the update function
-                update_live_score(curr_p, h_u, s_u)
-                # After posting, we clear the cache for THIS session so the table below updates
-                st.cache_data.clear()
-                st.rerun() 
-    else:
-        st.info("💡 Unlock your scorecard in the **Scorecard** tab to post live scores.")
+    # Check for API health
+    if not is_api_cooling():
+        curr_p = st.session_state.get("unlocked_player")
+        
+        if curr_p:
+            # Using a Form ensures NO API calls happen until 'Post' is clicked
+            with st.form("live_score_entry"):
+                st.markdown(f"⛳ **Logged in as: {curr_p}**")
+                c1, c2 = st.columns(2)
+                h_u = c1.selectbox("Hole", range(1, 10), key="live_hole")
+                s_u = c2.number_input("Strokes", 1, 15, 4, key="live_strokes")
+                
+                if st.form_submit_button("Post Score", use_container_width=True, type="primary"):
+                    update_live_score(curr_p, h_u, s_u)
+                    st.rerun()
+        else:
+            st.info("💡 To post scores, unlock your profile in the **Scorecard** tab.")
 
-    st.divider()
+        st.divider()
 
-    # 3. AUTOMATIC TABLE DISPLAY
-    # We use a slightly longer TTL (20s) for background viewers to save API quota,
-    # but the 'st.rerun()' above forces a fresh look for the person who just scored.
-    try:
-        l_df = load_live_data(force_refresh=False) 
+        # 2. Display the Board
+        l_df = load_live_data() # Uses the 5-minute cache
         
         if not l_df.empty:
-            h_cols = [str(i) for i in range(1, 10)]
-            # Ensure numeric data for the sum
-            for col in h_cols:
-                l_df[col] = pd.to_numeric(l_df[col], errors='coerce').fillna(0)
-            
-            l_df['Total'] = l_df[h_cols].sum(axis=1)
-            
-            # Show the leaderboard to everyone
-            st.write("### 📊 Current Leaderboard")
+            l_df['Total'] = l_df[[str(i) for i in range(1, 10)]].sum(axis=1)
+            st.write("### 📊 Current Standings")
             st.dataframe(
-                l_df.sort_values("Total", ascending=True), 
+                l_df.sort_values("Total"), 
                 use_container_width=True, 
-                hide_index=True,
-                column_config={"Total": st.column_config.NumberColumn("Total", format="%d ⛳")}
+                hide_index=True
             )
         else:
-            st.info("Waiting for the first scores to be posted...")
-    except Exception:
-        st.warning("⚠️ Leaderboard is temporarily busy. Try 'Sync' in a few seconds.")
+            st.write("Leaderboard is empty or loading...")
+    else:
+        st.info("The live board is currently paused to save data. It will return shortly.")
 
 with tabs[3]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
