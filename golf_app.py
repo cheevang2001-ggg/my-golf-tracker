@@ -9,8 +9,8 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
-REGISTRATION_KEY = "Food!2026"
-SESSION_TIMEOUT = 30 * 60 
+REGISTRATION_KEY = "goatpigcowfishduck2026"
+SESSION_TIMEOUT = 4 * 60 * 60 
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
@@ -225,13 +225,8 @@ with tabs[2]: # Live Round
             c1, c2, c3 = st.columns([2, 1, 1])
             h_u = c1.selectbox("Hole", range(1, 10))
             s_u = c2.number_input("Strokes", 1, 15, 4)
-            
             if c3.button("Post", use_container_width=True):
                 update_live_score(curr_p, h_u, s_u)
-                
-                # --- RESET TIMESTAMP HERE ---
-                st.session_state["login_timestamp"] = time.time()
-                
                 st.rerun()
     
     l_df = load_live_data(force_refresh=True)
@@ -298,7 +293,7 @@ with tabs[4]: # League Info
     info_category = st.radio("Select a Category:", ["About Us", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
-if info_category == "About Us":
+    if info_category == "About Us":
         st.subheader("GGGolf Summer League 2026")
         st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
         st.divider()
@@ -343,7 +338,7 @@ if info_category == "About Us":
         * Follow the structural chain
         """)
 
-elif info_category == "Rules":
+    elif info_category == "Rules":
         st.subheader("League Game Play Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
@@ -381,89 +376,29 @@ elif info_category == "Rules":
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
-elif info_category == "Schedule":
+    elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
-        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
+        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "TBD"]
         league_start = pd.to_datetime("2026-05-31")
-        
-        # Build the schedule data list
         schedule_data = []
         for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
             course_name = courses[i-1] 
-            
             if i == 4: note = "GGG Event- 2 Man Scramble Team (18 holes)"
             elif i == 8: note = "GGG Event- 4 Man Team Battle (18 holes)"
             elif i == 12: note = "GGG Event- Double Points (18 holes)"
             else: note = "Regular Round"
-            
-            schedule_data.append({
-                "Week": f"Week {i}", 
-                "Date": current_date.strftime('%B %d, %Y'), 
-                "Course": course_name, 
-                "Note": note
-            })
-        
-        # Add the Finale
-        schedule_data.append({
-            "Week": "FINALE", 
-            "Date": "August 28, 2026", 
-            "Course": "TBD", 
-            "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"
-        })
+            schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
+        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
+        df_schedule = pd.DataFrame(schedule_data)
+        st.dataframe(df_schedule.style.apply(lambda r: ['background-color: #d4edda']*len(r) if "GGG Event" in str(r["Note"]) else ['']*len(r), axis=1), use_container_width=True, hide_index=True, height=530)
+        st.caption("Note: Major events are highlighted in green.")
 
-        # Display Interactive Schedule with Expanders
-        st.write("Click a week to view specific event rules and details.")
-        
-        for entry in schedule_data:
-            # Create a label that highlights GGG Events
-            is_event = "GGG Event" in entry['Note']
-            header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
-            
-            with st.expander(header):
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.write(f"**Date:** {entry['Date']}")
-                    st.write(f"**Format:** {entry['Note']}")
-                
-                with col2:
-                    # Provide specific rules based on the event type
-                    if "2 Man Greensomes" in entry['Note']:
-                        st.info("""
-                        **2-Man Greensomes Rules:**
-                        * Both players tee off and select the desire Drive to play from.
-                        * The player's whose drive was not choosen, hits the second shot. Alternate through until the hole is complete.
-                        * Team members receives the same GGG points for the week.
-                        * **Handicap:** No handicap applied for this round.
-                        """)
-                    elif "4 Man Team Scramble" in entry['Note']:
-                        st.info("""
-                        **4-Man Team Battle Rules:**
-                        * All players tee off and selects the desired drive of the team.
-                        * All players continue play from best desired shot until hole is complete.
-                        * Team members receives the same GGG points for the week.
-                        * **Handicap:** No handicap applied for this round.
-                        """)
-                    elif "Double Points" in entry['Note']:
-                        st.success("""
-                        **Double Points Event:**
-                        * Regular individual stroke play with your current GGG handicap.
-                        * Front 9 - Example: With your handicap you come in 1st you get 100 GGG points
-                        * Back 9  - Example: With your handicap you come in last you get 1 GGG point
-                        * Your total GGG point for this week will be 101
-                        * Leaving after front 9 you will receive the front 9 points only, forfeiting the back 9 points.
-                        * Players must play front 9 to be eligible for back 9 points.                                                
-                        """)
-                    elif "Finale" in entry['Note']:
-                        st.warning("Season finale and trophy presentation. Details to be announced.")
-                    else:
-                        st.write("Standard league play rules and rolling handicaps apply.")
-
-elif info_category == "Prizes":
+    elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
 
-elif info_category == "Expenses":
+    elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
@@ -526,3 +461,4 @@ with tabs[6]: # Admin
         if st.button("🚨 Reset Live Board"):
             conn.update(worksheet="LiveScores", data=pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)]))
             st.rerun()
+            
