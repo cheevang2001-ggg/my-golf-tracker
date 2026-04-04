@@ -10,7 +10,7 @@ st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "InsigniaSeahawks6145"
 REGISTRATION_KEY = "Food!2026"
-SESSION_TIMEOUT = 30 * 60 
+SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
@@ -46,7 +46,8 @@ def load_data():
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         df['DNF'] = df['DNF'].astype(bool) if 'DNF' in df.columns else False
         return df[df['Player'] != ""]
-    except:
+    except Exception as e: # Updated: Catch specific exception
+        st.error(f"Failed to load main data: {e}")
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data(force_refresh=True):
@@ -62,12 +63,12 @@ def load_live_data(force_refresh=True):
             if col not in df.columns: df[col] = 0
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
         return df[['Player'] + hole_cols]
-    except:
+    except Exception as e: # Updated: Catch specific exception
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
     try:
-        st.cache_data.clear()
+        # Updated: Removed st.cache_data.clear() here
         df_live = load_live_data(force_refresh=True)
         if player not in df_live['Player'].values:
             st.error(f"❌ Player '{player}' not found. Please re-register.")
@@ -75,7 +76,7 @@ def update_live_score(player, hole, strokes):
         hole_col = str(hole)
         df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
         conn.update(worksheet="LiveScores", data=df_live)
-        st.cache_data.clear()
+        # Updated: Removed st.cache_data.clear() here
         st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
         time.sleep(0.5) 
     except Exception as e:
@@ -114,7 +115,8 @@ def calculate_rolling_handicap(player_df, target_week):
         else:
             hcp = round(sum(last_scores) / len(last_scores) - 36, 1)
         return float(hcp)
-    except: return 0.0
+    except Exception as e: # Updated: Catch specific exception
+        return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
