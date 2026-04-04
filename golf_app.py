@@ -582,11 +582,44 @@ with tabs[5]: # Registration
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
 with tabs[6]: # Admin
-    if st.text_input("Admin Password", type="password") == ADMIN_PASSWORD:
+    st.header("⚙️ Admin Control Panel")
+    
+    # Secure the tab with your Admin Password
+    admin_input = st.text_input("Enter Admin Password", type="password", key="admin_login_key")
+    
+    if admin_input == ADMIN_PASSWORD:
         st.session_state["authenticated"] = True
-        if st.button("🚨 Reset Live Board"):
-            empty_live = pd.DataFrame(columns=['Player'] + [str(i) for i in range(1, 10)])
-            conn.update(worksheet="LiveScores", data=empty_live)
-            st.success("Live Board Cleared! It will repopulate as players enter scores.")
-            st.rerun()
+        st.success("Admin Access Granted")
+        st.divider()
+
+        st.subheader("Live Scoring Management")
+        st.warning("Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This cannot be undone.")
+
+        # The Reset Button
+        if st.button("🚨 Reset Live Leaderboard", use_container_width=True, type="primary"):
+            try:
+                # Create a fresh, empty DataFrame with only the required headers
+                hole_headers = [str(i) for i in range(1, 10)]
+                empty_live_df = pd.DataFrame(columns=['Player'] + hole_headers)
+                
+                # Overwrite the LiveScores worksheet
+                conn.update(worksheet="LiveScores", data=empty_live_df)
+                
+                # Clear local cache so the app sees the empty sheet immediately
+                st.cache_data.clear()
+                
+                st.success("✅ Live Round scoring has been reset for the next session!")
+                time.sleep(1.5)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to reset board: {e}")
+
+        st.divider()
+        st.subheader("Data Maintenance")
+        if st.button("🧹 Clear App Cache", help="Force the app to pull fresh data from all sheets"):
+            st.cache_data.clear()
+            st.toast("Cache Cleared!")
+            
+    elif admin_input != "":
+        st.error("Incorrect Admin Password")
             
