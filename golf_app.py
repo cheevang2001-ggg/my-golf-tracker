@@ -102,40 +102,25 @@ def load_live_data(force_refresh=False):
 
 def update_live_score(player, hole, strokes):
     try:
-        # 1. Define the exact columns we expect
-        hole_cols = [str(i) for i in range(1, 10)]
-        required_columns = ['Player'] + hole_cols
+        # 1. Read the sheet
+        df_live = conn.read(worksheet="LiveScores", ttl=0)
         
-        # 2. Get current data (Read)
-        df_live = conn.read(worksheet="LiveScores", ttl=0) # Fresh read for the write
-        
-        # 3. If sheet is a mess or empty, start fresh with correct headers
-        if df_live is None or df_live.empty or 'Player' not in df_live.columns:
-            df_live = pd.DataFrame(columns=required_columns)
-        else:
-            # Force existing data into our required columns only (drops extra junk)
-            df_live = df_live[required_columns]
-
-        # 4. Update or Add
-        if player not in df_live['Player'].values:
-            # New Player: Create a clean row of zeros
-            new_row_data = {col: 0 for col in hole_cols}
-            new_row_data['Player'] = player
-            new_row_data[str(hole)] = int(strokes)
-            df_live = pd.concat([df_live, pd.DataFrame([new_row_data])], ignore_index=True)
-        else:
-            # Existing Player: Find row and hole, update value
+        # 2. Update the specific cell (since the row is guaranteed to exist)
+        if player in df_live['Player'].values:
             df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
-
-        # 5. Push to GSheet (Write)
-        conn.update(worksheet="LiveScores", data=df_live)
-        
-        # 6. Clear local cache so the leaderboard shows it
-        st.cache_data.clear()
-        st.toast(f"✅ {player}: Hole {hole} saved.")
-        
+            conn.update(worksheet="LiveScores", data=df_live)
+            st.cache_data.clear()
+            st.toast("Score Posted!")
+        else:
+            # Fallback: If they aren't there, add them on the fly
+            new_row = {'Player': player, **{str(i): 0 for i in range(1, 10)}}
+            new_row[str(hole)] = int(strokes)
+            df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+            conn.update(worksheet="LiveScores", data=df_live)
+            st.cache_data.clear()
+            
     except Exception as e:
-        st.error(f"Streamlining error: {e}")
+        st.error(f"Sync error: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -632,6 +617,21 @@ with tabs[5]: # Registration
                             "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
                             "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
                         }])
+
+                        # 2. PRE-POPULATE LiveScores START HERE####################################
+                    try:
+                        l_df = conn.read(worksheet="LiveScores", ttl=0)
+                        hole_cols = [str(i) for i in range(1, 10)]
+        
+                        if n not in l_df['Player'].values:
+                            # Create a clean, zeroed-out row for the new player
+                            new_live_row = pd.DataFrame([{'Player': n, **{col: 0 for col in hole_cols}}])
+                            updated_live = pd.concat([l_df, new_live_row], ignore_index=True)
+                            conn.update(worksheet="LiveScores", data=updated_live)
+                        st.success(f"Welcome {n}! You are cleared for Live Scoring.")
+                    except Exception as e:
+                        st.warning("Registered, but Live Board sync failed. Admin can refresh it.")
+                            #End Here#############################################################
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
                         conn.update(data=updated_main[MASTER_COLUMNS])
@@ -694,6 +694,23 @@ with tabs[6]: # Admin
                 st.rerun()
             except Exception as e:
                 st.error(f"Failed to reset sheet: {e}")
+
+        # Inside your Admin Tools (Tab 6) START ###########################
+        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
+    # Get everyone currently registered
+    all_players = df_main['Player'].unique().tolist()
+    hole_cols = [str(i) for i in range(1, 10)]
+    
+    # Create a fresh table with everyone starting at 0
+    synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
+    for p_name in all_players:
+        if p_name: # skip empty
+            row = {'Player': p_name, **{col: 0 for col in hole_cols}}
+            synced_df = pd.concat([synced_df, pd.DataFrame([row])], ignore_index=True)
+            
+    conn.update(worksheet="LiveScores", data=synced_df)
+    st.success("Live Board Rebuilt! Everyone is now listed.")
+            #####END##############################
 
         st.divider()
         
