@@ -146,10 +146,15 @@ st.markdown("</div>", unsafe_allow_html=True)
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "🔴 Live Round", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
-    if not EXISTING_PLAYERS: st.warning("No players registered yet.")
+    if not EXISTING_PLAYERS: 
+        st.warning("No players registered yet.")
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
-        is_unlocked = (st.session_state["unlocked_player"] == player_select and (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or st.session_state["authenticated"]
+        
+        # Check authentication/timeout
+        is_unlocked = (st.session_state["unlocked_player"] == player_select and 
+                      (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or \
+                      st.session_state["authenticated"]
         
         if not is_unlocked:
             user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
@@ -160,13 +165,21 @@ with tabs[0]: # Scorecard
                 if user_pin.strip() == stored_pin:
                     st.session_state.update({"unlocked_player": player_select, "login_timestamp": time.time()})
                     st.rerun()
-                else: st.error("❌ Incorrect PIN.")
+                else: 
+                    st.error("❌ Incorrect PIN.")
         else:
             p_data = df_main[df_main['Player'] == player_select]
-            # Updated to include Pre-Season Rounds (-2, -1, 0)
+            
+            # --- 1. Define Week Selection BEFORE the Form ---
             week_options = list(range(-2, 1)) + list(range(1, 15))
-            w_s = st.selectbox("Select Week", week_options, format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}")
+            w_s = st.selectbox(
+                "Select Week", 
+                week_options, 
+                format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}",
+                key="week_selector_dropdown"
+            )
 
+            # --- 2. Determine Handicap Logic ---
             if w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
@@ -179,6 +192,7 @@ with tabs[0]: # Scorecard
             else:
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
+            # --- 3. Stats Dashboard Visuals ---
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
@@ -190,16 +204,13 @@ with tabs[0]: # Scorecard
             m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
             m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum()))
 
-            if not played_rounds.empty:
-                chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
-                    x=alt.X('Week:O'),
-                    y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))
-                ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
-                st.altair_chart(chart.properties(height=300), use_container_width=True)
+            st.divider()
 
-st.divider()
-with st.form("score_entry", clear_on_submit=True):
-                st.subheader("📤 Submit Weekly Round") # Added subheader for visual cue
+            # --- 4. The Entry Form ---
+            with st.form("score_entry", clear_on_submit=True):
+                st.subheader("📤 Submit Weekly Round")
+                
+                # Use w_s safely now that it is defined above
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
                 h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
                 
@@ -208,14 +219,13 @@ with st.form("score_entry", clear_on_submit=True):
                 b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_in_{w_s}")
                 e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_in_{w_s}")
                 
-                # Updated: use_container_width=True makes the button easier to hit on mobile
                 submit_score = st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary")
                 
                 if submit_score:
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
-                    st.success("Round Submitted Successfully!") # Visual confirmation
+                    st.success("Round Submitted Successfully!")
                     time.sleep(1)
                     st.rerun()
 
