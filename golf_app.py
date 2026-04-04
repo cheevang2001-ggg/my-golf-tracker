@@ -668,38 +668,45 @@ with tabs[6]: # Admin
         st.subheader("Leaderboard Management")
         st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
 
-        # The Reset Button for Live Scoring
+        # 1. The Reset Button (Wipes the sheet)
         if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
             try:
-                # Re-initialize the sheet with just the headers
                 hole_headers = [str(i) for i in range(1, 10)]
                 empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
                 
                 conn.update(worksheet="LiveScores", data=empty_df)
                 st.cache_data.clear()
                 
-                st.success("✅ Live Round has been reset! The board will repopulate as players enter new scores.")
+                st.success("✅ Live Round has been reset!")
                 time.sleep(1.5)
                 st.rerun()
             except Exception as e:
                 st.error(f"Failed to reset sheet: {e}")
 
-        # Inside your Admin Tools (Tab 6) START ###########################
+        # 2. The Sync Button (Pre-populates the sheet with registered players)
+        # ALL CODE BELOW IS NOW CORRECTLY INDENTED
         if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
-    # Get everyone currently registered
-    all_players = df_main['Player'].unique().tolist()
-    hole_cols = [str(i) for i in range(1, 10)]
-    
-    # Create a fresh table with everyone starting at 0
-    synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
-    for p_name in all_players:
-        if p_name: # skip empty
-            row = {'Player': p_name, **{col: 0 for col in hole_cols}}
-            synced_df = pd.concat([synced_df, pd.DataFrame([row])], ignore_index=True)
-            
-    conn.update(worksheet="LiveScores", data=synced_df)
-    st.success("Live Board Rebuilt! Everyone is now listed.")
-            #####END##############################
+            try:
+                # Get everyone currently registered from the main data
+                all_players = df_main['Player'].unique().tolist()
+                hole_cols = [str(i) for i in range(1, 10)]
+                
+                # Create a fresh table with everyone starting at 0
+                synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
+                
+                for p_name in all_players:
+                    if p_name: # skip empty entries
+                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
+                        synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
+                
+                # Push the full list to Google Sheets
+                conn.update(worksheet="LiveScores", data=synced_df)
+                st.cache_data.clear()
+                st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
+                time.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Sync failed: {e}")
 
         st.divider()
         
