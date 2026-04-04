@@ -197,8 +197,8 @@ with tabs[0]: # Scorecard
                 ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
                 st.altair_chart(chart.properties(height=300), use_container_width=True)
 
-        st.divider()
-            with st.form("score_entry", clear_on_submit=True):
+st.divider()
+with st.form("score_entry", clear_on_submit=True):
                 st.subheader("📤 Submit Weekly Round") # Added subheader for visual cue
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
                 h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
