@@ -414,7 +414,7 @@ with tabs[3]: # League Info
                     st.write(f"**Date:** {entry['Date']}")
                     st.write(f"**Format:** {entry['Note']}")
                 with col2:
-                    if "2 Man Scramble" in entry['Note']:
+                    if "2 Man Team Greensome" in entry['Note']:
                         st.info("""
                         **2-Man Greensomes Rules:**
                         * Both players tee off and select the desire Drive to play from.
