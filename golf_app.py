@@ -298,26 +298,51 @@ with tabs[1]: # Standings
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
-    if st.button("🔄 Refresh Table"):
+    
+    # 1. Manual Sync Button
+    if st.button("🔄 Sync Leaderboard", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
+    # 2. THE FIX: Check if a player is logged in
     curr_p = st.session_state.get("unlocked_player")
+    
     if curr_p:
-        with st.expander(f"Post Score: {curr_p}", expanded=True):
+        # If they are logged in, ALWAYS show the input form
+        with st.expander(f"⛳ Post Score for {curr_p}", expanded=True):
             c1, c2, c3 = st.columns([2, 1, 1])
-            h_u = c1.selectbox("Hole", range(1, 10))
-            s_u = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post", use_container_width=True):
+            h_u = c1.selectbox("Hole", range(1, 10), key="live_hole_select")
+            s_u = c2.number_input("Strokes", 1, 15, 4, key="live_stroke_input")
+            
+            if c3.button("Post", use_container_width=True, type="primary"):
+                # This function (updated previously) will now auto-add the player 
+                # to the sheet if they aren't there yet.
                 update_live_score(curr_p, h_u, s_u)
+                
+                # Refresh the timestamp so they stay logged in for 2 hours
                 st.session_state["login_timestamp"] = time.time()
                 st.rerun()
+    else:
+        # If no one is logged in, show a helpful hint
+        st.info("💡 To post live scores, please go to the **Scorecard** tab and unlock your profile with your PIN.")
+
+    st.divider()
+
+    # 3. Display the Leaderboard
+    # We use a small TTL (5-10 seconds) so it stays relatively "live"
+    l_df = load_live_data(force_refresh=True) 
     
-    l_df = load_live_data(force_refresh=True)
     if not l_df.empty:
         h_cols = [str(i) for i in range(1, 10)]
+        # Calculate totals for the display
         l_df['Total'] = l_df[h_cols].sum(axis=1)
-        st.dataframe(l_df.sort_values("Total"), use_container_width=True, hide_index=True)
+        st.dataframe(
+            l_df.sort_values("Total"), 
+            use_container_width=True, 
+            hide_index=True
+        )
+    else:
+        st.write("The leaderboard is currently empty. Start posting scores to see it populate!")
 
 with tabs[3]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
