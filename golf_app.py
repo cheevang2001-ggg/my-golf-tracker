@@ -102,30 +102,36 @@ def load_live_data(force_refresh=False):
 
 def update_live_score(player, hole, strokes):
     try:
-        # 1. Pull the data with a tiny wait
-        df_live = load_live_data(force_refresh=True)
+        # 1. Load the most current data from Google (forcing refresh to be accurate)
+        # We use a 2-second TTL here specifically for the 'Write' action to prevent collisions
+        df_live = conn.read(worksheet="LiveScores", ttl=2)
+        hole_cols = [str(i) for i in range(1, 10)]
         
-        # 2. Add player if missing
+        # 2. Safety: If the sheet is totally empty/null, create the structure
+        if df_live is None or df_live.empty:
+            df_live = pd.DataFrame(columns=['Player'] + hole_cols)
+
+        # 3. APPEND OR UPDATE logic
         if player not in df_live['Player'].values:
-            new_row = pd.DataFrame([{'Player': player, **{str(i): 0 for i in range(1, 10)}}])
-            df_live = pd.concat([df_live, new_row], ignore_index=True)
-        
-        # 3. Update score
-        df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
-        
-        # 4. Push update
+            # Create a new row for the new player (Goat or Beer)
+            new_row = {col: 0 for col in hole_cols}
+            new_row['Player'] = player
+            new_row[str(hole)] = int(strokes)
+            df_live = pd.concat([df_live, pd.DataFrame([new_row])], ignore_index=True)
+        else:
+            # Update the existing player's specific hole
+            df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
+
+        # 4. Push the FULL table back to Google Sheets
+        # This ensures Goat stays there when Beer updates, and vice versa.
         conn.update(worksheet="LiveScores", data=df_live)
         
-        # 5. SUCCESS! Clear cache so the board updates, but don't do it instantly
-        st.cache_data.clear() 
-        st.toast(f"✅ Saved Hole {hole}!")
-        time.sleep(1) # Mandatory pause to prevent rapid-fire API hits
+        # 5. Clear cache so the local app sees the new merged table
+        st.cache_data.clear()
+        st.toast(f"✅ {player}: Hole {hole} updated!")
         
     except Exception as e:
-        if "429" in str(e):
-            st.error("🐢 Google is slowing us down. Your score will save in about 30 seconds. Please wait.")
-        else:
-            st.error(f"Error: {e}")
+        st.error(f"Failed to update live score: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -355,23 +361,32 @@ with tabs[2]: # Live Round
         else:
             st.info("💡 To post scores, unlock your profile in the **Scorecard** tab.")
 
-        st.divider()
+st.divider()
 
         # 2. Display the Board
-        l_df = load_live_data() # Uses the 5-minute cache
+        l_df = load_live_data(force_refresh=False) 
         
-        if not l_df.empty:
-            l_df['Total'] = l_df[[str(i) for i in range(1, 10)]].sum(axis=1)
+        # DEBUG: Check if data exists
+        if l_df is not None and not l_df.empty and 'Player' in l_df.columns:
+            h_cols = [str(i) for i in range(1, 10)]
+            
+            # Ensure columns are numbers so we can sum them
+            for col in h_cols:
+                l_df[col] = pd.to_numeric(l_df[col], errors='coerce').fillna(0)
+            
+            # Calculate total
+            l_df['Total'] = l_df[h_cols].sum(axis=1)
+            
             st.write("### 📊 Current Standings")
+            # Sort by total score (lowest to highest)
             st.dataframe(
-                l_df.sort_values("Total"), 
+                l_df.sort_values("Total", ascending=True), 
                 use_container_width=True, 
                 hide_index=True
             )
         else:
-            st.write("Leaderboard is empty or loading...")
-    else:
-        st.info("The live board is currently paused to save data. It will return shortly.")
+            # If the table is empty, we show a placeholder so the user knows it's working
+            st.info("No scores have been posted yet. Be the first to start the round!")
 
 with tabs[3]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
