@@ -151,21 +151,18 @@ with tabs[0]: # Scorecard
     else:
         player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         
-        # Check authentication/timeout
-        is_unlocked = (st.session_state["unlocked_player"] == player_select and 
-                      (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or \
-                      st.session_state["authenticated"]
+        # Check if the session is still valid (2-hour timeout logic)
+        is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
+                      (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
+                      st.session_state.get("authenticated", False)
         
-if not is_unlocked:
-            # Visual Header for the Login Area
+        if not is_unlocked:
+            # --- LOCKED STATE: Only show PIN entry ---
             st.markdown("### 🔒 Player Verification")
             st.info(f"Please enter your 4-digit PIN to unlock the scorecard for **{player_select}**.")
 
-            # Create a small, centered form for the PIN
             with st.form("unlock_form"):
-                user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
-                
-                # The visual Unlock Button
+                user_pin = st.text_input("Enter PIN", type="password", key=f"pin_input_{player_select}")
                 submit_unlock = st.form_submit_button("🔓 Unlock Scorecard", use_container_width=True, type="primary")
                 
                 if submit_unlock:
@@ -173,48 +170,48 @@ if not is_unlocked:
                         p_info = df_main[df_main['Player'] == player_select]
                         reg_row = p_info[p_info['Week'] == 0]
                         
-                        # Get stored PIN safely
                         if not reg_row.empty:
                             stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
-                            
                             if user_pin.strip() == stored_pin:
                                 st.session_state.update({
                                     "unlocked_player": player_select, 
                                     "login_timestamp": time.time()
                                 })
-                                st.success("Identity Verified! Loading scorecard...")
-                                time.sleep(1)
+                                st.success("Identity Verified!")
+                                time.sleep(0.5)
                                 st.rerun()
                             else:
-                                st.error("❌ Incorrect PIN. Please try again.")
+                                st.error("❌ Incorrect PIN.")
                         else:
-                            st.error("⚠️ Player record not found. Are you registered?")
+                            st.error("⚠️ Player not found in registration records.")
                     else:
-                        st.warning("Please enter a PIN to proceed.")
+                        st.warning("Please enter your PIN.")
+        
+        else:
+            # --- UNLOCKED STATE: Show everything else ---
+            # Now p_data is defined safely inside this block
+            p_data = df_main[df_main['Player'] == player_select]
             
-            # --- 1. Define Week Selection BEFORE the Form ---
+            # 1. Week Selection
             week_options = list(range(-2, 1)) + list(range(1, 15))
             w_s = st.selectbox(
                 "Select Week", 
                 week_options, 
                 format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}",
-                key="week_selector_dropdown"
+                key=f"week_selector_{player_select}"
             )
 
-            # --- 2. Determine Handicap Logic ---
+            # 2. Handicap Logic
             if w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
             elif w_s in [4, 8]:
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
-            elif w_s == 12:
-                current_hcp = calculate_rolling_handicap(p_data, w_s)
-                st.info("🔥 GGG Double Points Event: Rolling handicap is active!")
             else:
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
-            # --- 3. Stats Dashboard Visuals ---
+            # 3. Stats Dashboard
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
@@ -226,28 +223,32 @@ if not is_unlocked:
             m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
             m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum()))
 
+            # 4. Progress Chart
+            if not played_rounds.empty:
+                chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
+                    x=alt.X('Week:O'),
+                    y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))
+                ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
+                st.altair_chart(chart.properties(height=250), use_container_width=True)
+
             st.divider()
 
-            # --- 4. The Entry Form ---
+            # 5. Score Entry Form
             with st.form("score_entry", clear_on_submit=True):
                 st.subheader("📤 Submit Weekly Round")
-                
-                # Use w_s safely now that it is defined above
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
-                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
+                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
                 
                 c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18, key=f"pars_in_{w_s}")
-                b_c = c2.number_input("Birdies", 0, 18, key=f"birdies_in_{w_s}")
-                e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_in_{w_s}")
+                p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}")
+                e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}")
                 
-                submit_score = st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary")
-                
-                if submit_score:
+                if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary"):
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
-                    st.success("Round Submitted Successfully!")
+                    st.success("Score Saved!")
                     time.sleep(1)
                     st.rerun()
 
