@@ -353,25 +353,25 @@ with tabs[3]: # League Info
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
         
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
         * GGG Points will be automatically applied.\n
-        * Any mis-aligned score please consult your Rules/Players Committee.
+        * Any mis-aligned score please consult your Rules/Players Committee.\n\n
         
         **Tee Box:** All players will play from tee box as stated below.\n  
-        ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
-        Brown Deer: **Blue - 6306 yd**\n
-        Dretzka: **Blue - 6538 yd**\n
-        Oakwood: **Blue - 6737 yd**\n
-        Whitnall: **Blue - 6308 yd**\n
-        Currie: **Black - 6444 yd**\n
+        ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***\n
+        Brown Deer: **Blue - 6306 yd**
+        Dretzka: **Blue - 6538 yd**
+        Oakwood: **Blue - 6737 yd**
+        Whitnall: **Blue - 6308 yd**
+        Currie: **Black - 6444 yd**
         
         * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
         * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
-        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n
+        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
         
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
@@ -388,12 +388,12 @@ with tabs[3]: # League Info
         * Play ready golf.
         * Move off the greens and record score at the next tee box.
         * Use common sense to keep play moving.
-        * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n
+        * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n\n
         
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
 
-
+    st.info(""" The League Committee reserves the right to amend these rules during the season to improve league operations or address emerging procedural issues. """)
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
