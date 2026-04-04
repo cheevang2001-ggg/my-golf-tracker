@@ -49,45 +49,40 @@ def load_data():
     except:
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
-def load_live_data(force_refresh=True):
-    hole_cols = [str(i) for i in range(1, 10)]
-    try:
-        ttl_val = 0 if force_refresh else 2
-        df = conn.read(worksheet="LiveScores", ttl=ttl_val)
-        if df is None or df.empty or 'Player' not in df.columns:
-            return pd.DataFrame(columns=['Player'] + hole_cols)
-        
-        df.columns = [str(c).strip().split('.')[0] for c in df.columns]
-        for col in hole_cols:
-            if col not in df.columns: df[col] = 0
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-        return df[['Player'] + hole_cols]
-    except:
-        return pd.DataFrame(columns=['Player'] + hole_cols)
+def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
+    st.cache_data.clear()
+    existing_data = load_data()
+    is_dnf = (score_val == "DNF")
+    final_gross = 0 if is_dnf else int(score_val)
+    
+    new_entry = pd.DataFrame([{
+        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
+        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
+        'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
+    }])
 
-def update_live_score(player, hole, strokes):
-    try:
-        st.cache_data.clear()
-        df_live = load_live_data(force_refresh=True)
-        if player not in df_live['Player'].values:
-            st.error(f"❌ Player '{player}' not found. Please re-register.")
-            return
-        hole_col = str(hole)
-        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
-        conn.update(worksheet="LiveScores", data=df_live)
-        st.cache_data.clear()
-        st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
-        time.sleep(0.5) 
-    except Exception as e:
-        st.error(f"🚨 Update Failed: {e}")
+    # FIX: Only filter out existing rows if they are NOT the registration row.
+    # Registration rows are Week 0 AND have Total_Score 0.
+    filtered_df = existing_data[~(
+        (existing_data['Week'] == week) & 
+        (existing_data['Player'] == player) & 
+        (existing_data['Total_Score'] > 0) # Keep the registration row (Score 0)
+    )]
+    
+    updated_df = pd.concat([filtered_df, new_entry], ignore_index=True)
+    conn.update(data=updated_df[MASTER_COLUMNS])
+    st.cache_data.clear()
+    st.rerun()
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # --- PRE-SEASON LOGIC FOR WEEK 1 ---
+        # Pre-Season Logic for Week 1
         if target_week == 1:
+            # Look for rounds where a score was actually entered (Total_Score > 0)
             pre_season_rounds = player_df[
                 (player_df['Week'] <= 0) & 
-                (player_df['DNF'] == False)
+                (player_df['DNF'] == False) &
+                (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
             
             if len(pre_season_rounds) >= 3:
@@ -95,17 +90,16 @@ def calculate_rolling_handicap(player_df, target_week):
                 hcp = round(sum(scores) / 3 - 36, 1)
                 return float(hcp)
 
-        # --- STANDARD ROLLING LOGIC ---
+        # Standard Rolling Logic (Weeks 2-14)
         excluded_weeks = [0, 4, 8, 12]
         rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) & 
             (player_df['DNF'] == False) & 
-            (player_df['Week'] < target_week)
+            (player_df['Week'] < target_week) &
+            (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
         
-        if len(rounds) == 0: 
-            return 0.0
-            
+        if len(rounds) == 0: return 0.0
         last_scores = rounds.head(4)['Total_Score'].tolist()
         
         if len(last_scores) >= 4:
@@ -115,21 +109,6 @@ def calculate_rolling_handicap(player_df, target_week):
             hcp = round(sum(last_scores) / len(last_scores) - 36, 1)
         return float(hcp)
     except: return 0.0
-
-def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    st.cache_data.clear()
-    existing_data = load_data()
-    is_dnf = (score_val == "DNF")
-    final_gross = 0 if is_dnf else int(score_val)
-    new_entry = pd.DataFrame([{
-        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
-        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
-        'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
-    }])
-    updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
-    conn.update(data=updated_df[MASTER_COLUMNS])
-    st.cache_data.clear()
-    st.rerun()
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
@@ -153,7 +132,8 @@ with tabs[0]: # Scorecard
             user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
             if user_pin:
                 p_info = df_main[df_main['Player'] == player_select]
-                reg_row = p_info[p_info['Week'] == 0]
+                # Identify registration row (Week 0, Total_Score 0) to find the PIN
+                reg_row = p_info[(p_info['Week'] == 0) & (p_info['Total_Score'] == 0)]
                 stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip() if not reg_row.empty else ""
                 if user_pin.strip() == stored_pin:
                     st.session_state.update({"unlocked_player": player_select, "login_timestamp": time.time()})
@@ -161,13 +141,12 @@ with tabs[0]: # Scorecard
                 else: st.error("❌ Incorrect PIN.")
         else:
             p_data = df_main[df_main['Player'] == player_select]
-            # Updated to include Pre-Season Rounds (-2, -1, 0)
             week_options = list(range(-2, 1)) + list(range(1, 15))
             w_s = st.selectbox("Select Week", week_options, format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}")
 
             if w_s <= 0:
                 current_hcp = 0.0
-                st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
+                st.info("🛠️ Pre-Season: Logging rounds to establish Week 1 handicap.")
             elif w_s in [4, 8]:
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
@@ -177,9 +156,9 @@ with tabs[0]: # Scorecard
             else:
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
+            # Dashboard
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
-            
             st.markdown(f"### 📊 {player_select}'s Season Dashboard")
             m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric("Current HCP", h_disp)
@@ -188,17 +167,10 @@ with tabs[0]: # Scorecard
             m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
             m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum()))
 
-            if not played_rounds.empty:
-                chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
-                    x=alt.X('Week:O'),
-                    y=alt.Y('Net_Score:Q', scale=alt.Scale(reverse=True, zero=False))
-                ) + alt.Chart(played_rounds).mark_point(color='#2e7d32', size=100, filled=True).encode(x='Week:O', y='Net_Score:Q')
-                st.altair_chart(chart.properties(height=300), use_container_width=True)
-
             st.divider()
             with st.form("score_entry", clear_on_submit=True):
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_select_{w_s}")
-                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}")
+                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_input_{w_s}", disabled=True)
                 
                 c1, c2, c3 = st.columns(3)
                 p_c = c1.number_input("Pars", 0, 18, key=f"pars_in_{w_s}")
@@ -206,7 +178,8 @@ with tabs[0]: # Scorecard
                 e_c = c3.number_input("Eagles", 0, 18, key=f"eagles_in_{w_s}")
                 
                 if st.form_submit_button("Submit Score"):
-                    reg_row = p_data[p_data['Week'] == 0]
+                    # Always pull the PIN from the core registration row
+                    reg_row = p_data[(p_data['Week'] == 0) & (p_data['Total_Score'] == 0)]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
 
