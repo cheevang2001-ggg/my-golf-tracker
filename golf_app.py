@@ -50,11 +50,12 @@ def load_data():
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def load_live_data(force_refresh=False):
-    hole_cols = [str(i) for i in range(1, 10)]
     try:
-        # If not forcing a refresh, wait 10 seconds between API calls
-        ttl_val = 0 if force_refresh else 10
+        # Increase TTL to 20 seconds. 
+        # This means the leaderboard only hits the API 3 times per minute maximum.
+        ttl_val = 0 if force_refresh else 20 
         df = conn.read(worksheet="LiveScores", ttl=ttl_val)
+      
         
         if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
@@ -296,50 +297,60 @@ with tabs[1]: # Standings
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
     
-    # 1. Manual Sync Button
+    # 1. Sync Button with "Cooldown"
     if st.button("🔄 Sync Leaderboard", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-    # 2. THE FIX: Check if a player is logged in
     curr_p = st.session_state.get("unlocked_player")
     
     if curr_p:
-        # If they are logged in, ALWAYS show the input form
-        with st.expander(f"⛳ Post Score for {curr_p}", expanded=True):
-            c1, c2, c3 = st.columns([2, 1, 1])
+        # We define the form for the logged-in player
+        with st.form("live_score_form", clear_on_submit=False):
+            st.markdown(f"⛳ **Updating Score for: {curr_p}**")
+            c1, c2 = st.columns(2)
             h_u = c1.selectbox("Hole", range(1, 10), key="live_hole_select")
             s_u = c2.number_input("Strokes", 1, 15, 4, key="live_stroke_input")
             
-            if c3.button("Post", use_container_width=True, type="primary"):
-                # This function (updated previously) will now auto-add the player 
-                # to the sheet if they aren't there yet.
+            submit_live = st.form_submit_button("Post Score", use_container_width=True, type="primary")
+            
+            if submit_live:
+                # We call the update function
                 update_live_score(curr_p, h_u, s_u)
-                
-                # Refresh the timestamp so they stay logged in for 2 hours
-                st.session_state["login_timestamp"] = time.time()
-                st.rerun()
+                # After posting, we clear the cache for THIS session so the table below updates
+                st.cache_data.clear()
+                st.rerun() 
     else:
-        # If no one is logged in, show a helpful hint
-        st.info("💡 To post live scores, please go to the **Scorecard** tab and unlock your profile with your PIN.")
+        st.info("💡 Unlock your scorecard in the **Scorecard** tab to post live scores.")
 
     st.divider()
 
-    # 3. Display the Leaderboard
-    # We use a small TTL (5-10 seconds) so it stays relatively "live"
-    l_df = load_live_data(force_refresh=True) 
-    
-    if not l_df.empty:
-        h_cols = [str(i) for i in range(1, 10)]
-        # Calculate totals for the display
-        l_df['Total'] = l_df[h_cols].sum(axis=1)
-        st.dataframe(
-            l_df.sort_values("Total"), 
-            use_container_width=True, 
-            hide_index=True
-        )
-    else:
-        st.write("The leaderboard is currently empty. Start posting scores to see it populate!")
+    # 3. AUTOMATIC TABLE DISPLAY
+    # We use a slightly longer TTL (20s) for background viewers to save API quota,
+    # but the 'st.rerun()' above forces a fresh look for the person who just scored.
+    try:
+        l_df = load_live_data(force_refresh=False) 
+        
+        if not l_df.empty:
+            h_cols = [str(i) for i in range(1, 10)]
+            # Ensure numeric data for the sum
+            for col in h_cols:
+                l_df[col] = pd.to_numeric(l_df[col], errors='coerce').fillna(0)
+            
+            l_df['Total'] = l_df[h_cols].sum(axis=1)
+            
+            # Show the leaderboard to everyone
+            st.write("### 📊 Current Leaderboard")
+            st.dataframe(
+                l_df.sort_values("Total", ascending=True), 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={"Total": st.column_config.NumberColumn("Total", format="%d ⛳")}
+            )
+        else:
+            st.info("Waiting for the first scores to be posted...")
+    except Exception:
+        st.warning("⚠️ Leaderboard is temporarily busy. Try 'Sync' in a few seconds.")
 
 with tabs[3]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
