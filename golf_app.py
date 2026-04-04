@@ -585,8 +585,6 @@ with tabs[5]: # Registration
         
         with st.form("league_key_form"):
             user_key = st.text_input("League Key", type="password", key="reg_gate_key_input")
-            
-            # The new Unlock/Submit button for the pre-step
             submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary")
             
             if submit_key:
@@ -598,7 +596,7 @@ with tabs[5]: # Registration
                 else:
                     st.error("❌ Invalid League Key. Please contact an Officer.")
 
-    # --- STEP 2: Player Details (Only shows after Key is correct) ---
+    # --- STEP 2: Player Details ---
     else:
         with st.form("registration_form", clear_on_submit=True):
             st.subheader("📝 New Player Details")
@@ -606,47 +604,38 @@ with tabs[5]: # Registration
             n = st.text_input("Full Name", key="reg_name_input")
             p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input")
             
-            # Final submission button
             submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
             
             if submit_reg:
                 if n and len(p) == 4:
                     try:
-                        # Logic to add player to GSheets
+                        # 1. ADD TO MAIN DATABASE
                         new_reg = pd.DataFrame([{
                             "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
                             "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
                         }])
-
-                        # 2. PRE-POPULATE LiveScores START HERE####################################
-                    try:
-                        l_df = conn.read(worksheet="LiveScores", ttl=0)
-                        hole_cols = [str(i) for i in range(1, 10)]
-        
-                        if n not in l_df['Player'].values:
-                            # Create a clean, zeroed-out row for the new player
-                            new_live_row = pd.DataFrame([{'Player': n, **{col: 0 for col in hole_cols}}])
-                            updated_live = pd.concat([l_df, new_live_row], ignore_index=True)
-                            conn.update(worksheet="LiveScores", data=updated_live)
-                        st.success(f"Welcome {n}! You are cleared for Live Scoring.")
-                    except Exception as e:
-                        st.warning("Registered, but Live Board sync failed. Admin can refresh it.")
-                            #End Here#############################################################
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
                         conn.update(data=updated_main[MASTER_COLUMNS])
-                        
-                        # Ensure they appear on Live Board
-                        l_df = load_live_data(force_refresh=True)
-                        if n not in l_df['Player'].values:
-                            new_live = pd.DataFrame([{'Player': n, **{str(i): 0 for i in range(1, 10)}}])
-                            conn.update(worksheet="LiveScores", data=pd.concat([l_df, new_live], ignore_index=True))
-                        
+
+                        # 2. PRE-POPULATE LIVE SCORES (Nested Safety)
+                        try:
+                            l_df = conn.read(worksheet="LiveScores", ttl=0)
+                            hole_cols = [str(i) for i in range(1, 10)]
+                            
+                            if n not in l_df['Player'].values:
+                                new_live_row = pd.DataFrame([{'Player': n, **{col: 0 for col in hole_cols}}])
+                                updated_live = pd.concat([l_df, new_live_row], ignore_index=True)
+                                conn.update(worksheet="LiveScores", data=updated_live)
+                            st.success(f"Live board prepared for {n}!")
+                        except Exception as live_err:
+                            st.warning(f"Note: Registration saved, but Live Board sync missed: {live_err}")
+
+                        # 3. FINALIZE
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
-                        
                         time.sleep(1.5)
-                        st.session_state["reg_access"] = False # Reset for next person
+                        st.session_state["reg_access"] = False # Relock for next use
                         st.rerun()
                         
                     except Exception as e:
