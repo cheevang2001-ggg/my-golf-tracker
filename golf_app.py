@@ -392,8 +392,10 @@ with tabs[3]: # League Info
         
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
+        
+        # This replaces the old Live Round warning with a relevant Rules Note
+        st.info("**Note:** The League Committee reserves the right to amend these rules during the season to improve league operations or address emerging procedural issues. All players are expected to uphold the spirit of the game. For scoring disputes, please notify the Rules Committee before leaving the course.")
 
-    st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
