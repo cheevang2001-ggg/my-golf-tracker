@@ -584,42 +584,54 @@ with tabs[5]: # Registration
 with tabs[6]: # Admin
     st.header("⚙️ Admin Control Panel")
     
-    # Secure the tab with your Admin Password
-    admin_input = st.text_input("Enter Admin Password", type="password", key="admin_login_key")
-    
-    if admin_input == ADMIN_PASSWORD:
-        st.session_state["authenticated"] = True
-        st.success("Admin Access Granted")
-        st.divider()
+    # --- STEP 1: Secure Login Form ---
+    if not st.session_state.get("authenticated"):
+        st.info("Please enter the Administrative Password to access league management tools.")
+        
+        with st.form("admin_login_form"):
+            admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
+            submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
+            
+            if submit_admin:
+                if admin_input == ADMIN_PASSWORD:
+                    st.session_state["authenticated"] = True
+                    st.success("Access Granted!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Incorrect Admin Password.")
 
-        st.subheader("Live Scoring Management")
-        st.warning("Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This cannot be undone.")
+    # --- STEP 2: Admin Tools (Only visible after successful login) ---
+    else:
+        st.subheader("Leaderboard Management")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
 
-        # The Reset Button
-        if st.button("🚨 Reset Live Leaderboard", use_container_width=True, type="primary"):
+        # The Reset Button for Live Scoring
+        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
             try:
-                # Create a fresh, empty DataFrame with only the required headers
+                # Re-initialize the sheet with just the headers
                 hole_headers = [str(i) for i in range(1, 10)]
-                empty_live_df = pd.DataFrame(columns=['Player'] + hole_headers)
+                empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
                 
-                # Overwrite the LiveScores worksheet
-                conn.update(worksheet="LiveScores", data=empty_live_df)
-                
-                # Clear local cache so the app sees the empty sheet immediately
+                conn.update(worksheet="LiveScores", data=empty_df)
                 st.cache_data.clear()
                 
-                st.success("✅ Live Round scoring has been reset for the next session!")
+                st.success("✅ Live Round has been reset! The board will repopulate as players enter new scores.")
                 time.sleep(1.5)
                 st.rerun()
             except Exception as e:
-                st.error(f"Failed to reset board: {e}")
+                st.error(f"Failed to reset sheet: {e}")
 
         st.divider()
-        st.subheader("Data Maintenance")
-        if st.button("🧹 Clear App Cache", help="Force the app to pull fresh data from all sheets"):
-            st.cache_data.clear()
-            st.toast("Cache Cleared!")
-            
-    elif admin_input != "":
-        st.error("Incorrect Admin Password")
-            
+        
+        # Logout / Maintenance Section
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Data Cache", use_container_width=True):
+                st.cache_data.clear()
+                st.toast("App data synced with Google Sheets.")
+        
+        with col2:
+            if st.button("🔒 Lock Admin Panel", use_container_width=True):
+                st.session_state["authenticated"] = False
+                st.rerun()
