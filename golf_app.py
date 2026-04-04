@@ -156,19 +156,41 @@ with tabs[0]: # Scorecard
                       (time.time() - st.session_state["login_timestamp"]) < SESSION_TIMEOUT) or \
                       st.session_state["authenticated"]
         
-        if not is_unlocked:
-            user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
-            if user_pin:
-                p_info = df_main[df_main['Player'] == player_select]
-                reg_row = p_info[p_info['Week'] == 0]
-                stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip() if not reg_row.empty else ""
-                if user_pin.strip() == stored_pin:
-                    st.session_state.update({"unlocked_player": player_select, "login_timestamp": time.time()})
-                    st.rerun()
-                else: 
-                    st.error("❌ Incorrect PIN.")
-        else:
-            p_data = df_main[df_main['Player'] == player_select]
+if not is_unlocked:
+            # Visual Header for the Login Area
+            st.markdown("### 🔒 Player Verification")
+            st.info(f"Please enter your 4-digit PIN to unlock the scorecard for **{player_select}**.")
+
+            # Create a small, centered form for the PIN
+            with st.form("unlock_form"):
+                user_pin = st.text_input("Enter PIN", type="password", key=f"pin_{player_select}")
+                
+                # The visual Unlock Button
+                submit_unlock = st.form_submit_button("🔓 Unlock Scorecard", use_container_width=True, type="primary")
+                
+                if submit_unlock:
+                    if user_pin:
+                        p_info = df_main[df_main['Player'] == player_select]
+                        reg_row = p_info[p_info['Week'] == 0]
+                        
+                        # Get stored PIN safely
+                        if not reg_row.empty:
+                            stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
+                            
+                            if user_pin.strip() == stored_pin:
+                                st.session_state.update({
+                                    "unlocked_player": player_select, 
+                                    "login_timestamp": time.time()
+                                })
+                                st.success("Identity Verified! Loading scorecard...")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ Incorrect PIN. Please try again.")
+                        else:
+                            st.error("⚠️ Player record not found. Are you registered?")
+                    else:
+                        st.warning("Please enter a PIN to proceed.")
             
             # --- 1. Define Week Selection BEFORE the Form ---
             week_options = list(range(-2, 1)) + list(range(1, 15))
