@@ -355,37 +355,46 @@ with tabs[3]: # League Info
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n
         
-        **Scoring:** Use the GGG App AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
+        **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
         * GGG Points will be automatically applied.\n
         * Any mis-aligned score please consult your Rules/Players Committee.
         
         **Tee Box:** All players will play from tee box as stated below.\n  
+        ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
+        Brown Deer: **Blue - 6306 yd\n**
+        Dretzka: **Blue - 6538 yd\n**
+        Oakwood: **Blue - 6737 yd\n**
+        Whitnall: **Blue - 6308 yd\n**
+        Currie: **Black - 6444 yd\n**
         
-        ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
-        * C1: If your handicap average equals 36+ you will play from the tee box ahead of the default tee box mentioned below.
-        * C2: If your handicap average equals 50+ or more, you may play from tee box ahead of C1.\n
-        Brown Deer: Blue - 6306 yd\n
-        Dretzka: Blue - 6538 yd\n
-        Oakwood: Blue - 6737 yd\n
-        Whitnall: Blue - 6308 yd\n
-        Currie: Black - 6444 yd\n
+        * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
+        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.\n
+        * C3: If you are of Senior Age (60+), you may play from the forward tee. 
         
-        **Gimmies/Putting:** Promote competition of fair play, Putt out\n
+        **Gimmies/Putting:**\n 
+        Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***\n
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 2 stroke from 15-19 feet about 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
-        * Your group is holding up the playing field and the group in fornt of you are off their tee box, pickup with 3 stroke from 30+ feet about 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.\n
-        * If the group behind you are on the tee box, STOP searching - drop and continue play.\n
+        * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.\n
         * Help your playing partners spot and search for their ball.\n
-        * Search smartly: if a playing partner is helping search for the ball, you need to move on to play your ball. Do NOT have the entire group search for one players ball.\n
+        * Search smartly: If one of the group's playing partner is helping another player search for their ball, You NEED to move on and play your ball. The entire group **DOES NOT** need to search for one players ball.\n
         * Play ready golf.
         * Move off the greens and record score at the next tee box.
+        * Use common sense to keep play moving.
+        * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n
         
         **DNFs:** If you cannot finish, mark 'DNF'.
+        """)
+
+    st.info("""
+        The League Committee reserves the right to amend these rules during the season to improve league operations or address emerging procedural issues. 
         """)
 
     elif info_category == "Schedule":
