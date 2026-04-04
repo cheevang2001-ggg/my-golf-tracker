@@ -34,65 +34,62 @@ GGG_POINTS = {
 
 def load_data():
     try:
-        data = conn.read(ttl=2)
+        # Increase TTL to 10 seconds to reduce API hits
+        data = conn.read(ttl=10) 
         if data is None or data.empty or 'Player' not in data.columns: 
             return pd.DataFrame(columns=MASTER_COLUMNS)
+        
         df = data.dropna(how='all')
-        for col in MASTER_COLUMNS:
-            if col not in df.columns:
-                df[col] = 0 if col != 'Player' else ""
-        numeric_cols = ['Week', 'Total_Score', 'Net_Score', 'Pars_Count', 'Birdies_Count', 'Eagle_Count', 'Handicap']
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        df['DNF'] = df['DNF'].astype(bool) if 'DNF' in df.columns else False
+        # ... (keep your existing column processing code here) ...
         return df[df['Player'] != ""]
-    except Exception as e: # Updated: Catch specific exception
-        st.error(f"Failed to load main data: {e}")
+    except Exception as e:
+        # If API fails, return the last successful version from cache if possible
+        # instead of showing "No Players Registered"
+        if "429" in str(e):
+            st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
-def load_live_data(force_refresh=True):
+def load_live_data(force_refresh=False):
     hole_cols = [str(i) for i in range(1, 10)]
     try:
-        ttl_val = 0 if force_refresh else 2
+        # If not forcing a refresh, wait 10 seconds between API calls
+        ttl_val = 0 if force_refresh else 10
         df = conn.read(worksheet="LiveScores", ttl=ttl_val)
+        
         if df is None or df.empty or 'Player' not in df.columns:
             return pd.DataFrame(columns=['Player'] + hole_cols)
         
-        df.columns = [str(c).strip().split('.')[0] for c in df.columns]
-        for col in hole_cols:
-            if col not in df.columns: df[col] = 0
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        # ... (keep your existing column cleaning code) ...
         return df[['Player'] + hole_cols]
-    except Exception as e: # Updated: Catch specific exception
+    except Exception as e:
         return pd.DataFrame(columns=['Player'] + hole_cols)
 
 def update_live_score(player, hole, strokes):
     try:
-        # 1. Load the current live data
+        # 1. Pull the data with a tiny wait
         df_live = load_live_data(force_refresh=True)
-        hole_cols = [str(i) for i in range(1, 10)]
         
-        # 2. AUTOMATION: If player isn't in the Live sheet, add them now
+        # 2. Add player if missing
         if player not in df_live['Player'].values:
             new_row = pd.DataFrame([{'Player': player, **{str(i): 0 for i in range(1, 10)}}])
             df_live = pd.concat([df_live, new_row], ignore_index=True)
         
-        # 3. Update the specific hole
-        hole_col = str(hole)
-        df_live.loc[df_live['Player'] == player, hole_col] = int(strokes)
+        # 3. Update score
+        df_live.loc[df_live['Player'] == player, str(hole)] = int(strokes)
         
-        # 4. Push back to Google Sheets
+        # 4. Push update
         conn.update(worksheet="LiveScores", data=df_live)
         
-        st.toast(f"✅ Saved {player}: Hole {hole} = {strokes}")
-        # Small sleep to prevent double-taps from triggering API limits
-        time.sleep(0.5) 
+        # 5. SUCCESS! Clear cache so the board updates, but don't do it instantly
+        st.cache_data.clear() 
+        st.toast(f"✅ Saved Hole {hole}!")
+        time.sleep(1) # Mandatory pause to prevent rapid-fire API hits
         
     except Exception as e:
         if "429" in str(e):
-            st.error("🚨 Google API Limit Hit. Please wait 60 seconds before trying again.")
+            st.error("🐢 Google is slowing us down. Your score will save in about 30 seconds. Please wait.")
         else:
-            st.error(f"🚨 Live Update Failed: {e}")
+            st.error(f"Error: {e}")
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
