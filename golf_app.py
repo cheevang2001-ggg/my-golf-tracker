@@ -224,21 +224,32 @@ with tabs[1]: # Standings
 
 with tabs[2]: # Live Round
     st.subheader("🔴 Live Round Tracking")
-    if st.button("🔄 Refresh Table"):
-        st.cache_data.clear()
-        st.rerun()
-
+    
+    # 1. Update Section
     curr_p = st.session_state.get("unlocked_player")
     if curr_p:
-        with st.expander(f"Update Score for {curr_p}", expanded=True):
-            c1, c2, c3 = st.columns([2, 1, 1])
+        # Replaced old 'Post' button with a formal form and "Enter" button
+        with st.form("live_score_form", clear_on_submit=True):
+            st.markdown(f"#### Update Score for **{curr_p}**")
+            c1, c2 = st.columns(2)
             h_u = c1.selectbox("Hole", range(1, 10))
             s_u = c2.number_input("Strokes", 1, 15, 4)
-            if c3.button("Post", use_container_width=True):
+            
+            # This provides the clear "Enter" style button you requested
+            if st.form_submit_button("Submit Live Score", use_container_width=True):
                 update_live_score(curr_p, h_u, s_u)
                 st.session_state["login_timestamp"] = time.time()
                 st.rerun()
-    
+    else:
+        st.info("💡 Log in via the **Scorecard** tab to update your live scores.")
+
+    st.divider()
+
+    # 2. Display Section
+    if st.button("🔄 Refresh Leaderboard"):
+        st.cache_data.clear()
+        st.rerun()
+
     l_df = load_live_data(force_refresh=True)
     if not l_df.empty:
         h_cols = [str(i) for i in range(1, 10)]
