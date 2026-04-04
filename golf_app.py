@@ -9,7 +9,7 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
-REGISTRATION_KEY = "@Food2026#"
+REGISTRATION_KEY = "2026"
 SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
 if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
