@@ -206,7 +206,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 Challenges", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -372,7 +372,79 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[3]: # League Info
+# --- New streamlined GGG Challenge tab (replace the existing with tabs[3] block) ---
+with tabs[3]:  # GGG Challenge
+    st.header("🏁 GGG Challenge")
+    st.write("Seasonal challenges and reward opportunities for GGGolf members.")
+    st.divider()
+
+    st.info(
+        "Challenges will be announced here during the season. "
+        "Each challenge includes a short description, cost (if any), eligibility rules, and how to participate."
+    )
+
+    col_main, col_side = st.columns([3, 1])
+
+    # Main column: Current Challenge card
+    with col_main:
+        st.subheader("Current Challenge")
+        # Example challenge card — update text as needed when a challenge is active
+        st.markdown("#### Season Ball Challenge")
+        st.markdown("**Entry:** $20 for a GGG sleeve of balls")
+        st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
+        st.divider()
+
+        st.markdown("**How it works**")
+        st.markdown(
+            "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
+            "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
+            "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
+        )
+
+        st.divider()
+        st.markdown("**Eligibility and Rebuy Options**")
+        # Compact eligibility table for quick scanning
+        import pandas as _pd
+        elig = _pd.DataFrame([
+            {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
+            {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
+            {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
+            {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
+        ])
+        st.table(elig)
+
+        st.divider()
+        # CTA (disabled placeholder until admin enables)
+        st.write("**Participation**")
+        st.button("Join Season Ball Challenge", disabled=True)
+        st.caption("Admin will enable signups and payment links when the challenge is active.")
+
+        with st.expander("Full Rules and Examples", expanded=False):
+            st.markdown(
+                "**Key Rules**\n\n"
+                "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
+                "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
+                "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
+                "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
+                "**Examples**\n\n"
+                "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
+                "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+            )
+
+    # Side column: quick admin actions and notes
+    with col_side:
+        st.subheader("Quick Actions")
+        st.write("Admin controls will appear here when implemented.")
+        st.button("Request Challenge Edit Access", disabled=True)
+        st.divider()
+        st.markdown("**Notes for Players**")
+        st.markdown(
+            "- Keep your sleeve balls separate so returned balls can be verified.\n"
+            "- Questions about eligibility should be directed to the Rules and Players Committee."
+        )
+
+
+with tabs[4]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
@@ -781,7 +853,7 @@ with tabs[3]: # League Info
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
 
 
-with tabs[4]: # Registration
+with tabs[5]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -849,7 +921,7 @@ with tabs[4]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[5]: # Admin
+with tabs[6]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     # --- STEP 1: Secure LOGIN Form ---
