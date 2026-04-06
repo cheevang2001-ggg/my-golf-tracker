@@ -30,7 +30,7 @@ def get_gsheets_conn():
 
 MASTER_COLUMNS = [
     'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
-    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF'
+    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF', 'Acknowledged'
 ]
 
 GGG_POINTS = {
@@ -583,10 +583,11 @@ with tabs[4]: # Registration
                     st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
                 elif n and len(p) == 4:
                     try:
-                        # 1. ADD TO MAIN DATABASE
+                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
                         new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
+                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
+                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
                         }])
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
@@ -604,7 +605,6 @@ with tabs[4]: # Registration
                         st.error(f"Registration Error: {e}")
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
-
 
 with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
