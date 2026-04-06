@@ -539,8 +539,8 @@ with tabs[3]: # League Info
         st.write("Breakdown of league fees and administrative costs.")
 
     elif info_category == "Members":
-        st.subheader("👥 League Members")
-        st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.")
+        st.subheader("GGG League Members")
+        st.write("Welcome back, GGGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
 
         # Build members list from df_main: registration rows are Week == 0
         if df_main is None or df_main.empty:
