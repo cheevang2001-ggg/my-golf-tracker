@@ -375,7 +375,7 @@ with tabs[2]: # History
 # --- New streamlined GGG Challenge tab (replace the existing with tabs[3] block) ---
 with tabs[3]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
-    st.write("Seasonal challenges and reward opportunities for GGGolf members.")
+    st.write("Join our season challenge to earn prizes! Every dollar raised goes right back into supporting the league and improving the GGGolf experience for everyone.")
     st.divider()
 
     st.info(
