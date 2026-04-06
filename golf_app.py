@@ -779,7 +779,10 @@ with tabs[4]: # League Info
             # Option to lock again
             if st.button("🔒 Lock Editing", use_container_width=True, type="secondary"):
                 st.session_state["expenses_edit_unlocked"] = False
-                st.experimental_rerun()
+                try:
+                    st.experimental_rerun()
+                except Exception:
+                    st.warning("Editing locked. Please refresh the page if the UI does not update automatically.")
 
             # Add new expense entry (visible only when unlocked)
             with st.expander("Add a Prize / Expense", expanded=True):
