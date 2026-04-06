@@ -821,9 +821,16 @@ with tabs[4]: # League Info
                             st.session_state["expenses_edit_unlocked"] = True
                             st.success("Edit access granted.")
                             time.sleep(0.5)
-                            st.experimental_rerun()
+                            # Try to trigger a rerun; if rerun is unavailable, handle gracefully
+                            try:
+                                st.experimental_rerun()
+                            except Exception as e:
+                                # Some Streamlit runtimes may raise an AttributeError or other error here.
+                                # Fall back to a safe, non-crashing behavior so the UI reflects the unlocked state.
+                                st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
                         else:
                             st.error("❌ Incorrect code. Editing remains locked.")
+
 
             st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
