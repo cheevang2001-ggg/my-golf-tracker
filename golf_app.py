@@ -206,7 +206,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGOLF LEAGUE 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -372,7 +372,36 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[3]: # League Info
+# --- New placeholder tab for in-season challenges ---
+with tabs[3]:  # GGG Challenge
+    st.header("🏁 GGG Challenge")
+    st.write("This space will host in-season challenges and reward details.")
+    st.divider()
+
+    st.info(
+        "Placeholder: Challenges will be announced here during the season. "
+        "Admins will be able to publish challenge details, eligibility, and rewards."
+    )
+
+    # Simple placeholder UI for future features
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.subheader("Current Challenges")
+        st.write("No active challenges at the moment.")
+        with st.expander("Planned features", expanded=False):
+            st.markdown(
+                "- Admins can create time-limited challenges\n"
+                "- Players can opt-in to challenges\n"
+                "- Automatic tracking of challenge progress from weekly scores\n"
+                "- Reward distribution and leaderboard for each challenge"
+            )
+    with col2:
+        st.subheader("Quick Actions")
+        st.write("Admin actions will appear here when implemented.")
+        st.button("Request Challenge Edit Access", disabled=True)
+
+
+with tabs[4]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
@@ -787,7 +816,7 @@ with tabs[3]: # League Info
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
 
 
-with tabs[4]: # Registration
+with tabs[5]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -855,7 +884,7 @@ with tabs[4]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[5]: # Admin
+with tabs[6]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     # --- STEP 1: Secure LOGIN Form ---
