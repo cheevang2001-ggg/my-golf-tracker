@@ -853,27 +853,35 @@ with tabs[4]: # League Info
         st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
 
-        elif info_category == "Members":
-            st.subheader("GGG League Members")
-            st.write("Welcome back, GGGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
+elif info_category == "Members":
+    st.subheader("GGG League Members")
+    st.write("Welcome back, GGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
 
-        # Build members list from df_main: registration rows are Week == 0
-        if df_main is None or df_main.empty:
+    # Build members list from df_main: registration rows are Week == 0
+    if 'df_main' not in globals() or df_main is None or df_main.empty:
+        st.info("No registered members yet.")
+    else:
+        members_df = df_main[df_main['Week'] == 0].copy()
+        if members_df.empty:
             st.info("No registered members yet.")
         else:
-            members_df = df_main[df_main['Week'] == 0].copy()
-            if members_df.empty:
-                st.info("No registered members yet.")
-            else:
-                # Normalize columns for display
-                display_cols = ['Player']
-                if 'Acknowledged' in members_df.columns:
+            # Normalize columns for display
+            display_cols = ['Player']
+            if 'Acknowledged' in members_df.columns:
+                # Defensive cast: handle missing/NA values gracefully
+                try:
                     members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
                     display_cols.append('Acknowledged')
-                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
-                
-                st.markdown(f"**Total Members:** {len(members_df)}")
-                st.dataframe(members_df, use_container_width=True, hide_index=True)
+                except Exception:
+                    # If cast fails, create a safe boolean column
+                    members_df['Acknowledged'] = members_df.get('Acknowledged', pd.Series([False]*len(members_df)))
+                    display_cols.append('Acknowledged')
+
+            # Keep only the display columns, dedupe and sort
+            members_df = members_df.loc[:, display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
+
+            st.markdown(f"**Total Members:** {len(members_df)}")
+            st.dataframe(members_df, use_container_width=True, hide_index=True)
 
 
 with tabs[5]: # Registration
