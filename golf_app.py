@@ -370,7 +370,7 @@ with tabs[2]: # History
 
 with tabs[3]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
@@ -537,6 +537,29 @@ with tabs[3]: # League Info
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
+
+    elif info_category == "Members":
+        st.subheader("👥 League Members")
+        st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.")
+
+        # Build members list from df_main: registration rows are Week == 0
+        if df_main is None or df_main.empty:
+            st.info("No registered members yet.")
+        else:
+            members_df = df_main[df_main['Week'] == 0].copy()
+            if members_df.empty:
+                st.info("No registered members yet.")
+            else:
+                # Normalize columns for display
+                display_cols = ['Player']
+                if 'Acknowledged' in members_df.columns:
+                    members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
+                    display_cols.append('Acknowledged')
+                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
+                
+                st.markdown(f"**Total Members:** {len(members_df)}")
+                st.dataframe(members_df, use_container_width=True, hide_index=True)
+
 
 with tabs[4]: # Registration
     st.header("👤 Registration")
