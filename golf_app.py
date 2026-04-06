@@ -425,7 +425,7 @@ with tabs[3]: # League Info
         * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
         """)
 
-    st.divider()
+        st.divider()
         st.subheader("Handicap Calculation Transparency")
         st.write(
             "Use the tool below to inspect how a player's handicap is derived. "
