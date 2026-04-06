@@ -39,8 +39,22 @@ GGG_POINTS = {
     15: 5, 16: 3, 17: 1 
 }
 
-def _empty_master_df():
-    return pd.DataFrame(columns=MASTER_COLUMNS)
+#def _empty_master_df():
+    #return pd.DataFrame(columns=MASTER_COLUMNS)
+
+empty_df = pd.DataFrame(columns=MASTER_COLUMNS)
+
+try:
+    conn = get_gsheets_conn()   # your existing helper
+    conn.update(data=empty_df)  # overwrite sheet with empty table and headers
+    st.success("Google Sheet overwritten with empty master table.")
+    st.cache_data.clear()
+    try:
+        st.experimental_rerun()
+    except Exception:
+        st.info("Reset complete. Please refresh the page if UI does not update automatically.")
+except Exception as e:
+    st.error(f"Failed to reset sheet: {e}")
 
 @st.cache_data(ttl=10)  # cache successful reads for 10 seconds
 def _read_sheet_cached():
