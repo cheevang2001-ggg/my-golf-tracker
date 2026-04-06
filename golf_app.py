@@ -432,7 +432,7 @@ with tabs[3]: # League Info
         st.divider()
         st.subheader("Handicap Calculation Transparency")
         st.write(
-            "Rolling average of the best 3 of the last 4 rounds to a par 36. "\n\n
+            "Rolling average of the best 3 of the last 4 rounds to a par 36. "
             "Use the tool below to inspect how a player's handicap is derived. "
             "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
         )
