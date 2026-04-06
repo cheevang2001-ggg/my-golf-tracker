@@ -9,7 +9,7 @@ import altair as alt
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
-REGISTRATION_KEY = "2026"
+REGISTRATION_KEY = "2026!@#"
 SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
 if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
@@ -312,7 +312,7 @@ with tabs[3]: # League Info
             """)
         with col2:
             st.subheader("Committees")
-            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lex, Deng Kue\n")
+            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lee, Deng Kue\n")
             st.markdown("""
             **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
             They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
