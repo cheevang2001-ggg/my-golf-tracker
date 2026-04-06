@@ -703,8 +703,8 @@ with tabs[4]: # League Info
         st.image("rockstarBag1.jpg", width=120)
 
     elif info_category == "Expenses":
-    st.subheader("💵 League Expenses")
-    st.write("Breakdown of league fees and administrative costs.")
+        st.subheader("💵 League Expenses")
+        st.write("Breakdown of league fees and administrative costs.")
 
     # Use existing in-memory expenses table in session_state (persists per app session)
     if "expenses_table" not in st.session_state:
