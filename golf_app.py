@@ -485,26 +485,25 @@ with tabs[3]: # League Info
                 st.markdown(f"**Total Members:** {len(members_df)}")
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
 
-
 with tabs[4]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
     if not st.session_state.get("reg_access"):
-        st.info("Please enter the League Registration Key provided by the League Officers to begin.")
+        st.info("Please enter the League Registration Key provided by the League Officers to begin.") [cite: 92]
         
         with st.form("league_key_form"):
-            user_key = st.text_input("League Key", type="password", key="reg_gate_key_input")
-            submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary")
+            user_key = st.text_input("League Key", type="password", key="reg_gate_key_input") [cite: 92]
+            submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary") [cite: 92]
             
             if submit_key:
-                if user_key == REGISTRATION_KEY:
-                    st.session_state["reg_access"] = True
-                    st.success("Key Accepted! Please provide your details below.")
+                if user_key == REGISTRATION_KEY: [cite: 93]
+                    st.session_state["reg_access"] = True [cite: 93]
+                    st.success("Key Accepted! Please provide your details below.") [cite: 93, 94]
                     time.sleep(1)
-                    st.rerun()
+                    st.rerun() [cite: 94]
                 else:
-                    st.error("❌ Invalid League Key. Please contact an Officer.")
+                    st.error("❌ Invalid League Key. Please contact an Officer.") [cite: 94]
 
     # --- STEP 2: Player Details ---
     else:
@@ -513,58 +512,56 @@ with tabs[4]: # Registration
             "By registering for the GGGolf Summer League you confirm that you have read, "
             "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
             "Registration indicates acceptance of these terms."
-        )
+        ) [cite: 95]
 
         # Require explicit acknowledgement before allowing registration
-        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
+        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox") [cite: 96]
 
         with st.form("registration_form", clear_on_submit=True):
-            st.subheader("📝 New Player Details")
+            st.subheader("📝 New Player Details") [cite: 96]
             
-            n = st.text_input("Full Name", key="reg_name_input")
-            p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input")
+            n = st.text_input("Full Name", key="reg_name_input") [cite: 96]
+            p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input") [cite: 96, 97]
             
-            submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
+            submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary") [cite: 97]
             
             if submit_reg:
                 if not ack:
-                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
-                elif n and len(p) == 4:
+                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.") [cite: 97, 98]
+                elif n and len(p) == 4: [cite: 98]
                     try:
-                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
+                        # 1. CREATE NEW PLAYER ENTRY
                         new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
-                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
-                        }]) [cite: 216, 217]
+                            "Week": 0, 
+                            "Player": n, 
+                            "PIN": p, 
+                            "Handicap": 0.0, 
+                            "DNF": True,
+                            "Pars_Count": 0, 
+                            "Birdies_Count": 0, 
+                            "Eagle_Count": 0,
+                            "Total_Score": 0, 
+                            "Net_Score": 0, 
+                            "Acknowledged": True
+                        }]) [cite: 99, 100]
 
-                        updated_main = pd.concat([df_main, new_reg], ignore_index=True) [cite: 217]
-
-                        conn.update(data=updated_main[MASTER_COLUMNS]) [cite: 218]
-                        
-                        st.success(f"Welcome to the league, {n}!") [cite: 218]
-                        st.cache_data.clear() [cite: 219]
-                        time.sleep(1.5)
-                        st.session_state["reg_access"] = False 
-                        st.rerun() [cite: 219, 220]
-
-
-                        
-                        updated_main = pd.concat([df_main, new_reg], ignore_index=True)
-                        conn = get_gsheets_conn()
-                        conn.update(data=updated_main[MASTER_COLUMNS])
+                        # 2. UPDATE DATABASE
+                        # Use the existing df_main and global conn object
+                        updated_main = pd.concat([df_main, new_reg], ignore_index=True) [cite: 100]
+                        conn.update(data=updated_main[MASTER_COLUMNS]) [cite: 101]
 
                         # 3. FINALIZE
-                        st.success(f"Welcome to the league, {n}!")
-                        st.cache_data.clear()
+                        st.success(f"Welcome to the league, {n}!") [cite: 101]
+                        st.cache_data.clear() [cite: 102]
                         time.sleep(1.5)
                         st.session_state["reg_access"] = False # Relock for next use
-                        st.rerun()
+                        st.rerun() [cite: 102, 103]
                         
                     except Exception as e:
-                        st.error(f"Registration Error: {e}")
+                        st.error(f"Registration Error: {e}") [cite: 103]
                 else:
-                    st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
+                    st.warning("Please ensure name is filled and PIN is exactly 4 digits.") [cite: 104]
+
 
 
 with tabs[5]: # Admin
