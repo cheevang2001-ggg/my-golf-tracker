@@ -814,7 +814,7 @@ with tabs[4]: # League Info
         st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
     
 
-    elif info_category == "Members":
+elif info_category == "Members":
         st.subheader("GGG League Members")
         st.write("Welcome back, GGGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
 
