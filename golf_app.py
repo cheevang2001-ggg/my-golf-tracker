@@ -206,7 +206,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 Challenges", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -372,79 +372,7 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-# --- New streamlined GGG Challenge tab (replace the existing with tabs[3] block) ---
-with tabs[3]:  # GGG Challenge
-    st.header("🏁 GGG Challenge")
-    st.write("Seasonal challenges and reward opportunities for GGGolf members.")
-    st.divider()
-
-    st.info(
-        "Challenges will be announced here during the season. "
-        "Each challenge includes a short description, cost (if any), eligibility rules, and how to participate."
-    )
-
-    col_main, col_side = st.columns([3, 1])
-
-    # Main column: Current Challenge card
-    with col_main:
-        st.subheader("Current Challenge")
-        # Example challenge card — update text as needed when a challenge is active
-        st.markdown("#### Season Ball Challenge")
-        st.markdown("**Entry:** $20 for a GGG sleeve of balls")
-        st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
-        st.divider()
-
-        st.markdown("**How it works**")
-        st.markdown(
-            "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
-            "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
-            "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
-        )
-
-        st.divider()
-        st.markdown("**Eligibility and Rebuy Options**")
-        # Compact eligibility table for quick scanning
-        import pandas as _pd
-        elig = _pd.DataFrame([
-            {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
-            {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
-            {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
-            {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
-        ])
-        st.table(elig)
-
-        st.divider()
-        # CTA (disabled placeholder until admin enables)
-        st.write("**Participation**")
-        st.button("Join Season Ball Challenge", disabled=True)
-        st.caption("Admin will enable signups and payment links when the challenge is active.")
-
-        with st.expander("Full Rules and Examples", expanded=False):
-            st.markdown(
-                "**Key Rules**\n\n"
-                "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
-                "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
-                "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
-                "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
-                "**Examples**\n\n"
-                "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
-            )
-
-    # Side column: quick admin actions and notes
-    with col_side:
-        st.subheader("Quick Actions")
-        st.write("Admin controls will appear here when implemented.")
-        st.button("Request Challenge Edit Access", disabled=True)
-        st.divider()
-        st.markdown("**Notes for Players**")
-        st.markdown(
-            "- Keep your sleeve balls separate so returned balls can be verified.\n"
-            "- Questions about eligibility should be directed to the Rules and Players Committee."
-        )
-
-
-with tabs[4]: # League Info
+with tabs[3]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
@@ -750,141 +678,110 @@ with tabs[4]: # League Info
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
-    # Initialize session state
-    if "expenses_table" not in st.session_state:
-        st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
-    if "expenses_edit_unlocked" not in st.session_state:
-        st.session_state["expenses_edit_unlocked"] = False
+        # Use existing in-memory expenses table in session_state (persists per app session)
+        if "expenses_table" not in st.session_state:
+            st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
 
-    # Read-only view
-    st.markdown("**Current Prize / Expense List (read-only)**")
-    if not st.session_state["expenses_table"]:
-        st.info("No prize expenses recorded yet.")
-    else:
-        expenses_df = pd.DataFrame(st.session_state["expenses_table"])
-        expenses_df_display = expenses_df.copy()
-        expenses_df_display["Cost"] = expenses_df_display["Cost"].map(lambda x: f"${x:,.2f}")
-        st.dataframe(expenses_df_display.reset_index(drop=True), use_container_width=True, hide_index=True)
-        total_cost = expenses_df["Cost"].sum()
-        st.markdown(f"**Total Estimated Cost:** **${total_cost:,.2f}**")
-
-    st.divider()
-
-    # Edit controls
-    st.markdown("**Edit Controls (restricted)**")
-    if st.session_state["expenses_edit_unlocked"]:
-        st.success("Editing unlocked. You may add or remove expense items.")
-
-        # Lock editing
-        if st.button("🔒 Lock Editing"):
+        # Track whether editing is unlocked for this session
+        if "expenses_edit_unlocked" not in st.session_state:
             st.session_state["expenses_edit_unlocked"] = False
-            try:
-                st.experimental_rerun()
-            except Exception:
-                st.warning("Editing locked. Please refresh the page if the UI does not update automatically.")
 
-        # Add new expense entry
-        with st.expander("Add a Prize / Expense", expanded=True):
-            with st.form("add_expense_form", clear_on_submit=True):
-                prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy, Gift Cards")
-                prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                add_sub = st.form_submit_button("Add Expense")
-                if add_sub:
-                    if not prize_desc:
-                        st.warning("Please enter a prize description.")
-                    else:
-                        st.session_state["expenses_table"].append({"Prize": prize_desc.strip(), "Cost": float(prize_cost)})
-                        st.success(f"Added: {prize_desc} — ${prize_cost:,.2f}")
-                        try:
-                            st.cache_data.clear()
-                        except Exception:
-                            pass
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.info("Added. Please refresh the page if the UI does not update automatically.")
+        # --- Read-only view for all members ---
+        st.markdown("**Current Prize / Expense List (read-only)**")
+        if not st.session_state["expenses_table"]:
+            st.info("No prize expenses recorded yet.")
+        else:
+            expenses_df = pd.DataFrame(st.session_state["expenses_table"])
+            expenses_df_display = expenses_df.copy()
+            expenses_df_display["Cost"] = expenses_df_display["Cost"].map(lambda x: f"${x:,.2f}")
+            st.dataframe(expenses_df_display.reset_index(drop=True), use_container_width=True, hide_index=True)
+            total_cost = expenses_df["Cost"].sum()
+            st.markdown(f"**Total Estimated Cost:** **${total_cost:,.2f}**")
 
         st.divider()
 
-        # Manage / remove items
-        if st.session_state["expenses_table"]:
-            with st.expander("Manage Expenses (Remove an item)", expanded=False):
-                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
-                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
+        # --- Editing requires unlock code ---
+        st.markdown("**Edit Controls (restricted)**")
+        if st.session_state["expenses_edit_unlocked"]:
+            st.success("Editing unlocked. You may add or remove expense items.")
+            # Option to lock again
+            if st.button("🔒 Lock Editing", use_container_width=True, type="secondary"):
+                st.session_state["expenses_edit_unlocked"] = False
+                st.experimental_rerun()
 
-                # Use a form to confirm removal
-                with st.form("remove_expense_form"):
-                    st.write("Selected item to remove:")
-                    st.write(to_remove if to_remove != "None" else "No item selected")
-                    confirm_remove = st.form_submit_button("Remove Selected Item")
-                if confirm_remove:
-                    if to_remove == "None":
-                        st.warning("No item selected. Please choose an expense to remove.")
-                    else:
-                        idx = remove_options.index(to_remove)
-                        removed = st.session_state["expenses_table"].pop(idx)
-                        st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
-                        try:
-                            st.cache_data.clear()
-                        except Exception:
-                            pass
-                        try:
+            # Add new expense entry (visible only when unlocked)
+            with st.expander("Add a Prize / Expense", expanded=True):
+                with st.form("add_expense_form", clear_on_submit=True):
+                    prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy, Gift Cards")
+                    prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
+                    add_sub = st.form_submit_button("Add Expense", use_container_width=True, type="primary")
+
+                    if add_sub:
+                        if not prize_desc:
+                            st.warning("Please enter a prize description.")
+                        else:
+                            st.session_state["expenses_table"].append({"Prize": prize_desc.strip(), "Cost": float(prize_cost)})
+                            st.success(f"Added: {prize_desc} — ${prize_cost:,.2f}")
                             st.experimental_rerun()
-                        except Exception:
-                            st.info("Removal complete. Please refresh the page if the UI does not update automatically.")
-    else:
-        # Unlock form
-        with st.expander("Request Edit Access (requires code)", expanded=False):
-            with st.form("unlock_expenses_form"):
-                unlock_code = st.text_input("Enter Edit Code", type="password", placeholder="Enter admin code to unlock editing")
-                submit_unlock = st.form_submit_button("Unlock Editing")
-                if submit_unlock:
-                    if unlock_code and unlock_code == ADMIN_PASSWORD:
-                        st.session_state["expenses_edit_unlocked"] = True
-                        st.success("Edit access granted.")
-                        time.sleep(0.5)
-                        try:
+
+            st.divider()
+
+            # Manage / remove items (visible only when unlocked)
+            if st.session_state["expenses_table"]:
+                with st.expander("Manage Expenses (Remove an item)", expanded=False):
+                    remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
+                    to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
+                    if to_remove != "None":
+                        if st.button("Remove Selected Item", use_container_width=True, type="danger"):
+                            idx = remove_options.index(to_remove)
+                            removed = st.session_state["expenses_table"].pop(idx)
+                            st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
                             st.experimental_rerun()
-                        except Exception:
-                            st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
-                    else:
-                        st.error("❌ Incorrect code. Editing remains locked.")
+        else:
+            # Show unlock form (collapsed) for users who need to edit
+            with st.expander("Request Edit Access (requires code)", expanded=False):
+                with st.form("unlock_expenses_form"):
+                    # Reuse ADMIN_PASSWORD for unlock or change to a dedicated code variable if desired
+                    unlock_code = st.text_input("Enter Edit Code", type="password", placeholder="Enter admin code to unlock editing")
+                    submit_unlock = st.form_submit_button("Unlock Editing", use_container_width=True, type="primary")
+                    if submit_unlock:
+                        if unlock_code and unlock_code == ADMIN_PASSWORD:
+                            st.session_state["expenses_edit_unlocked"] = True
+                            st.success("Edit access granted.")
+                            time.sleep(0.5)
+                            st.experimental_rerun()
+                        else:
+                            st.error("❌ Incorrect code. Editing remains locked.")
 
-        st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
+            st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
 
-elif info_category == "Members":
-    st.subheader("GGG League Members")
-    st.write("Welcome back, GGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
+        
 
-    # Build members list from df_main: registration rows are Week == 0
-    if 'df_main' not in globals() or df_main is None or df_main.empty:
-        st.info("No registered members yet.")
-    else:
-        members_df = df_main[df_main['Week'] == 0].copy()
-        if members_df.empty:
+    elif info_category == "Members":
+        st.subheader("GGG League Members")
+        st.write("Welcome back, GGGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
+
+        # Build members list from df_main: registration rows are Week == 0
+        if df_main is None or df_main.empty:
             st.info("No registered members yet.")
         else:
-            # Normalize columns for display
-            display_cols = ['Player']
-            if 'Acknowledged' in members_df.columns:
-                # Defensive cast: handle missing/NA values gracefully
-                try:
+            members_df = df_main[df_main['Week'] == 0].copy()
+            if members_df.empty:
+                st.info("No registered members yet.")
+            else:
+                # Normalize columns for display
+                display_cols = ['Player']
+                if 'Acknowledged' in members_df.columns:
                     members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
                     display_cols.append('Acknowledged')
-                except Exception:
-                    # If cast fails, create a safe boolean column
-                    members_df['Acknowledged'] = members_df.get('Acknowledged', pd.Series([False]*len(members_df)))
-                    display_cols.append('Acknowledged')
-
-            # Keep only the display columns, dedupe and sort
-            members_df = members_df.loc[:, display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
-
-            st.markdown(f"**Total Members:** {len(members_df)}")
-            st.dataframe(members_df, use_container_width=True, hide_index=True)
+                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
+                
+                st.markdown(f"**Total Members:** {len(members_df)}")
+                st.dataframe(members_df, use_container_width=True, hide_index=True)
 
 
-with tabs[5]: # Registration
+with tabs[4]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -952,7 +849,7 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     # --- STEP 1: Secure LOGIN Form ---
