@@ -746,14 +746,14 @@ with tabs[4]: # League Info
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
         st.image("rockstarBag1.jpg", width=120)
 
-elif info_category == "Expenses":
-    st.subheader("💵 League Expenses")
-    st.write("Breakdown of league fees and administrative costs.")
+    elif info_category == "Expenses":
+        st.subheader("💵 League Expenses")
+        st.write("Breakdown of league fees and administrative costs.")
 
     # Initialize session state
-    if "expenses_table" not in st.session_state:
+            if "expenses_table" not in st.session_state:
         st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
-    if "expenses_edit_unlocked" not in st.session_state:
+            if "expenses_edit_unlocked" not in st.session_state:
         st.session_state["expenses_edit_unlocked"] = False
 
     # Read-only view
