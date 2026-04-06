@@ -446,311 +446,53 @@ with tabs[3]:  # GGG Challenge
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
+    # --- Info / Category selector and content blocks (replace existing section) ---
+info_category = st.radio(
+    "Select a Category:",
+    ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"],
+    horizontal=True,
+)
+
+st.divider()
+
+# --- About Us ---
+if info_category == "About Us":
+    st.subheader("GGGolf Summer League 2026")
+    st.write(
+        "Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels."
+    )
     st.divider()
+    st.subheader("League Officers")
+    st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
 
-    if info_category == "About Us":
-        st.subheader("GGGolf Summer League 2026")
-        st.write("Formed in 2022, GGGOLF league promotes camaraderie through friendly golf competition and welcomes all skill levels. Members gain experience to prepare for community tournaments and events, while maintaining high standards of integrity in the game.")
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("League Officers")
-            st.markdown("* **President**: Txoovnom Vang\n* **Vice President**: Cory Vue\n* **Finance**: Mike Yang")
-            st.markdown("""
-            **Executive Team:** The Officers hold primary responsibility for the league’s operational backbone. 
-            Their focus is on **growth, financial oversight, and external promotion.** They ensure the league’s sustainability by managing the essential logistics that allow GGGolf to function as a professional-grade organization.
-            """)
-        with col2:
-            st.subheader("Committees")
-            st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lee, Deng Kue\n")
-            st.markdown("""
-            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
-            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
-            """)
-        
-        st.divider()
-        with st.expander("GGGolf Organizational Protocol", expanded=False):
-            st.markdown("""
-            To ensure the effective administration of GGGolf, we operate under a dual-branch governance model:
-            
-            1. **Administrative Authority:** All final decisions regarding league expansion, financial allocations, and external partnerships reside with the **League Officers**.
-            2. **Consultative Feedback:** Players seeking to implement change or address concerns must follow the established chain of command by bringing matters to the **Players Committee**. The Committee evaluates these proposals before presenting them to the Officers for executive review.
-            
-            This professional hierarchy is established to protect the integrity of the league and ensure that the voice of the player is represented within a disciplined administrative framework.
-            """)
-        st.divider()
-        st.subheader("Code of Conduct")
-        st.markdown("""
-        * Practice common golfing etiquette and rules.
-        * Integrity: Respect yourself, fellow league members, and others outside the league on the golf course.
-        * Arrive promptly and timely.
-        * Communicate clearly about schedules and issues.
-        * Comply with all policies and guidelines.
-        * Follow the structural chain
-        """)
+# --- Handicaps ---
+elif info_category == "Handicaps":
+    st.subheader("Establishing Your Handicap")
+    st.info(
+        "Pre-season rounds establish Week 1 handicap. If fewer than 3 pre-season rounds, Week 1 handicap defaults to 0.0."
+    )
 
-    elif info_category == "Handicaps":
-        st.subheader("Establishing Your Handicap")
-        st.info("""
-        **Pre-Season Requirement:**
-        To have an accurate handicap for Week 1, players are encouraged to log 3 Pre-Season rounds. Play with one or more 2026 GGG member and play from the Tee Box you feel is fair per your skill level.
-        You may play at any course on the 2026 GGG Schedule, once you've logged a pre-season round it will be locked in for calculation for Week 1.
-        
-        * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
-        * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
-        """)
+# --- Rules (placeholder) ---
+elif info_category == "Rules":
+    st.subheader("League Rules")
+    st.write("Rules and policies will be posted here.")
 
-        st.divider()
-        st.subheader("Handicap Calculation Transparency")
-        st.write(
-            "Rolling average of the best 3 of the last 4 rounds to a par 36. "
-            "Use the tool below to inspect how a player's handicap is derived. "
-            "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
-        )
+# --- Schedule (placeholder) ---
+elif info_category == "Schedule":
+    st.subheader("Season Schedule")
+    st.write("Schedule will be posted here.")
 
-        # Defensive: ensure df_main exists
-        if 'df_main' not in globals() or df_main is None or df_main.empty:
-            st.warning("No player data available to show handicap breakdown.")
-        else:
-            # Build player list from registration rows (Week == 0) or all players if registration rows missing
-            try:
-                reg_players = df_main[df_main['Week'] == 0]['Player'].dropna().unique().tolist()
-                all_players = sorted(df_main['Player'].dropna().unique().tolist())
-                player_options = reg_players if reg_players else all_players
-            except Exception:
-                player_options = sorted(df_main['Player'].dropna().unique().tolist())
+# --- Prizes (placeholder) ---
+elif info_category == "Prizes":
+    st.subheader("Prizes")
+    st.write("Prize structure and details will be posted here.")
 
-            if not player_options:
-                st.info("No registered players found.")
-            else:
-                sel_player = st.selectbox("Select Player to Inspect", player_options, key="handicap_transparency_player")
-                sel_week = st.selectbox("Target Week (handicap to apply for)", list(range(1, 15)), index=0, key="handicap_transparency_week")
+# --- Expenses (full block) ---
+elif info_category == "Expenses":
+    st.subheader("💵 League Expenses")
+    st.write("Breakdown of league fees and administrative costs.")
 
-                # Fetch player rows
-                p_df = df_main[df_main['Player'] == sel_player].copy()
-                if p_df.empty:
-                    st.warning("No recorded rounds for this player.")
-                else:
-                    # Pre-season rounds (Week <= 0)
-                    pre_season = p_df[(p_df['Week'] <= 0) & (p_df['DNF'] == False) & (p_df['Total_Score'] > 0)].sort_values('Week', ascending=False)
-                    # Regular eligible rounds: Week > 0, exclude event weeks, DNF False, and Week < target_week
-                    excluded_weeks = [0, 4, 8]
-                    regular_rounds = p_df[
-                        (p_df['Week'] > 0) &
-                        (~p_df['Week'].isin(excluded_weeks)) &
-                        (p_df['DNF'] == False) &
-                        (p_df['Week'] < sel_week)
-                    ].sort_values('Week', ascending=False)
-
-                    with st.expander("View Rounds Used In Calculation", expanded=True):
-                        st.markdown("**Pre-Season Rounds (Week <= 0)**")
-                        if pre_season.empty:
-                            st.write("No pre-season rounds recorded.")
-                        else:
-                            st.dataframe(pre_season[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
-
-                        st.markdown("**Eligible Regular Rounds (excluding Weeks 0, 4, 8)**")
-                        if regular_rounds.empty:
-                            st.write("No eligible regular rounds recorded prior to the selected target week.")
-                        else:
-                            st.dataframe(regular_rounds[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
-
-                    # Compute the handicap breakdown using the same logic as calculate_rolling_handicap
-                    try:
-                        if sel_week == 1:
-                            # Week 1 uses pre-season logic
-                            if not pre_season.empty:
-                                scores = pre_season.head(3)['Total_Score'].tolist()
-                                used_scores = scores[:3]
-                                avg_score = sum(used_scores) / len(used_scores)
-                                hcp_val = round(avg_score - 36, 1)
-                                method = f"Week 1: average of up to 3 most recent pre-season rounds ({len(used_scores)} used)"
-                            else:
-                                used_scores = []
-                                avg_score = None
-                                hcp_val = 0.0
-                                method = "Week 1: no pre-season rounds found → default 0.0"
-                        else:
-                            # Regular season: best 3 of last 4 eligible rounds
-                            last_scores = regular_rounds.head(4)['Total_Score'].tolist()
-                            if not last_scores:
-                                # fallback to pre-season
-                                if not pre_season.empty:
-                                    scores = pre_season.head(3)['Total_Score'].tolist()
-                                    used_scores = scores[:3]
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "No eligible regular rounds → fallback to pre-season average"
-                                else:
-                                    used_scores = []
-                                    avg_score = None
-                                    hcp_val = 0.0
-                                    method = "No eligible rounds → default 0.0"
-                            else:
-                                if len(last_scores) >= 4:
-                                    sorted_scores = sorted(last_scores)
-                                    used_scores = sorted_scores[:3]  # best 3 of last 4
-                                    avg_score = sum(used_scores) / 3
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "Best 3 of last 4 eligible rounds"
-                                else:
-                                    used_scores = last_scores[:]  # average of whatever is available
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = f"Average of {len(used_scores)} eligible round(s) (fewer than 4 available)"
-
-                        # Display the numeric breakdown
-                        st.divider()
-                        st.markdown("### Handicap Breakdown Result")
-                        st.write(f"**Player:** {sel_player}")
-                        st.write(f"**Target Week:** {sel_week}")
-                        st.write(f"**Method:** {method}")
-                        if avg_score is not None:
-                            st.write(f"**Used Scores:** {used_scores}")
-                            st.write(f"**Average Gross (used):** {avg_score:.2f}")
-                            st.write(f"**Calculated Handicap:** **{hcp_val}** (computed as average gross − 36)")
-                        else:
-                            st.write("No scores available to compute an average. Handicap set to **0.0** by default.")
-
-                        # Show a small table marking which rounds were used
-                        with st.expander("Detailed Rounds Table (marking used rounds)"):
-                            # Build a combined table of all relevant rounds for context
-                            combined = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
-                            if combined.empty:
-                                st.write("No rounds to display.")
-                            else:
-                                combined_display = combined[['Week', 'Total_Score', 'DNF']].reset_index(drop=True).copy()
-                                # Mark used rows
-                                def mark_used(row):
-                                    try:
-                                        return row['Total_Score'] in used_scores
-                                    except Exception:
-                                        return False
-                                combined_display['UsedInCalc'] = combined_display.apply(mark_used, axis=1)
-                                st.dataframe(combined_display, use_container_width=True, hide_index=True)
-
-                        # Provide a short explanation and link back to rules
-                        st.markdown(
-                            "If you believe a round was incorrectly included or excluded, please contact the Rules and Players Committee. "
-                            "Rounds from special event weeks (e.g., scrambles or team events) are excluded from handicap calculations by league policy."
-                        )
-                    except Exception as e:
-                        st.error(f"Error computing handicap breakdown: {e}")
-
-    elif info_category == "Rules":
-        st.subheader("League Rules and Format")
-        st.markdown("""
-    
-        **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
-        * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
-        * The Net score will be automatically applied using the handicap.\n
-        * GGG Points will be automatically applied.\n
-        * Any mis-aligned score please consult your Rules/Players Committee.\n\n
-        
-        **Tee Box:** All players will play from tee box as stated below.\n  
-        ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***\n
-        Brown Deer: **Blue - 6306 yd**
-        Dretzka: **Blue - 6538 yd**
-        Oakwood: **Blue - 6737 yd**
-        Whitnall: **Blue - 6308 yd**
-        Currie: **Black - 6444 yd**
-        
-        * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
-        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
-        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
-        
-        **Gimmies/Putting:**\n 
-        Promote competition of fair play, Putt out\n
-        ***Unless one of the below scenario***\n
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-        
-        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
-        * 2 Minutes ball search.\n
-        * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.\n
-        * Help your playing partners spot and search for their ball.\n
-        * Search smartly: If one of the group's playing partner is helping another player search for their ball, You NEED to move on and play your ball. The entire group **DOES NOT** need to search for one players ball.\n
-        * Play ready golf.
-        * Move off the greens and record score at the next tee box.
-        * Use common sense to keep play moving.
-        * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n\n
-        
-        **DNFs:** If you cannot finish, mark 'DNF'.
-        """)
-        
-        # This replaces the old Live Round warning with a relevant Rules Note
-        st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
-
-
-    elif info_category == "Schedule":
-        st.subheader("📅 2026 Season Schedule")
-        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
-        league_start = pd.to_datetime("2026-05-31")
-        
-        schedule_data = []
-        for i in range(1, 14):
-            current_date = league_start + pd.Timedelta(weeks=i-1)
-            course_name = courses[i-1] 
-            if i == 4: note = "GGG Event- 2 Man Team Greensome (18 holes)"
-            elif i == 8: note = "GGG Event- 4 Man Team Scramble (18 holes)"
-            elif i == 12: note = "GGG Event- Double Points (18 holes)"
-            else: note = "Regular Round"
-            schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
-        
-        schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
-
-        for entry in schedule_data:
-            is_event = "GGG Event" in entry['Note']
-            header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
-            with st.expander(header):
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.write(f"**Date:** {entry['Date']}")
-                    st.write(f"**Format:** {entry['Note']}")
-                with col2:
-                    if "2 Man Team Greensome" in entry['Note']:
-                        st.info("""
-                        **2-Man Greensomes Rules:**
-                        * Both players tee off and select the desire Drive to play from.
-                        * The player's whose drive was not choosen, hits the second shot. Alternate through until the hole is complete.
-                        * Team members receives the same GGG points for the week.
-                        * **Handicap:** No handicap applied for this round.
-                        """)
-                    elif "4 Man Team Scramble" in entry['Note']:
-                        st.info("""
-                        **4-Man Team Battle Scramble:**
-                        * All players tee off and selects the desired drive.
-                        * All players continue play from best desired shot until hole is complete.
-                        * Team members receives the same GGG points for the week.
-                        * **Handicap:** No handicap applied for this round.
-                        """)
-                    elif "Double Points" in entry['Note']:
-                        st.success("""
-                        **Double Points Event:**
-                        * Regular individual stroke play with your current GGG handicap.
-                        * Front 9 points + Back 9 Point
-                        * **Example 1:** You win the front But you end up last place in back. Your front GGG point is 100 points front and your back GGG points is 1 point. Total 101 points
-                        * **Example 2:** You come in Third in the front and in the back you came in Second. Front GGG points for Third is 64 points and for Second points is 77 points. You get total 141
-                        * **Example 3:** You win front and back. You get 100 for front and 100 for back, total 200 points
-                        * **Example 4:** You are last front and back. You get 1 for front and 1 for back, total 2 points                        
-                        """)
-                    elif "Finale" in entry['Note']:
-                        st.warning("Season finale and trophy presentation. Details to be announced.")
-                    else:
-                        st.write("Standard league play rules and rolling handicaps apply.")
-
-    elif info_category == "Prizes":
-        st.subheader("🏆 Prize Pool")
-        st.write("Prizes are based on GGG Point standings at the end of Week 13.")
-        st.image("rockstarBag1.jpg", width=120)
-
-    elif info_category == "Expenses":
-        st.subheader("💵 League Expenses")
-        st.write("Breakdown of league fees and administrative costs.")
-
-    # Initialize session state
+    # Initialize session state safely
     if "expenses_table" not in st.session_state:
         st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
     if "expenses_edit_unlocked" not in st.session_state:
@@ -770,12 +512,12 @@ with tabs[4]: # League Info
 
     st.divider()
 
-    # Edit controls
+    # Edit controls (restricted)
     st.markdown("**Edit Controls (restricted)**")
     if st.session_state["expenses_edit_unlocked"]:
         st.success("Editing unlocked. You may add or remove expense items.")
 
-        # Lock editing
+        # Lock editing (simple button)
         if st.button("🔒 Lock Editing"):
             st.session_state["expenses_edit_unlocked"] = False
             try:
@@ -809,10 +551,12 @@ with tabs[4]: # League Info
         # Manage / remove items
         if st.session_state["expenses_table"]:
             with st.expander("Manage Expenses (Remove an item)", expanded=False):
-                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
+                remove_options = [
+                    f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])
+                ]
                 to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
 
-                # Use a form to confirm removal
+                # Confirm removal via form
                 with st.form("remove_expense_form"):
                     st.write("Selected item to remove:")
                     st.write(to_remove if to_remove != "None" else "No item selected")
@@ -852,7 +596,7 @@ with tabs[4]: # League Info
 
         st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
-
+# --- Members (full block) ---
 elif info_category == "Members":
     st.subheader("GGG League Members")
     st.write("Welcome back, GGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
@@ -868,18 +612,14 @@ elif info_category == "Members":
             # Normalize columns for display
             display_cols = ['Player']
             if 'Acknowledged' in members_df.columns:
-                # Defensive cast: handle missing/NA values gracefully
                 try:
                     members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
                     display_cols.append('Acknowledged')
                 except Exception:
-                    # If cast fails, create a safe boolean column
-                    members_df['Acknowledged'] = members_df.get('Acknowledged', pd.Series([False]*len(members_df)))
+                    members_df['Acknowledged'] = members_df.get('Acknowledged', pd.Series([False] * len(members_df)))
                     display_cols.append('Acknowledged')
 
-            # Keep only the display columns, dedupe and sort
             members_df = members_df.loc[:, display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
-
             st.markdown(f"**Total Members:** {len(members_df)}")
             st.dataframe(members_df, use_container_width=True, hide_index=True)
 
