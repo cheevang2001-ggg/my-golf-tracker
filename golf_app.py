@@ -746,14 +746,14 @@ with tabs[4]: # League Info
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
         st.image("rockstarBag1.jpg", width=120)
 
-    elif info_category == "Expenses":
-        st.subheader("💵 League Expenses")
-        st.write("Breakdown of league fees and administrative costs.")
+elif info_category == "Expenses":
+    st.subheader("💵 League Expenses")
+    st.write("Breakdown of league fees and administrative costs.")
 
     # Initialize session state
-            if "expenses_table" not in st.session_state:
+    if "expenses_table" not in st.session_state:
         st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
-            if "expenses_edit_unlocked" not in st.session_state:
+    if "expenses_edit_unlocked" not in st.session_state:
         st.session_state["expenses_edit_unlocked"] = False
 
     # Read-only view
@@ -775,7 +775,7 @@ with tabs[4]: # League Info
     if st.session_state["expenses_edit_unlocked"]:
         st.success("Editing unlocked. You may add or remove expense items.")
 
-        # Lock editing (plain button without unsupported kwargs)
+        # Lock editing
         if st.button("🔒 Lock Editing"):
             st.session_state["expenses_edit_unlocked"] = False
             try:
@@ -852,59 +852,6 @@ with tabs[4]: # League Info
 
         st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
-
-        st.divider()
-
-        # Manage / remove items
-        if st.session_state["expenses_table"]:
-            with st.expander("Manage Expenses (Remove an item)", expanded=False):
-                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
-                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
-
-                # Use a form to confirm removal and avoid unsupported button kwargs
-                with st.form("remove_expense_form"):
-                    st.write("Selected item to remove:")
-                    st.write(to_remove if to_remove != "None" else "No item selected")
-                    confirm_remove = st.form_submit_button("Remove Selected Item")
-                if confirm_remove:
-                    if to_remove == "None":
-                        st.warning("No item selected. Please choose an expense to remove.")
-                    else:
-                        idx = remove_options.index(to_remove)
-                        removed = st.session_state["expenses_table"].pop(idx)
-                        st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
-                        # Optional: append removed row to an audit log here
-                        try:
-                            st.cache_data.clear()
-                        except Exception:
-                            pass
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.info("Removal complete. Please refresh the page if the UI does not update automatically.")
-    else:
-        # Unlock form
-        with st.expander("Request Edit Access (requires code)", expanded=False):
-            with st.form("unlock_expenses_form"):
-                unlock_code = st.text_input("Enter Edit Code", type="password", placeholder="Enter admin code to unlock editing")
-                submit_unlock = st.form_submit_button("Unlock Editing")
-                if submit_unlock:
-                    if unlock_code and unlock_code == ADMIN_PASSWORD:
-                        st.session_state["expenses_edit_unlocked"] = True
-                        st.success("Edit access granted.")
-                        time.sleep(0.5)
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
-                    else:
-                        st.error("❌ Incorrect code. Editing remains locked.")
-
-        st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
-
-
-
-        
 
     elif info_category == "Members":
         st.subheader("GGG League Members")
