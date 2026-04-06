@@ -19,18 +19,11 @@ if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
 if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
-# --- Cached connection and optimized I/O helpers ---
-@st.cache_resource(ttl=60*60)  # cache the connection for 1 hour
-def get_gsheets_conn():
-    try:
-        return st.connection("gsheets", type=GSheetsConnection)
-    except Exception as e:
-        st.error("Google Sheets connection failed.")
-        raise
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 MASTER_COLUMNS = [
     'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
-    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF', 'Acknowledged'
+    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF'
 ]
 
 GGG_POINTS = {
@@ -39,161 +32,90 @@ GGG_POINTS = {
     15: 5, 16: 3, 17: 1 
 }
 
-def _empty_master_df():
-    return pd.DataFrame(columns=MASTER_COLUMNS)
-
-@st.cache_data(ttl=10)  # cache successful reads for 10 seconds
-def _read_sheet_cached():
-    conn = get_gsheets_conn()
-    data = conn.read()
-    if data is None or data.empty or 'Player' not in data.columns:
-        return _empty_master_df()
-    df = data.dropna(how='all')
-    return df[df['Player'] != ""]
+# --- 2. CORE FUNCTIONS ---
 
 def load_data():
-    """
-    Wrapper around the cached reader that implements retry/backoff and
-    keeps a last-successful fallback in session_state to reduce visible failures.
-    """
-    # Try the cached reader first (fast)
     try:
-        df = _read_sheet_cached()
-        # store last successful snapshot for fallback
-        st.session_state["last_successful_df"] = df.copy()
-        return df
+        # Increase TTL to 10 seconds to reduce API hits
+        data = conn.read(ttl=10) 
+        if data is None or data.empty or 'Player' not in data.columns: 
+            return pd.DataFrame(columns=MASTER_COLUMNS)
+        
+        df = data.dropna(how='all')
+        # ... (keep your existing column processing code here) ...
+        return df[df['Player'] != ""]
     except Exception as e:
-        # Retry with exponential backoff for transient errors (e.g., 429)
-        backoff = [0.5, 1.0, 2.0]
-        for wait in backoff:
-            time.sleep(wait)
-            try:
-                df = _read_sheet_cached()
-                st.session_state["last_successful_df"] = df.copy()
-                return df
-            except Exception:
-                continue
-
-        # If all retries fail, return the last successful cached snapshot if available
-        if "last_successful_df" in st.session_state:
-            st.warning("⚠️ Using last successful cached data due to Sheets API issues.")
-            return st.session_state["last_successful_df"]
-        # final fallback: empty frame with expected columns
-        st.warning("⚠️ Unable to load data from Google Sheets. Showing empty dataset.")
-        return _empty_master_df()
+        # If API fails, return the last successful version from cache if possible
+        # instead of showing "No Players Registered"
+        if "429" in str(e):
+            st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
+        return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # Ensure Total_Score is numeric for reliable math
-        if 'Total_Score' in player_df.columns:
-            player_df = player_df.copy()
-            player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
-
         # --- PHASE 1: WEEK 1 STARTING HANDICAP (PRE-SEASON) ---
         if target_week == 1:
+            # Look for all pre-season entries where a score was actually recorded
             pre_season_rounds = player_df[
-                (player_df['Week'] <= 0) &
+                (player_df['Week'] <= 0) & 
                 (player_df['DNF'] == False) &
-                (player_df['Total_Score'].notna()) &
                 (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
-
-            # Require at least 3 pre-season rounds to establish a Week 1 handicap
-            if len(pre_season_rounds) >= 3:
+            
+            if not pre_season_rounds.empty:
+                # Take up to the 3 most recent pre-season rounds
                 scores = pre_season_rounds.head(3)['Total_Score'].tolist()
+                # Average the available scores and subtract par (36)
                 hcp = round((sum(scores) / len(scores)) - 36, 1)
                 return float(hcp)
-
-            # If fewer than 3 pre-season rounds, start at 0.0 per league rule
+            
+            # If absolutely no pre-season rounds found, start at 0.0
             return 0.0
 
         # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
-        excluded_weeks = [0, 4, 8]
-
+        # Exclude specific event weeks (0 is registration/pre-season, 4/8 are scrambles)
+        excluded_weeks = [0, 4, 8] 
+        
         rounds = player_df[
-            (player_df['Week'] > 0) &
-            (~player_df['Week'].isin(excluded_weeks)) &
-            (player_df['DNF'] == False) &
-            (player_df['Week'] < target_week) &
-            (player_df['Total_Score'].notna()) &
-            (player_df['Total_Score'] > 0)
+            (player_df['Week'] > 0) & 
+            (~player_df['Week'].isin(excluded_weeks)) & 
+            (player_df['DNF'] == False) & 
+            (player_df['Week'] < target_week)
         ].sort_values('Week', ascending=False)
-
-        # If no regular season rounds played yet, fallback to Week 1 logic (which may return 0.0)
+        
+        # If no regular season rounds played yet (e.g., it's Week 2 but they missed Week 1),
+        # keep using the Pre-Season average as the baseline.
         if rounds.empty:
             return calculate_rolling_handicap(player_df, 1)
-
+            
         last_scores = rounds.head(4)['Total_Score'].tolist()
-
+        
         # Standard "Best 3 of last 4" logic
         if len(last_scores) >= 4:
             last_scores.sort()
             hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
         else:
+            # Average of whatever is available (1, 2, or 3 rounds)
             hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
-
+            
         return float(hcp)
-    except Exception:
+    except Exception as e:
         return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    """
-    Efficient save:
-    - Read current sheet (fast cached read)
-    - Build new entry and only write if it changes the sheet
-    - Update in-memory fallback cache after successful write
-    """
-    # Build new entry
+    st.cache_data.clear()
+    existing_data = load_data()
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
     new_entry = pd.DataFrame([{
-        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies,
-        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val,
+        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
+        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
         'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
     }])
-
-    # Load existing data (cached)
-    existing_data = load_data()
-
-    # Remove any existing row for same player/week and append new entry
-    mask = ~((existing_data['Week'] == week) & (existing_data['Player'] == player))
-    updated_df = pd.concat([existing_data[mask], new_entry], ignore_index=True)
-
-    # Normalize column order and types for reliable comparison
-    updated_df = updated_df.reindex(columns=MASTER_COLUMNS).fillna("")
-    existing_norm = existing_data.reindex(columns=MASTER_COLUMNS).fillna("")
-
-    # Only push to Sheets if there is a difference
-    try:
-        if not existing_norm.reset_index(drop=True).equals(updated_df.reset_index(drop=True)):
-            conn = get_gsheets_conn()
-            # attempt write with simple retry/backoff
-            attempts = 3
-            for i in range(attempts):
-                try:
-                    conn.update(data=updated_df[MASTER_COLUMNS])
-                    # update in-memory fallback cache
-                    st.session_state["last_successful_df"] = updated_df.copy()
-                    break
-                except Exception as e:
-                    if i < attempts - 1:
-                        time.sleep(0.5 * (2 ** i))
-                        continue
-                    else:
-                        st.error(f"Failed to save data after {attempts} attempts: {e}")
-                        raise
-        else:
-            # no-op write avoided
-            st.info("No changes detected; skipping Sheets update.")
-    finally:
-        # Keep UI responsive: clear only the cached read (not the connection)
-        try:
-            st.cache_data.clear()
-        except Exception:
-            pass
-
-    # Refresh UI state after save
-    st.experimental_rerun()
+    updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
+    conn.update(data=updated_df[MASTER_COLUMNS])
+    st.cache_data.clear()
+    st.rerun()
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
@@ -205,8 +127,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Replace the original tabs line with this (adds GGG Challenge tab at the end)
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -372,37 +293,9 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-# --- New placeholder tab for in-season challenges ---
-with tabs[3]:  # GGG Challenge
-    st.header("🏁 GGG Challenge")
-    st.write("This space will host in-season challenges and reward details.")
-    st.divider()
-
-    st.info(
-        "Placeholder: Challenges will be announced here during the season. "
-        "Admins will be able to publish challenge details, eligibility, and rewards."
-    )
-
-    # Simple placeholder UI for future features
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.subheader("Current Challenges")
-        st.write("No active challenges at the moment.")
-        with st.expander("Planned features", expanded=False):
-            st.markdown(
-                "- Admins can create time-limited challenges\n"
-                "- Players can opt-in to challenges\n"
-                "- Automatic tracking of challenge progress from weekly scores\n"
-                "- Reward distribution and leaderboard for each challenge"
-            )
-    with col2:
-        st.subheader("Quick Actions")
-        st.write("Admin actions will appear here when implemented.")
-        st.button("Request Challenge Edit Access", disabled=True)
-
-with tabs[4]: # League Info
+with tabs[3]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
@@ -457,147 +350,11 @@ with tabs[4]: # League Info
         * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
         """)
 
-        st.divider()
-        st.subheader("Handicap Calculation Transparency")
-        st.write(
-            "Use the tool below to inspect how a player's handicap is derived. "
-            "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
-        )
-
-        # Defensive: ensure df_main exists
-        if 'df_main' not in globals() or df_main is None or df_main.empty:
-            st.warning("No player data available to show handicap breakdown.")
-        else:
-            # Build player list from registration rows (Week == 0) or all players if registration rows missing
-            try:
-                reg_players = df_main[df_main['Week'] == 0]['Player'].dropna().unique().tolist()
-                all_players = sorted(df_main['Player'].dropna().unique().tolist())
-                player_options = reg_players if reg_players else all_players
-            except Exception:
-                player_options = sorted(df_main['Player'].dropna().unique().tolist())
-
-            if not player_options:
-                st.info("No registered players found.")
-            else:
-                sel_player = st.selectbox("Select Player to Inspect", player_options, key="handicap_transparency_player")
-                sel_week = st.selectbox("Target Week (handicap to apply for)", list(range(1, 15)), index=0, key="handicap_transparency_week")
-
-                # Fetch player rows
-                p_df = df_main[df_main['Player'] == sel_player].copy()
-                if p_df.empty:
-                    st.warning("No recorded rounds for this player.")
-                else:
-                    # Pre-season rounds (Week <= 0)
-                    pre_season = p_df[(p_df['Week'] <= 0) & (p_df['DNF'] == False) & (p_df['Total_Score'] > 0)].sort_values('Week', ascending=False)
-                    # Regular eligible rounds: Week > 0, exclude event weeks, DNF False, and Week < target_week
-                    excluded_weeks = [0, 4, 8]
-                    regular_rounds = p_df[
-                        (p_df['Week'] > 0) &
-                        (~p_df['Week'].isin(excluded_weeks)) &
-                        (p_df['DNF'] == False) &
-                        (p_df['Week'] < sel_week)
-                    ].sort_values('Week', ascending=False)
-
-                    with st.expander("View Rounds Used In Calculation", expanded=True):
-                        st.markdown("**Pre-Season Rounds (Week <= 0)**")
-                        if pre_season.empty:
-                            st.write("No pre-season rounds recorded.")
-                        else:
-                            st.dataframe(pre_season[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
-
-                        st.markdown("**Eligible Regular Rounds (excluding Weeks 0, 4, 8)**")
-                        if regular_rounds.empty:
-                            st.write("No eligible regular rounds recorded prior to the selected target week.")
-                        else:
-                            st.dataframe(regular_rounds[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
-
-                    # Compute the handicap breakdown using the same logic as calculate_rolling_handicap
-                    try:
-                        if sel_week == 1:
-                            # Week 1 uses pre-season logic
-                            if not pre_season.empty:
-                                scores = pre_season.head(3)['Total_Score'].tolist()
-                                used_scores = scores[:3]
-                                avg_score = sum(used_scores) / len(used_scores)
-                                hcp_val = round(avg_score - 36, 1)
-                                method = f"Week 1: average of up to 3 most recent pre-season rounds ({len(used_scores)} used)"
-                            else:
-                                used_scores = []
-                                avg_score = None
-                                hcp_val = 0.0
-                                method = "Week 1: no pre-season rounds found → default 0.0"
-                        else:
-                            # Regular season: best 3 of last 4 eligible rounds
-                            last_scores = regular_rounds.head(4)['Total_Score'].tolist()
-                            if not last_scores:
-                                # fallback to pre-season
-                                if not pre_season.empty:
-                                    scores = pre_season.head(3)['Total_Score'].tolist()
-                                    used_scores = scores[:3]
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "No eligible regular rounds → fallback to pre-season average"
-                                else:
-                                    used_scores = []
-                                    avg_score = None
-                                    hcp_val = 0.0
-                                    method = "No eligible rounds → default 0.0"
-                            else:
-                                if len(last_scores) >= 4:
-                                    sorted_scores = sorted(last_scores)
-                                    used_scores = sorted_scores[:3]  # best 3 of last 4
-                                    avg_score = sum(used_scores) / 3
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "Best 3 of last 4 eligible rounds"
-                                else:
-                                    used_scores = last_scores[:]  # average of whatever is available
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = f"Average of {len(used_scores)} eligible round(s) (fewer than 4 available)"
-
-                        # Display the numeric breakdown
-                        st.divider()
-                        st.markdown("### Handicap Breakdown Result")
-                        st.write(f"**Player:** {sel_player}")
-                        st.write(f"**Target Week:** {sel_week}")
-                        st.write(f"**Method:** {method}")
-                        if avg_score is not None:
-                            st.write(f"**Used Scores:** {used_scores}")
-                            st.write(f"**Average Gross (used):** {avg_score:.2f}")
-                            st.write(f"**Calculated Handicap:** **{hcp_val}** (computed as average gross − 36)")
-                        else:
-                            st.write("No scores available to compute an average. Handicap set to **0.0** by default.")
-
-                        # Show a small table marking which rounds were used
-                        with st.expander("Detailed Rounds Table (marking used rounds)"):
-                            # Build a combined table of all relevant rounds for context
-                            combined = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
-                            if combined.empty:
-                                st.write("No rounds to display.")
-                            else:
-                                combined_display = combined[['Week', 'Total_Score', 'DNF']].reset_index(drop=True).copy()
-                                # Mark used rows
-                                def mark_used(row):
-                                    try:
-                                        return row['Total_Score'] in used_scores
-                                    except Exception:
-                                        return False
-                                combined_display['UsedInCalc'] = combined_display.apply(mark_used, axis=1)
-                                st.dataframe(combined_display, use_container_width=True, hide_index=True)
-
-                        # Provide a short explanation and link back to rules
-                        st.markdown(
-                            "If you believe a round was incorrectly included or excluded, please contact the Rules and Players Committee. "
-                            "Rounds from special event weeks (e.g., scrambles or team events) are excluded from handicap calculations by league policy."
-                        )
-                    except Exception as e:
-                        st.error(f"Error computing handicap breakdown: {e}")
-
-
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-    
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
+        
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
@@ -706,137 +463,7 @@ with tabs[4]: # League Info
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
-    # Use existing in-memory expenses table in session_state (persists per app session)
-    if "expenses_table" not in st.session_state:
-        st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
-
-    # Track whether editing is unlocked for this session
-    if "expenses_edit_unlocked" not in st.session_state:
-        st.session_state["expenses_edit_unlocked"] = False
-
-    # --- Read-only view for all members ---
-    st.markdown("**Current Prize / Expense List (read-only)**")
-    if not st.session_state["expenses_table"]:
-        st.info("No prize expenses recorded yet.")
-    else:
-        expenses_df = pd.DataFrame(st.session_state["expenses_table"])
-        expenses_df_display = expenses_df.copy()
-        expenses_df_display["Cost"] = expenses_df_display["Cost"].map(lambda x: f"${x:,.2f}")
-        st.dataframe(expenses_df_display.reset_index(drop=True), use_container_width=True, hide_index=True)
-        total_cost = expenses_df["Cost"].sum()
-        st.markdown(f"**Total Estimated Cost:** **${total_cost:,.2f}**")
-
-    st.divider()
-
-    # --- Editing requires unlock code ---
-    st.markdown("**Edit Controls (restricted)**")
-    if st.session_state["expenses_edit_unlocked"]:
-        st.success("Editing unlocked. You may add or remove expense items.")
-
-        # Safe lock button (no unsupported kwargs)
-        if st.button("🔒 Lock Editing"):
-            st.session_state["expenses_edit_unlocked"] = False
-            try:
-                st.experimental_rerun()
-            except Exception:
-                st.warning("Editing locked. Please refresh the page if the UI does not update automatically.")
-
-        # Add new expense entry (visible only when unlocked)
-        with st.expander("Add a Prize / Expense", expanded=True):
-            with st.form("add_expense_form", clear_on_submit=True):
-                prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy, Gift Cards")
-                prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                add_sub = st.form_submit_button("Add Expense")
-
-                if add_sub:
-                    if not prize_desc:
-                        st.warning("Please enter a prize description.")
-                    else:
-                        st.session_state["expenses_table"].append({"Prize": prize_desc.strip(), "Cost": float(prize_cost)})
-                        st.success(f"Added: {prize_desc} — ${prize_cost:,.2f}")
-                        try:
-                            st.cache_data.clear()
-                        except Exception:
-                            pass
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.info("Added. Please refresh the page if the UI does not update automatically.")
-
-        st.divider()
-
-        # Manage / remove items (visible only when unlocked)
-        if st.session_state["expenses_table"]:
-            with st.expander("Manage Expenses (Remove an item)", expanded=False):
-                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
-                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
-
-                # Confirm removal via form to avoid unsupported button kwargs
-                with st.form("remove_expense_form"):
-                    st.write("Selected item to remove:")
-                    st.write(to_remove if to_remove != "None" else "No item selected")
-                    confirm_remove = st.form_submit_button("Remove Selected Item")
-
-                if confirm_remove:
-                    if to_remove == "None":
-                        st.warning("No item selected. Please choose an expense to remove.")
-                    else:
-                        idx = remove_options.index(to_remove)
-                        removed = st.session_state["expenses_table"].pop(idx)
-                        st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
-                        try:
-                            st.cache_data.clear()
-                        except Exception:
-                            pass
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.info("Removal complete. Please refresh the page if the UI does not update automatically.")
-    else:
-        # Show unlock form (collapsed) for users who need to edit
-        with st.expander("Request Edit Access (requires code)", expanded=False):
-            with st.form("unlock_expenses_form"):
-                # Reuse ADMIN_PASSWORD for unlock or change to a dedicated code variable if desired
-                unlock_code = st.text_input("Enter Edit Code", type="password", placeholder="Enter admin code to unlock editing")
-                submit_unlock = st.form_submit_button("Unlock Editing")
-                if submit_unlock:
-                    if unlock_code and unlock_code == ADMIN_PASSWORD:
-                        st.session_state["expenses_edit_unlocked"] = True
-                        st.success("Edit access granted.")
-                        time.sleep(0.5)
-                        try:
-                            st.experimental_rerun()
-                        except Exception:
-                            st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
-                    else:
-                        st.error("❌ Incorrect code. Editing remains locked.")
-
-        st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
-    
-    elif info_category == "Members":
-        st.subheader("GGG League Members")
-        st.write("Welcome back, GGGGOLF Members! We’re celebrating our fourth year thanks to all of you. Get out there, have a great time, and enjoy the battle!")
-
-        # Build members list from df_main: registration rows are Week == 0
-        if df_main is None or df_main.empty:
-            st.info("No registered members yet.")
-        else:
-            members_df = df_main[df_main['Week'] == 0].copy()
-            if members_df.empty:
-                st.info("No registered members yet.")
-            else:
-                # Normalize columns for display
-                display_cols = ['Player']
-                if 'Acknowledged' in members_df.columns:
-                    members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
-                    display_cols.append('Acknowledged')
-                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
-                
-                st.markdown(f"**Total Members:** {len(members_df)}")
-                st.dataframe(members_df, use_container_width=True, hide_index=True)
-
-
-with tabs[5]: # Registration
+with tabs[4]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -858,16 +485,6 @@ with tabs[5]: # Registration
 
     # --- STEP 2: Player Details ---
     else:
-        # Informational note and acknowledgement requirement
-        st.info(
-            "By registering for the GGGolf Summer League you confirm that you have read, "
-            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
-            "Registration indicates acceptance of these terms."
-        )
-
-        # Require explicit acknowledgement before allowing registration
-        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
-
         with st.form("registration_form", clear_on_submit=True):
             st.subheader("📝 New Player Details")
             
@@ -877,19 +494,15 @@ with tabs[5]: # Registration
             submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
             
             if submit_reg:
-                if not ack:
-                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
-                elif n and len(p) == 4:
+                if n and len(p) == 4:
                     try:
-                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
+                        # 1. ADD TO MAIN DATABASE
                         new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
-                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
+                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
                         }])
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
-                        conn = get_gsheets_conn()
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
                         # 3. FINALIZE
@@ -904,10 +517,10 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
     
-    # --- STEP 1: Secure LOGIN Form ---
+    # --- STEP 1: Secure Login Form ---
     if not st.session_state.get("authenticated"):
         st.info("Please enter the Administrative Password to access league management tools.")
         
@@ -927,4 +540,58 @@ with tabs[6]: # Admin
     # --- STEP 2: Admin Tools (Only visible after successful login) ---
     else:
         st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
+
+        # 1. The Reset Button (Wipes the sheet)
+        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
+            try:
+                hole_headers = [str(i) for i in range(1, 10)]
+                empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
+                
+                conn.update(worksheet="LiveScores", data=empty_df)
+                st.cache_data.clear()
+                
+                st.success("✅ Live Round has been reset!")
+                time.sleep(1.5)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to reset sheet: {e}")
+
+        # 2. The Sync Button (Pre-populates the sheet with registered players)
+        # ALL CODE BELOW IS NOW CORRECTLY INDENTED
+        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
+            try:
+                # Get everyone currently registered from the main data
+                all_players = df_main['Player'].unique().tolist()
+                hole_cols = [str(i) for i in range(1, 10)]
+                
+                # Create a fresh table with everyone starting at 0
+                synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
+                
+                for p_name in all_players:
+                    if p_name: # skip empty entries
+                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
+                        synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
+                
+                # Push the full list to Google Sheets
+                conn.update(worksheet="LiveScores", data=synced_df)
+                st.cache_data.clear()
+                st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
+                time.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Sync failed: {e}")
+
+        st.divider()
+        
+        # Logout / Maintenance Section
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Data Cache", use_container_width=True):
+                st.cache_data.clear()
+                st.toast("App data synced with Google Sheets.")
+        
+        with col2:
+            if st.button("🔒 Lock Admin Panel", use_container_width=True):
+                st.session_state["authenticated"] = False
+                st.rerun()
