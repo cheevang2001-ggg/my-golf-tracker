@@ -432,6 +432,7 @@ with tabs[3]: # League Info
         st.divider()
         st.subheader("Handicap Calculation Transparency")
         st.write(
+            "Rolling average of the best 3 of the last 4 rounds to a par 36. "\n\n
             "Use the tool below to inspect how a player's handicap is derived. "
             "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
         )
@@ -568,8 +569,7 @@ with tabs[3]: # League Info
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
-        
+    
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
