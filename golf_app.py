@@ -136,7 +136,6 @@ def calculate_rolling_handicap(player_df, target_week):
     except Exception:
         return 0.0
 
-
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     """
     Efficient save:
@@ -206,7 +205,8 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+# Replace the original tabs line with this (adds GGG Challenge tab at the end)
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -372,7 +372,35 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[3]: # League Info
+# --- New placeholder tab for in-season challenges ---
+with tabs[3]:  # GGG Challenge
+    st.header("🏁 GGG Challenge")
+    st.write("This space will host in-season challenges and reward details.")
+    st.divider()
+
+    st.info(
+        "Placeholder: Challenges will be announced here during the season. "
+        "Admins will be able to publish challenge details, eligibility, and rewards."
+    )
+
+    # Simple placeholder UI for future features
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.subheader("Current Challenges")
+        st.write("No active challenges at the moment.")
+        with st.expander("Planned features", expanded=False):
+            st.markdown(
+                "- Admins can create time-limited challenges\n"
+                "- Players can opt-in to challenges\n"
+                "- Automatic tracking of challenge progress from weekly scores\n"
+                "- Reward distribution and leaderboard for each challenge"
+            )
+    with col2:
+        st.subheader("Quick Actions")
+        st.write("Admin actions will appear here when implemented.")
+        st.button("Request Challenge Edit Access", disabled=True)
+
+with tabs[4]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
@@ -432,7 +460,6 @@ with tabs[3]: # League Info
         st.divider()
         st.subheader("Handicap Calculation Transparency")
         st.write(
-            "Rolling average of the best 3 of the last 4 rounds to a par 36. "
             "Use the tool below to inspect how a player's handicap is derived. "
             "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
         )
@@ -565,6 +592,7 @@ with tabs[3]: # League Info
                         )
                     except Exception as e:
                         st.error(f"Error computing handicap breakdown: {e}")
+
 
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
@@ -702,12 +730,16 @@ with tabs[3]: # League Info
 
         # --- Editing requires unlock code ---
         st.markdown("**Edit Controls (restricted)**")
-        if st.session_state["expenses_edit_unlocked"]:
-            st.success("Editing unlocked. You may add or remove expense items.")
-            # Option to lock again
-            if st.button("🔒 Lock Editing", use_container_width=True, type="secondary"):
-                st.session_state["expenses_edit_unlocked"] = False
-                st.experimental_rerun()
+            if st.session_state["expenses_edit_unlocked"]:
+                st.success("Editing unlocked. You may add or remove expense items.")
+                # Safe lock button
+                if st.button("🔒 Lock Editing", use_container_width=True, type="secondary"):
+                    st.session_state["expenses_edit_unlocked"] = False
+                    try:
+                        st.experimental_rerun()
+                    except Exception:
+                        st.warning("Editing locked. Please refresh the page if the UI does not update automatically.")
+
 
             # Add new expense entry (visible only when unlocked)
             with st.expander("Add a Prize / Expense", expanded=True):
@@ -749,14 +781,20 @@ with tabs[3]: # League Info
                             st.session_state["expenses_edit_unlocked"] = True
                             st.success("Edit access granted.")
                             time.sleep(0.5)
-                            st.experimental_rerun()
+                            # Try to trigger a rerun; if rerun is unavailable, handle gracefully
+                            try:
+                                st.experimental_rerun()
+                            except Exception as e:
+                                # Some Streamlit runtimes may raise an AttributeError or other error here.
+                                # Fall back to a safe, non-crashing behavior so the UI reflects the unlocked state.
+                                st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
                         else:
                             st.error("❌ Incorrect code. Editing remains locked.")
+
 
             st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
 
 
-        
 
     elif info_category == "Members":
         st.subheader("GGG League Members")
@@ -781,7 +819,7 @@ with tabs[3]: # League Info
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
 
 
-with tabs[4]: # Registration
+with tabs[5]: # Registration
     st.header("👤 Registration")
     
     # --- PRE-STEP: League Code Verification ---
@@ -849,7 +887,7 @@ with tabs[4]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[5]: # Admin
+with tabs[6]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     # --- STEP 1: Secure LOGIN Form ---
