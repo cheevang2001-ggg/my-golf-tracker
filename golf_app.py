@@ -942,60 +942,80 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[6]:  # Admin
     st.header("⚙️ Admin Control Panel")
-    
-    # --- STEP 1: Secure LOGIN Form ---
+
+    # --- LOGIN FORM (unchanged) ---
     if not st.session_state.get("authenticated"):
         st.info("Please enter the Administrative Password to access league management tools.")
-        
         with st.form("admin_login_form"):
             admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
             submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
-            
             if submit_admin:
                 if admin_input == ADMIN_PASSWORD:
                     st.session_state["authenticated"] = True
                     st.success("Access Granted!")
                     time.sleep(1)
-                    st.rerun()
+                    try:
+                        st.experimental_rerun()
+                    except Exception:
+                        st.info("Access granted. Please refresh if the UI does not update automatically.")
                 else:
                     st.error("❌ Incorrect Admin Password.")
 
-    # --- STEP 2: Admin Tools (Only visible after successful login) ---
+    # --- AUTHENTICATED ADMIN TOOLS ---
     else:
-        st.subheader("Leaderboard Management")
+        st.subheader("Admin Tools")
 
-        # Clear, explicit caution (informational, not alarming)
-        st.info("Admin tools can modify league data. Use caution when performing resets or bulk updates.")
+        # --- One-Click Sheet Reset (place here so only authenticated admins see it) ---
+        st.markdown("### One-Click Sheet Reset (Admin Only)")
+        st.markdown(
+            "This action **overwrites the main Google Sheet** with an empty master table. "
+            "It is destructive and cannot be undone. Check the confirmation box to enable Reset."
+        )
 
-        # Example: guarded reset action (disabled until confirmed)
-        with st.expander("Danger Zone (reset / destructive actions)", expanded=False):
-            st.markdown(
-                "**Warning:** Actions here can modify or erase data. To proceed, type the confirmation word and re-enter the admin password."
-            )
-            # Use a form to collect confirmation inputs and submit once
-    with st.form("admin_reset_form"):
-        confirm_text = st.text_input("Type RESET to confirm", key="admin_reset_confirm")
-        confirm_pass = st.text_input("Re-enter Admin Password", type="password", key="admin_reset_pass")
-        submit_reset = st.form_submit_button("Confirm Reset Leaderboard")
+        confirm_reset = st.checkbox(
+            "I understand this will permanently erase all league data in the sheet",
+            key="confirm_reset_checkbox"
+        )
 
-    if submit_reset:
-        if confirm_text == "RESET" and confirm_pass == ADMIN_PASSWORD:
+        if st.button("Reset Google Sheet Now", disabled=not confirm_reset):
             try:
-                # --- PLACEHOLDER: actual reset logic goes here ---
-                # Example:
-                # empty_df = pd.DataFrame(columns=MASTER_COLUMNS)
-                # conn = get_gsheets_conn()
-                # conn.update(data=empty_df)
-                st.success("Leaderboard reset executed (placeholder).")
-
-                # Try to rerun safely; fall back to a friendly message if rerun fails
+                MASTER_COLUMNS  # ensure this constant exists
+            except Exception:
+                st.error("MASTER_COLUMNS is not defined. Reset aborted.")
+            else:
+                import pandas as _pd
                 try:
-                    st.experimental_rerun()
-                except Exception:
-                    st.warning("Reset done. Please refresh the page if the UI does not update automatically.")
-            except Exception as e:
-                st.error(f"Reset failed: {e}")
-        else:
-            st.error("Confirmation failed. Type RESET and provide the correct admin password to proceed.")
+                    empty_df = _pd.DataFrame(columns=MASTER_COLUMNS)
+                    conn = get_gsheets_conn()  # your existing helper
+                    conn.update(data=empty_df)  # overwrite sheet with headers only
+
+                    # Clear caches and session state (preserve admin login)
+                    try:
+                        st.cache_data.clear()
+                    except Exception:
+                        pass
+                    try:
+                        st.cache_resource.clear()
+                    except Exception:
+                        pass
+
+                    preserved = {"authenticated"}
+                    for k in list(st.session_state.keys()):
+                        if k not in preserved:
+                            del st.session_state[k]
+
+                    st.success("Google Sheet overwritten with an empty master table.")
+                    st.info("Caches and session state cleared (except admin login).")
+                    try:
+                        st.experimental_rerun()
+                    except Exception:
+                        st.warning("Reset complete. Please refresh the page if the UI does not update automatically.")
+                except Exception as e:
+                    st.error(f"Reset failed: {e}")
+
+        # --- Other admin controls can follow here ---
+        st.divider()
+        st.write("Other admin controls go here.")
+
