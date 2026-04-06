@@ -560,6 +560,16 @@ with tabs[4]: # Registration
 
     # --- STEP 2: Player Details ---
     else:
+        # Informational note and acknowledgement requirement
+        st.info(
+            "By registering for the GGGolf Summer League you confirm that you have read, "
+            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
+            "Registration indicates acceptance of these terms."
+        )
+
+        # Require explicit acknowledgement before allowing registration
+        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
+
         with st.form("registration_form", clear_on_submit=True):
             st.subheader("📝 New Player Details")
             
@@ -569,7 +579,9 @@ with tabs[4]: # Registration
             submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
             
             if submit_reg:
-                if n and len(p) == 4:
+                if not ack:
+                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
+                elif n and len(p) == 4:
                     try:
                         # 1. ADD TO MAIN DATABASE
                         new_reg = pd.DataFrame([{
@@ -592,6 +604,7 @@ with tabs[4]: # Registration
                         st.error(f"Registration Error: {e}")
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
+
 
 with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
