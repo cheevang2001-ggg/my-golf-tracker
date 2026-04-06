@@ -372,41 +372,77 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-# --- New placeholder tab for in-season challenges ---
+# --- New streamlined GGG Challenge tab (replace the existing with tabs[3] block) ---
 with tabs[3]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
-    st.write("This space will host in-season challenges.")
+    st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
 
     st.info(
-        "In Season Challenges will be announced here during the season. "
+        "Challenges will be announced here during the season. "
+        "Each challenge includes a short description, cost (if any), eligibility rules, and how to participate."
+    )
+
+    col_main, col_side = st.columns([3, 1])
+
+    # Main column: Current Challenge card
+    with col_main:
+        st.subheader("Current Challenge")
+        # Example challenge card — update text as needed when a challenge is active
+        st.markdown("#### Season Ball Challenge")
+        st.markdown("**Entry:** $20 for a GGG sleeve of balls")
+        st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
+        st.divider()
+
+        st.markdown("**How it works**")
+        st.markdown(
+            "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
+            "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
+            "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
         )
 
-    # Simple placeholder UI for future features
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.subheader("Season Challenge")
-        st.write("No active challenges at the moment.")
-        with st.expander("Season Ball Challenge", expanded=False):
+        st.divider()
+        st.markdown("**Eligibility and Rebuy Options**")
+        # Compact eligibility table for quick scanning
+        import pandas as _pd
+        elig = _pd.DataFrame([
+            {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
+            {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
+            {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
+            {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
+        ])
+        st.table(elig)
+
+        st.divider()
+        # CTA (disabled placeholder until admin enables)
+        st.write("**Participation**")
+        st.button("Join Season Ball Challenge", disabled=True)
+        st.caption("Admin will enable signups and payment links when the challenge is active.")
+
+        with st.expander("Full Rules and Examples", expanded=False):
             st.markdown(
-                "- $20 to receive GGG sleeve\n"
-                "- During GGGOLF regular and event play use the GGG ball. If you lose all your balls you can REBUY.\n"
-                "- At the end of the season finale, if you return the atleast 1 ball from the sleeve you automatically get first pick at prize or $100 cash\n"
-                "- Eligibility for Top prize, sleeve has to be purchased before start of Week 1.
-                
-                "- REBUY 1 RULE: Not eligible for initaial prize but elgible for ***2nd prize pick or $50***"
-                "- Eligibility for REBUY 1 prize, sleeve has to be purchased before start of Week 3.\n\n
-                
-                "- REBUY 2 RULE: Not eligible for initial prize and REBUY 1 Prize. REBUY 2 elgible for 4th prize pick or $20"
-                "- Eligibility for REBUY 2 prize, sleeve has to be purchased before start of Week 7.\n\n
-                
-                "- REBUY 3 RULE: Not eligible for Original, REBUY 1, REBUY 2 Prize. REBUY 3 elgible for 6th prize pick"
-                "- Eligibility for REBUY 3 prize, sleeve has to be purchased before start of Week 11.\n\n
+                "**Key Rules**\n\n"
+                "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
+                "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
+                "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
+                "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
+                "**Examples**\n\n"
+                "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
+                "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
             )
-    with col2:
+
+    # Side column: quick admin actions and notes
+    with col_side:
         st.subheader("Quick Actions")
-        st.write("Admin actions will appear here when implemented.")
+        st.write("Admin controls will appear here when implemented.")
         st.button("Request Challenge Edit Access", disabled=True)
+        st.divider()
+        st.markdown("**Notes for Players**")
+        st.markdown(
+            "- Keep your sleeve balls separate so returned balls can be verified.\n"
+            "- Questions about eligibility should be directed to the Rules and Players Committee."
+        )
+
 
 
 with tabs[4]: # League Info
