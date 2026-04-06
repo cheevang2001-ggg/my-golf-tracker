@@ -749,7 +749,10 @@ with tabs[3]: # League Info
                             st.session_state["expenses_edit_unlocked"] = True
                             st.success("Edit access granted.")
                             time.sleep(0.5)
-                            st.experimental_rerun()
+                            try:
+                                st.experimental_rerun()
+                            except Exception as e:
+                                st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
                         else:
                             st.error("❌ Incorrect code. Editing remains locked.")
 
