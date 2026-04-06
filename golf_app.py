@@ -795,7 +795,6 @@ elif info_category == "Expenses":
                     else:
                         st.session_state["expenses_table"].append({"Prize": prize_desc.strip(), "Cost": float(prize_cost)})
                         st.success(f"Added: {prize_desc} — ${prize_cost:,.2f}")
-                        # Clear small caches if you use them, then attempt safe rerun
                         try:
                             st.cache_data.clear()
                         except Exception:
@@ -804,6 +803,55 @@ elif info_category == "Expenses":
                             st.experimental_rerun()
                         except Exception:
                             st.info("Added. Please refresh the page if the UI does not update automatically.")
+
+        st.divider()
+
+        # Manage / remove items
+        if st.session_state["expenses_table"]:
+            with st.expander("Manage Expenses (Remove an item)", expanded=False):
+                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
+                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
+
+                # Use a form to confirm removal
+                with st.form("remove_expense_form"):
+                    st.write("Selected item to remove:")
+                    st.write(to_remove if to_remove != "None" else "No item selected")
+                    confirm_remove = st.form_submit_button("Remove Selected Item")
+                if confirm_remove:
+                    if to_remove == "None":
+                        st.warning("No item selected. Please choose an expense to remove.")
+                    else:
+                        idx = remove_options.index(to_remove)
+                        removed = st.session_state["expenses_table"].pop(idx)
+                        st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
+                        try:
+                            st.cache_data.clear()
+                        except Exception:
+                            pass
+                        try:
+                            st.experimental_rerun()
+                        except Exception:
+                            st.info("Removal complete. Please refresh the page if the UI does not update automatically.")
+    else:
+        # Unlock form
+        with st.expander("Request Edit Access (requires code)", expanded=False):
+            with st.form("unlock_expenses_form"):
+                unlock_code = st.text_input("Enter Edit Code", type="password", placeholder="Enter admin code to unlock editing")
+                submit_unlock = st.form_submit_button("Unlock Editing")
+                if submit_unlock:
+                    if unlock_code and unlock_code == ADMIN_PASSWORD:
+                        st.session_state["expenses_edit_unlocked"] = True
+                        st.success("Edit access granted.")
+                        time.sleep(0.5)
+                        try:
+                            st.experimental_rerun()
+                        except Exception:
+                            st.warning("Edit access granted. Please refresh the page if the UI does not update automatically.")
+                    else:
+                        st.error("❌ Incorrect code. Editing remains locked.")
+
+        st.info("Editing is restricted. Members can view expenses above. To add or remove items, request edit access and provide the edit code.")
+
 
         st.divider()
 
