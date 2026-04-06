@@ -960,22 +960,28 @@ with tabs[6]: # Admin
             st.markdown(
                 "**Warning:** Actions here can modify or erase data. To proceed, type the confirmation word and re-enter the admin password."
             )
-            confirm_text = st.text_input("Type RESET to confirm", key="admin_reset_confirm")
-            confirm_pass = st.text_input("Re-enter Admin Password", type="password", key="admin_reset_pass")
-            if st.button("Confirm Reset Leaderboard", use_container_width=True, type="danger"):
-                if confirm_text == "RESET" and confirm_pass == ADMIN_PASSWORD:
-                    try:
-                        # Place the actual reset logic here (example placeholder)
-                        # conn = get_gsheets_conn()
-                        # conn.update(data=empty_leaderboard_df)
-                        st.success("Leaderboard reset executed.")
-                        # Try to rerun safely
-                        try:
-                            st.rerun()
-                        except Exception:
-                            st.warning("Reset done. Please refresh the page if the UI does not update automatically.")
-                    except Exception as e:
-                        st.error(f"Reset failed: {e}")
-                else:
-                    st.error("Confirmation failed. Type RESET and provide the correct admin password to proceed.")
+            # Use a form to collect confirmation inputs and submit once
+    with st.form("admin_reset_form"):
+        confirm_text = st.text_input("Type RESET to confirm", key="admin_reset_confirm")
+        confirm_pass = st.text_input("Re-enter Admin Password", type="password", key="admin_reset_pass")
+        submit_reset = st.form_submit_button("Confirm Reset Leaderboard")
 
+    if submit_reset:
+        if confirm_text == "RESET" and confirm_pass == ADMIN_PASSWORD:
+            try:
+                # --- PLACEHOLDER: actual reset logic goes here ---
+                # Example:
+                # empty_df = pd.DataFrame(columns=MASTER_COLUMNS)
+                # conn = get_gsheets_conn()
+                # conn.update(data=empty_df)
+                st.success("Leaderboard reset executed (placeholder).")
+
+                # Try to rerun safely; fall back to a friendly message if rerun fails
+                try:
+                    st.experimental_rerun()
+                except Exception:
+                    st.warning("Reset done. Please refresh the page if the UI does not update automatically.")
+            except Exception as e:
+                st.error(f"Reset failed: {e}")
+        else:
+            st.error("Confirmation failed. Type RESET and provide the correct admin password to proceed.")
