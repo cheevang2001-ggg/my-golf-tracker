@@ -84,54 +84,58 @@ def load_data():
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
+        # Ensure Total_Score is numeric for reliable math
+        if 'Total_Score' in player_df.columns:
+            player_df = player_df.copy()
+            player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
+
         # --- PHASE 1: WEEK 1 STARTING HANDICAP (PRE-SEASON) ---
         if target_week == 1:
-            # Look for all pre-season entries where a score was actually recorded
             pre_season_rounds = player_df[
-                (player_df['Week'] <= 0) & 
-                (player_df['DNF'] == False) & 
+                (player_df['Week'] <= 0) &
+                (player_df['DNF'] == False) &
+                (player_df['Total_Score'].notna()) &
                 (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
-            
-            if not pre_season_rounds.empty:
-                # Take up to the 3 most recent pre-season rounds
+
+            # Require at least 3 pre-season rounds to establish a Week 1 handicap
+            if len(pre_season_rounds) >= 3:
                 scores = pre_season_rounds.head(3)['Total_Score'].tolist()
-                # Average the available scores and subtract par (36)
                 hcp = round((sum(scores) / len(scores)) - 36, 1)
                 return float(hcp)
-            
-            # If absolutely no pre-season rounds found, start at 0.0
+
+            # If fewer than 3 pre-season rounds, start at 0.0 per league rule
             return 0.0
 
         # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
-        # Exclude specific event weeks (0 is registration/pre-season, 4/8 are scrambles)
-        excluded_weeks = [0, 4, 8] 
-        
+        excluded_weeks = [0, 4, 8]
+
         rounds = player_df[
-            (player_df['Week'] > 0) & 
-            (~player_df['Week'].isin(excluded_weeks)) & 
-            (player_df['DNF'] == False) & 
-            (player_df['Week'] < target_week)
+            (player_df['Week'] > 0) &
+            (~player_df['Week'].isin(excluded_weeks)) &
+            (player_df['DNF'] == False) &
+            (player_df['Week'] < target_week) &
+            (player_df['Total_Score'].notna()) &
+            (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
-        
-        # If no regular season rounds played yet (e.g., it's Week 2 but they missed Week 1),
-        # keep using the Pre-Season average as the baseline.
+
+        # If no regular season rounds played yet, fallback to Week 1 logic (which may return 0.0)
         if rounds.empty:
             return calculate_rolling_handicap(player_df, 1)
-            
+
         last_scores = rounds.head(4)['Total_Score'].tolist()
-        
+
         # Standard "Best 3 of last 4" logic
         if len(last_scores) >= 4:
             last_scores.sort()
             hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
         else:
-            # Average of whatever is available (1, 2, or 3 rounds)
             hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
-            
+
         return float(hcp)
-    except Exception as e:
+    except Exception:
         return 0.0
+
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     """
