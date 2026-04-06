@@ -295,7 +295,7 @@ with tabs[2]: # History
 
 with tabs[3]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
@@ -463,6 +463,29 @@ with tabs[3]: # League Info
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
+    elif info_category == "Members":
+        st.subheader("👥 League Members")
+        st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.")
+
+        # Build members list from df_main: registration rows are Week == 0
+        if df_main is None or df_main.empty:
+            st.info("No registered members yet.")
+        else:
+            members_df = df_main[df_main['Week'] == 0].copy()
+            if members_df.empty:
+                st.info("No registered members yet.")
+            else:
+                # Normalize columns for display
+                display_cols = ['Player']
+                if 'Acknowledged' in members_df.columns:
+                    members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
+                    display_cols.append('Acknowledged')
+                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
+                
+                st.markdown(f"**Total Members:** {len(members_df)}")
+                st.dataframe(members_df, use_container_width=True, hide_index=True)
+
+
 with tabs[4]: # Registration
     st.header("👤 Registration")
     
@@ -485,6 +508,16 @@ with tabs[4]: # Registration
 
     # --- STEP 2: Player Details ---
     else:
+        # Informational note and acknowledgement requirement
+        st.info(
+            "By registering for the GGGolf Summer League you confirm that you have read, "
+            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
+            "Registration indicates acceptance of these terms."
+        )
+
+        # Require explicit acknowledgement before allowing registration
+        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
+
         with st.form("registration_form", clear_on_submit=True):
             st.subheader("📝 New Player Details")
             
@@ -494,15 +527,19 @@ with tabs[4]: # Registration
             submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
             
             if submit_reg:
-                if n and len(p) == 4:
+                if not ack:
+                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
+                elif n and len(p) == 4:
                     try:
-                        # 1. ADD TO MAIN DATABASE
+                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
                         new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True, 
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0, "Total_Score": 0, "Net_Score": 0
+                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
+                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
+                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
                         }])
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
+                        conn = get_gsheets_conn()
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
                         # 3. FINALIZE
@@ -516,6 +553,7 @@ with tabs[4]: # Registration
                         st.error(f"Registration Error: {e}")
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
+
 
 with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
