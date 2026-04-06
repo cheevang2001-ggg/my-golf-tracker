@@ -375,25 +375,33 @@ with tabs[2]: # History
 # --- New placeholder tab for in-season challenges ---
 with tabs[3]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
-    st.write("This space will host in-season challenges and reward details.")
+    st.write("This space will host in-season challenges.")
     st.divider()
 
     st.info(
-        "Placeholder: Challenges will be announced here during the season. "
-        "Admins will be able to publish challenge details, eligibility, and rewards."
-    )
+        "In Season Challenges will be announced here during the season. "
+        )
 
     # Simple placeholder UI for future features
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.subheader("Current Challenges")
+        st.subheader("Season Challenge")
         st.write("No active challenges at the moment.")
-        with st.expander("Planned features", expanded=False):
+        with st.expander("Season Ball Challenge", expanded=False):
             st.markdown(
-                "- Admins can create time-limited challenges\n"
-                "- Players can opt-in to challenges\n"
-                "- Automatic tracking of challenge progress from weekly scores\n"
-                "- Reward distribution and leaderboard for each challenge"
+                "- $20 to receive GGG sleeve\n"
+                "- During GGGOLF regular and event play use the GGG ball. If you lose all your balls you can REBUY.\n"
+                "- At the end of the season finale, if you return the atleast 1 ball from the sleeve you automatically get first pick at prize or $100 cash\n"
+                "- Eligibility for Top prize, sleeve has to be purchased before start of Week 1.
+                
+                "- REBUY 1 RULE: Not eligible for initaial prize but elgible for ***2nd prize pick or $50***"
+                "- Eligibility for REBUY 1 prize, sleeve has to be purchased before start of Week 3.\n\n
+                
+                "- REBUY 2 RULE: Not eligible for initial prize and REBUY 1 Prize. REBUY 2 elgible for 4th prize pick or $20"
+                "- Eligibility for REBUY 2 prize, sleeve has to be purchased before start of Week 7.\n\n
+                
+                "- REBUY 3 RULE: Not eligible for Original, REBUY 1, REBUY 2 Prize. REBUY 3 elgible for 6th prize pick"
+                "- Eligibility for REBUY 3 prize, sleeve has to be purchased before start of Week 11.\n\n
             )
     with col2:
         st.subheader("Quick Actions")
