@@ -536,7 +536,19 @@ with tabs[4]: # Registration
                             "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
                             "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
                             "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
-                        }])
+                        }]) [cite: 216, 217]
+
+                        updated_main = pd.concat([df_main, new_reg], ignore_index=True) [cite: 217]
+
+                        conn.update(data=updated_main[MASTER_COLUMNS]) [cite: 218]
+                        
+                        st.success(f"Welcome to the league, {n}!") [cite: 218]
+                        st.cache_data.clear() [cite: 219]
+                        time.sleep(1.5)
+                        st.session_state["reg_access"] = False 
+                        st.rerun() [cite: 219, 220]
+
+
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
                         conn = get_gsheets_conn()
