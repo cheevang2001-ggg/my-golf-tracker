@@ -19,7 +19,14 @@ if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
 if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+# --- Cached connection and optimized I/O helpers ---
+@st.cache_resource(ttl=60*60)  # cache the connection for 1 hour
+def get_gsheets_conn():
+    try:
+        return st.connection("gsheets", type=GSheetsConnection)
+    except Exception as e:
+        st.error("Google Sheets connection failed.")
+        raise
 
 MASTER_COLUMNS = [
     'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
@@ -32,24 +39,48 @@ GGG_POINTS = {
     15: 5, 16: 3, 17: 1 
 }
 
-# --- 2. CORE FUNCTIONS ---
+def _empty_master_df():
+    return pd.DataFrame(columns=MASTER_COLUMNS)
+
+@st.cache_data(ttl=10)  # cache successful reads for 10 seconds
+def _read_sheet_cached():
+    conn = get_gsheets_conn()
+    data = conn.read()
+    if data is None or data.empty or 'Player' not in data.columns:
+        return _empty_master_df()
+    df = data.dropna(how='all')
+    return df[df['Player'] != ""]
 
 def load_data():
+    """
+    Wrapper around the cached reader that implements retry/backoff and
+    keeps a last-successful fallback in session_state to reduce visible failures.
+    """
+    # Try the cached reader first (fast)
     try:
-        # Increase TTL to 10 seconds to reduce API hits
-        data = conn.read(ttl=10) 
-        if data is None or data.empty or 'Player' not in data.columns: 
-            return pd.DataFrame(columns=MASTER_COLUMNS)
-        
-        df = data.dropna(how='all')
-        # ... (keep your existing column processing code here) ...
-        return df[df['Player'] != ""]
+        df = _read_sheet_cached()
+        # store last successful snapshot for fallback
+        st.session_state["last_successful_df"] = df.copy()
+        return df
     except Exception as e:
-        # If API fails, return the last successful version from cache if possible
-        # instead of showing "No Players Registered"
-        if "429" in str(e):
-            st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
-        return pd.DataFrame(columns=MASTER_COLUMNS)
+        # Retry with exponential backoff for transient errors (e.g., 429)
+        backoff = [0.5, 1.0, 2.0]
+        for wait in backoff:
+            time.sleep(wait)
+            try:
+                df = _read_sheet_cached()
+                st.session_state["last_successful_df"] = df.copy()
+                return df
+            except Exception:
+                continue
+
+        # If all retries fail, return the last successful cached snapshot if available
+        if "last_successful_df" in st.session_state:
+            st.warning("⚠️ Using last successful cached data due to Sheets API issues.")
+            return st.session_state["last_successful_df"]
+        # final fallback: empty frame with expected columns
+        st.warning("⚠️ Unable to load data from Google Sheets. Showing empty dataset.")
+        return _empty_master_df()
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
@@ -58,7 +89,7 @@ def calculate_rolling_handicap(player_df, target_week):
             # Look for all pre-season entries where a score was actually recorded
             pre_season_rounds = player_df[
                 (player_df['Week'] <= 0) & 
-                (player_df['DNF'] == False) &
+                (player_df['DNF'] == False) & 
                 (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
             
@@ -103,19 +134,63 @@ def calculate_rolling_handicap(player_df, target_week):
         return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    st.cache_data.clear()
-    existing_data = load_data()
+    """
+    Efficient save:
+    - Read current sheet (fast cached read)
+    - Build new entry and only write if it changes the sheet
+    - Update in-memory fallback cache after successful write
+    """
+    # Build new entry
     is_dnf = (score_val == "DNF")
     final_gross = 0 if is_dnf else int(score_val)
     new_entry = pd.DataFrame([{
-        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
-        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
+        'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies,
+        'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val,
         'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
     }])
-    updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
-    conn.update(data=updated_df[MASTER_COLUMNS])
-    st.cache_data.clear()
-    st.rerun()
+
+    # Load existing data (cached)
+    existing_data = load_data()
+
+    # Remove any existing row for same player/week and append new entry
+    mask = ~((existing_data['Week'] == week) & (existing_data['Player'] == player))
+    updated_df = pd.concat([existing_data[mask], new_entry], ignore_index=True)
+
+    # Normalize column order and types for reliable comparison
+    updated_df = updated_df.reindex(columns=MASTER_COLUMNS).fillna("")
+    existing_norm = existing_data.reindex(columns=MASTER_COLUMNS).fillna("")
+
+    # Only push to Sheets if there is a difference
+    try:
+        if not existing_norm.reset_index(drop=True).equals(updated_df.reset_index(drop=True)):
+            conn = get_gsheets_conn()
+            # attempt write with simple retry/backoff
+            attempts = 3
+            for i in range(attempts):
+                try:
+                    conn.update(data=updated_df[MASTER_COLUMNS])
+                    # update in-memory fallback cache
+                    st.session_state["last_successful_df"] = updated_df.copy()
+                    break
+                except Exception as e:
+                    if i < attempts - 1:
+                        time.sleep(0.5 * (2 ** i))
+                        continue
+                    else:
+                        st.error(f"Failed to save data after {attempts} attempts: {e}")
+                        raise
+        else:
+            # no-op write avoided
+            st.info("No changes detected; skipping Sheets update.")
+    finally:
+        # Keep UI responsive: clear only the cached read (not the connection)
+        try:
+            st.cache_data.clear()
+        except Exception:
+            pass
+
+    # Refresh UI state after save
+    st.experimental_rerun()
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
@@ -503,6 +578,7 @@ with tabs[4]: # Registration
                         }])
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
+                        conn = get_gsheets_conn()
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
                         # 3. FINALIZE
@@ -520,7 +596,7 @@ with tabs[4]: # Registration
 with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
     
-    # --- STEP 1: Secure Login Form ---
+    # --- STEP 1: Secure LOGIN Form ---
     if not st.session_state.get("authenticated"):
         st.info("Please enter the Administrative Password to access league management tools.")
         
@@ -540,58 +616,4 @@ with tabs[5]: # Admin
     # --- STEP 2: Admin Tools (Only visible after successful login) ---
     else:
         st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
-
-        # 1. The Reset Button (Wipes the sheet)
-        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
-            try:
-                hole_headers = [str(i) for i in range(1, 10)]
-                empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
-                
-                conn.update(worksheet="LiveScores", data=empty_df)
-                st.cache_data.clear()
-                
-                st.success("✅ Live Round has been reset!")
-                time.sleep(1.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to reset sheet: {e}")
-
-        # 2. The Sync Button (Pre-populates the sheet with registered players)
-        # ALL CODE BELOW IS NOW CORRECTLY INDENTED
-        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
-            try:
-                # Get everyone currently registered from the main data
-                all_players = df_main['Player'].unique().tolist()
-                hole_cols = [str(i) for i in range(1, 10)]
-                
-                # Create a fresh table with everyone starting at 0
-                synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
-                
-                for p_name in all_players:
-                    if p_name: # skip empty entries
-                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
-                        synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
-                
-                # Push the full list to Google Sheets
-                conn.update(worksheet="LiveScores", data=synced_df)
-                st.cache_data.clear()
-                st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Sync failed: {e}")
-
-        st.divider()
-        
-        # Logout / Maintenance Section
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 Refresh Data Cache", use_container_width=True):
-                st.cache_data.clear()
-                st.toast("App data synced with Google Sheets.")
-        
-        with col2:
-            if st.button("🔒 Lock Admin Panel", use_container_width=True):
-                st.session_state["authenticated"] = False
-                st.rerun()
+        st.warning("⚠️ Warning: Resetting")
