@@ -33,6 +33,21 @@ MASTER_COLUMNS = [
     'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF', 'Acknowledged'
 ]
 
+# --- Helper: return an empty master dataframe with correct columns and safe dtypes ---
+def _empty_master_df():
+    import pandas as pd
+    df = pd.DataFrame(columns=MASTER_COLUMNS)
+    # Optional: set dtypes for important numeric columns to avoid dtype surprises later
+    numeric_cols = ["Week", "Pars_Count", "Birdies_Count", "Eagle_Count", "Total_Score", "Handicap", "Net_Score"]
+    for c in numeric_cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    # Ensure boolean columns exist
+    for c in ["DNF", "Acknowledged"]:
+        if c in df.columns:
+            df[c] = df[c].astype("boolean")
+    return df
+
 GGG_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
     7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 16, 13: 13, 14: 9,
