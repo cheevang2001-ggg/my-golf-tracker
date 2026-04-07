@@ -23,7 +23,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 MASTER_COLUMNS = [
     'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
-    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF'
+    'Eagle_Count', 'Total_Score', 'Handicap', 'Net_Score', 'DNF', 'Acknowledged'
 ]
 
 GGG_POINTS = {
@@ -507,11 +507,14 @@ with tabs[4]: # Registration
 
     # --- STEP 2: Player Details ---
     else:
+        # Informational note and acknowledgement requirement
         st.info(
             "By registering for the GGGolf Summer League you confirm that you have read, "
-            "understand, and agree to abide by the League Rules, Handicaps, and Policies."
+            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
+            "Registration indicates acceptance of these terms."
         )
 
+        # Require explicit acknowledgement before allowing registration
         ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
 
         with st.form("registration_form", clear_on_submit=True):
@@ -524,30 +527,32 @@ with tabs[4]: # Registration
             
             if submit_reg:
                 if not ack:
-                    st.warning("You must acknowledge the rules before registering.")
+                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
                 elif n and len(p) == 4:
                     try:
-                        # Create the new registration row
+                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
                         new_reg = pd.DataFrame([{
                             "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
                             "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
                             "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
                         }])
                         
-                        # Combine with current data and update
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
+                        conn = get_gsheets_conn()
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
+                        # 3. FINALIZE
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
                         time.sleep(1.5)
-                        st.session_state["reg_access"] = False 
+                        st.session_state["reg_access"] = False # Relock for next use
                         st.rerun()
                         
                     except Exception as e:
                         st.error(f"Registration Error: {e}")
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
+
 
 with tabs[5]: # Admin
     st.header("⚙️ Admin Control Panel")
