@@ -53,54 +53,58 @@ def load_data():
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
+        # Ensure Total_Score is numeric for reliable math
+        if 'Total_Score' in player_df.columns:
+            player_df = player_df.copy()
+            player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
+
         # --- PHASE 1: WEEK 1 STARTING HANDICAP (PRE-SEASON) ---
         if target_week == 1:
-            # Look for all pre-season entries where a score was actually recorded
             pre_season_rounds = player_df[
-                (player_df['Week'] <= 0) & 
+                (player_df['Week'] <= 0) &
                 (player_df['DNF'] == False) &
+                (player_df['Total_Score'].notna()) &
                 (player_df['Total_Score'] > 0)
             ].sort_values('Week', ascending=False)
-            
-            if not pre_season_rounds.empty:
-                # Take up to the 3 most recent pre-season rounds
+
+            # Require at least 3 pre-season rounds to establish a Week 1 handicap
+            if len(pre_season_rounds) >= 3:
                 scores = pre_season_rounds.head(3)['Total_Score'].tolist()
-                # Average the available scores and subtract par (36)
                 hcp = round((sum(scores) / len(scores)) - 36, 1)
                 return float(hcp)
-            
-            # If absolutely no pre-season rounds found, start at 0.0
+
+            # If fewer than 3 pre-season rounds, start at 0.0 per league rule
             return 0.0
 
         # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
-        # Exclude specific event weeks (0 is registration/pre-season, 4/8 are scrambles)
-        excluded_weeks = [0, 4, 8] 
-        
+        excluded_weeks = [0, 4, 8]
+
         rounds = player_df[
-            (player_df['Week'] > 0) & 
-            (~player_df['Week'].isin(excluded_weeks)) & 
-            (player_df['DNF'] == False) & 
-            (player_df['Week'] < target_week)
+            (player_df['Week'] > 0) &
+            (~player_df['Week'].isin(excluded_weeks)) &
+            (player_df['DNF'] == False) &
+            (player_df['Week'] < target_week) &
+            (player_df['Total_Score'].notna()) &
+            (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
-        
-        # If no regular season rounds played yet (e.g., it's Week 2 but they missed Week 1),
-        # keep using the Pre-Season average as the baseline.
+
+        # If no regular season rounds played yet, fallback to Week 1 logic (which may return 0.0)
         if rounds.empty:
             return calculate_rolling_handicap(player_df, 1)
-            
+
         last_scores = rounds.head(4)['Total_Score'].tolist()
-        
+
         # Standard "Best 3 of last 4" logic
         if len(last_scores) >= 4:
             last_scores.sort()
             hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
         else:
-            # Average of whatever is available (1, 2, or 3 rounds)
             hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
-            
+
         return float(hcp)
-    except Exception as e:
+    except Exception:
         return 0.0
+
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
@@ -349,6 +353,143 @@ with tabs[3]: # League Info
         * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
         * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
         """)
+
+        st.divider()
+        st.subheader("Handicap Calculation Transparency")
+        st.write(
+            "Use the tool below to inspect how a player's handicap is derived. "
+            "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
+        )
+
+        # Defensive: ensure df_main exists
+        if 'df_main' not in globals() or df_main is None or df_main.empty:
+            st.warning("No player data available to show handicap breakdown.")
+        else:
+            # Build player list from registration rows (Week == 0) or all players if registration rows missing
+            try:
+                reg_players = df_main[df_main['Week'] == 0]['Player'].dropna().unique().tolist()
+                all_players = sorted(df_main['Player'].dropna().unique().tolist())
+                player_options = reg_players if reg_players else all_players
+            except Exception:
+                player_options = sorted(df_main['Player'].dropna().unique().tolist())
+
+            if not player_options:
+                st.info("No registered players found.")
+            else:
+                sel_player = st.selectbox("Select Player to Inspect", player_options, key="handicap_transparency_player")
+                sel_week = st.selectbox("Target Week (handicap to apply for)", list(range(1, 15)), index=0, key="handicap_transparency_week")
+
+                # Fetch player rows
+                p_df = df_main[df_main['Player'] == sel_player].copy()
+                if p_df.empty:
+                    st.warning("No recorded rounds for this player.")
+                else:
+                    # Pre-season rounds (Week <= 0)
+                    pre_season = p_df[(p_df['Week'] <= 0) & (p_df['DNF'] == False) & (p_df['Total_Score'] > 0)].sort_values('Week', ascending=False)
+                    # Regular eligible rounds: Week > 0, exclude event weeks, DNF False, and Week < target_week
+                    excluded_weeks = [0, 4, 8]
+                    regular_rounds = p_df[
+                        (p_df['Week'] > 0) &
+                        (~p_df['Week'].isin(excluded_weeks)) &
+                        (p_df['DNF'] == False) &
+                        (p_df['Week'] < sel_week)
+                    ].sort_values('Week', ascending=False)
+
+                    with st.expander("View Rounds Used In Calculation", expanded=True):
+                        st.markdown("**Pre-Season Rounds (Week <= 0)**")
+                        if pre_season.empty:
+                            st.write("No pre-season rounds recorded.")
+                        else:
+                            st.dataframe(pre_season[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
+
+                        st.markdown("**Eligible Regular Rounds (excluding Weeks 0, 4, 8)**")
+                        if regular_rounds.empty:
+                            st.write("No eligible regular rounds recorded prior to the selected target week.")
+                        else:
+                            st.dataframe(regular_rounds[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
+
+                    # Compute the handicap breakdown using the same logic as calculate_rolling_handicap
+                    try:
+                        if sel_week == 1:
+                            # Week 1 uses pre-season logic
+                            if not pre_season.empty:
+                                scores = pre_season.head(3)['Total_Score'].tolist()
+                                used_scores = scores[:3]
+                                avg_score = sum(used_scores) / len(used_scores)
+                                hcp_val = round(avg_score - 36, 1)
+                                method = f"Week 1: average of up to 3 most recent pre-season rounds ({len(used_scores)} used)"
+                            else:
+                                used_scores = []
+                                avg_score = None
+                                hcp_val = 0.0
+                                method = "Week 1: no pre-season rounds found → default 0.0"
+                        else:
+                            # Regular season: best 3 of last 4 eligible rounds
+                            last_scores = regular_rounds.head(4)['Total_Score'].tolist()
+                            if not last_scores:
+                                # fallback to pre-season
+                                if not pre_season.empty:
+                                    scores = pre_season.head(3)['Total_Score'].tolist()
+                                    used_scores = scores[:3]
+                                    avg_score = sum(used_scores) / len(used_scores)
+                                    hcp_val = round(avg_score - 36, 1)
+                                    method = "No eligible regular rounds → fallback to pre-season average"
+                                else:
+                                    used_scores = []
+                                    avg_score = None
+                                    hcp_val = 0.0
+                                    method = "No eligible rounds → default 0.0"
+                            else:
+                                if len(last_scores) >= 4:
+                                    sorted_scores = sorted(last_scores)
+                                    used_scores = sorted_scores[:3]  # best 3 of last 4
+                                    avg_score = sum(used_scores) / 3
+                                    hcp_val = round(avg_score - 36, 1)
+                                    method = "Best 3 of last 4 eligible rounds"
+                                else:
+                                    used_scores = last_scores[:]  # average of whatever is available
+                                    avg_score = sum(used_scores) / len(used_scores)
+                                    hcp_val = round(avg_score - 36, 1)
+                                    method = f"Average of {len(used_scores)} eligible round(s) (fewer than 4 available)"
+
+                        # Display the numeric breakdown
+                        st.divider()
+                        st.markdown("### Handicap Breakdown Result")
+                        st.write(f"**Player:** {sel_player}")
+                        st.write(f"**Target Week:** {sel_week}")
+                        st.write(f"**Method:** {method}")
+                        if avg_score is not None:
+                            st.write(f"**Used Scores:** {used_scores}")
+                            st.write(f"**Average Gross (used):** {avg_score:.2f}")
+                            st.write(f"**Calculated Handicap:** **{hcp_val}** (computed as average gross − 36)")
+                        else:
+                            st.write("No scores available to compute an average. Handicap set to **0.0** by default.")
+
+                        # Show a small table marking which rounds were used
+                        with st.expander("Detailed Rounds Table (marking used rounds)"):
+                            # Build a combined table of all relevant rounds for context
+                            combined = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
+                            if combined.empty:
+                                st.write("No rounds to display.")
+                            else:
+                                combined_display = combined[['Week', 'Total_Score', 'DNF']].reset_index(drop=True).copy()
+                                # Mark used rows
+                                def mark_used(row):
+                                    try:
+                                        return row['Total_Score'] in used_scores
+                                    except Exception:
+                                        return False
+                                combined_display['UsedInCalc'] = combined_display.apply(mark_used, axis=1)
+                                st.dataframe(combined_display, use_container_width=True, hide_index=True)
+
+                        # Provide a short explanation and link back to rules
+                        st.markdown(
+                            "If you believe a round was incorrectly included or excluded, please contact the Rules and Players Committee. "
+                            "Rounds from special event weeks (e.g., scrambles or team events) are excluded from handicap calculations by league policy."
+                        )
+                    except Exception as e:
+                        st.error(f"Error computing handicap breakdown: {e}")
+
 
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
