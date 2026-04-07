@@ -538,7 +538,7 @@ with tabs[4]: # Registration
                         }])
                         
                         updated_main = pd.concat([df_main, new_reg], ignore_index=True)
-                        conn = get_gsheets_conn()
+                        # use the existing connection created at module load
                         conn.update(data=updated_main[MASTER_COLUMNS])
 
                         # 3. FINALIZE
