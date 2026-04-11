@@ -42,39 +42,47 @@ def load_data():
             return pd.DataFrame(columns=MASTER_COLUMNS)
         
         df = data.dropna(how='all')
-        # ... (keep your existing column processing code here) ...
+        # Filter out specific players
+        df = df[df['Player'].str.lower() != 'john']
+        
         return df[df['Player'] != ""]
     except Exception as e:
-        # If API fails, return the last successful version from cache if possible
-        # instead of showing "No Players Registered"
         if "429" in str(e):
             st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # Ensure Total_Score is numeric for reliable math
         if 'Total_Score' in player_df.columns:
             player_df = player_df.copy()
             player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
 
-        # --- PHASE 1: WEEK 1 STARTING HANDICAP (PRE-SEASON) ---
-        if target_week == 1:
-            pre_season_rounds = player_df[
-                (player_df['Week'] <= 0) &
-                (player_df['DNF'] == False) &
-                (player_df['Total_Score'].notna()) &
-                (player_df['Total_Score'] > 0)
-            ].sort_values('Week', ascending=False)
+        # Gather all eligible rounds prior to the target_week
+        # (Week <= 0 is pre-season; 4 and 8 are excluded event weeks)
+        excluded_weeks = [0, 4, 8]
+        
+        eligible_rounds = player_df[
+            ((player_df['Week'] <= 0) | (~player_df['Week'].isin(excluded_weeks))) &
+            (player_df['DNF'] == False) &
+            (player_df['Week'] < target_week) &
+            (player_df['Total_Score'].notna()) &
+            (player_df['Total_Score'] > 0)
+        ].sort_values('Week', ascending=False)
 
-            # Require at least 3 pre-season rounds to establish a Week 1 handicap
-            if len(pre_season_rounds) >= 3:
-                scores = pre_season_rounds.head(3)['Total_Score'].tolist()
-                hcp = round((sum(scores) / len(scores)) - 36, 1)
-                return float(hcp)
-
-            # If fewer than 3 pre-season rounds, start at 0.0 per league rule
+        # Require a minimum of 3 completed rounds (pre-season or regular)
+        if len(eligible_rounds) < 3:
             return 0.0
+
+        # Get the most recent 4 eligible rounds
+        last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
+
+        # Calculate using the best 3 of the available rounds (up to 4)
+        last_scores.sort()
+        hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
+
+        return float(hcp)
+    except Exception:
+        return 0.0
 
         # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
         excluded_weeks = [0, 4, 8]
@@ -303,64 +311,70 @@ with tabs[3]:  # GGG Challenge
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
 
-    st.info(
-        "Challenges will be announced here during the season. "
-        "Each challenge includes a short description, cost (if any), eligibility rules, and how to participate."
-    )
+    challenge_selection = st.radio("Select Challenge:", ["Season Ball Challenge", "Gold Ticket"], horizontal=True)
+
+    st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost (if any), eligibility rules, and how to participate.")
 
     col_main, col_side = st.columns([3, 1])
 
-    # Main column: Current Challenge card
     with col_main:
-        st.subheader("Current Challenge")
-        # Example challenge card — update text as needed when a challenge is active
-        st.markdown("#### Season Ball Challenge")
-        st.markdown("**Entry:** $20 for a GGG sleeve of balls")
-        st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
-        st.divider()
+        if challenge_selection == "Season Ball Challenge":
+            st.subheader("Current Challenge: Season Ball")
+            st.markdown("**Entry:** $20 for a GGG sleeve of balls")
+            st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
+            st.divider()
 
-        st.markdown("**How it works**")
-        st.markdown(
-            "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
-            "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
-            "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
-        )
-
-        st.divider()
-        st.markdown("**Eligibility and Rebuy Options**")
-        # Compact eligibility table for quick scanning
-        import pandas as _pd
-        elig = _pd.DataFrame([
-            {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
-            {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
-            {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
-            {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
-        ])
-        st.table(elig)
-
-        st.divider()
-        # CTA (disabled placeholder until admin enables)
-        st.write("**Participation**")
-        st.button("Join Season Ball Challenge", disabled=True)
-        st.caption("Admin will enable signups and payment links when the challenge is active.")
-
-        with st.expander("Full Rules and Examples", expanded=False):
+            st.markdown("**How it works**")
             st.markdown(
-                "**Key Rules**\n\n"
-                "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
-                "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
-                "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
-                "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
-                "**Examples**\n\n"
-                "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
+                "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
+                "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
             )
 
-    # Side column: quick admin actions and notes
+            st.divider()
+            st.markdown("**Eligibility and Rebuy Options**")
+            import pandas as _pd
+            elig = _pd.DataFrame([
+                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
+                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
+                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
+                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
+            ])
+            st.table(elig)
+
+            st.divider()
+            st.write("**Participation**")
+            st.button("Join Season Ball Challenge", disabled=True, key="join_season_ball")
+            st.caption("Admin will enable signups and payment links when the challenge is active.")
+
+            with st.expander("Full Rules and Examples", expanded=False):
+                st.markdown(
+                    "**Key Rules**\n\n"
+                    "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
+                    "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
+                    "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
+                    "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
+                    "**Examples**\n\n"
+                    "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
+                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                )
+
+        elif challenge_selection == "Gold Ticket":
+            st.subheader("Current Challenge: Gold Ticket")
+            st.markdown("**Entry:** TBA")
+            st.markdown("**Overview:** Details for the Gold Ticket challenge will be revealed soon.")
+            st.divider()
+            st.markdown("**How it works**")
+            st.markdown("1. Stay tuned for official rules and mechanics.")
+            st.divider()
+            st.write("**Participation**")
+            st.button("Join Gold Ticket Challenge", disabled=True, key="join_gold_ticket")
+            st.caption("Admin will enable signups when the challenge goes live.")
+
     with col_side:
         st.subheader("Quick Actions")
         st.write("Admin controls will appear here when implemented.")
-        st.button("Request Challenge Edit Access", disabled=True)
+        st.button("Request Challenge Edit Access", disabled=True, key="req_edit_access")
         st.divider()
         st.markdown("**Notes for Players**")
         st.markdown(
@@ -368,10 +382,9 @@ with tabs[3]:  # GGG Challenge
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
 
-
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
@@ -482,47 +495,20 @@ with tabs[4]: # League Info
 
                     # Compute the handicap breakdown using the same logic as calculate_rolling_handicap
                     try:
-                        if sel_week == 1:
-                            # Week 1 uses pre-season logic
-                            if not pre_season.empty:
-                                scores = pre_season.head(3)['Total_Score'].tolist()
-                                used_scores = scores[:3]
-                                avg_score = sum(used_scores) / len(used_scores)
-                                hcp_val = round(avg_score - 36, 1)
-                                method = f"Week 1: average of up to 3 most recent pre-season rounds ({len(used_scores)} used)"
-                            else:
-                                used_scores = []
-                                avg_score = None
-                                hcp_val = 0.0
-                                method = "Week 1: no pre-season rounds found → default 0.0"
+                        all_eligible = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
+                        
+                        if len(all_eligible) < 3:
+                            used_scores = []
+                            avg_score = None
+                            hcp_val = 0.0
+                            method = f"Insufficient rounds ({len(all_eligible)}/3 completed). A minimum of 3 rounds is required to establish a handicap. Defaulting to 0.0."
                         else:
-                            # Regular season: best 3 of last 4 eligible rounds
-                            last_scores = regular_rounds.head(4)['Total_Score'].tolist()
-                            if not last_scores:
-                                # fallback to pre-season
-                                if not pre_season.empty:
-                                    scores = pre_season.head(3)['Total_Score'].tolist()
-                                    used_scores = scores[:3]
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "No eligible regular rounds → fallback to pre-season average"
-                                else:
-                                    used_scores = []
-                                    avg_score = None
-                                    hcp_val = 0.0
-                                    method = "No eligible rounds → default 0.0"
-                            else:
-                                if len(last_scores) >= 4:
-                                    sorted_scores = sorted(last_scores)
-                                    used_scores = sorted_scores[:3]  # best 3 of last 4
-                                    avg_score = sum(used_scores) / 3
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = "Best 3 of last 4 eligible rounds"
-                                else:
-                                    used_scores = last_scores[:]  # average of whatever is available
-                                    avg_score = sum(used_scores) / len(used_scores)
-                                    hcp_val = round(avg_score - 36, 1)
-                                    method = f"Average of {len(used_scores)} eligible round(s) (fewer than 4 available)"
+                            last_scores = all_eligible.head(4)['Total_Score'].tolist()
+                            sorted_scores = sorted(last_scores)
+                            used_scores = sorted_scores[:3]  # best 3 of last 4 (or 3 of 3)
+                            avg_score = sum(used_scores) / 3
+                            hcp_val = round(avg_score - 36, 1)
+                            method = f"Best 3 of last 4 eligible rounds ({len(last_scores)} available rounds evaluated)"
 
                         # Display the numeric breakdown
                         st.divider()
@@ -745,6 +731,22 @@ with tabs[4]: # League Info
                 
                 st.markdown(f"**Total Members:** {len(members_df)}")
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
+                
+    elif info_category == "Bets":
+        st.subheader("🤝 Season Long Bets")
+        st.write("Track all official season-long wagers and side-action between players here.")
+        st.divider()
+        
+        st.markdown("### Active Wagers")
+        # Placeholder dataframe for bets
+        bets_data = pd.DataFrame([
+            {"Player 1": "Player A", "Player 2": "Player B", "Wager": "$50", "Terms": "Better Overall Net Score at Season End"},
+        ])
+        st.dataframe(bets_data, use_container_width=True, hide_index=True)
+        
+        st.info("To officially register a new season-long bet on the board, please contact the League Officers.")
+
+
 
 with tabs[5]: # Registration
     st.header("👤 Registration")
