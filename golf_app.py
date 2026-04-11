@@ -734,14 +734,14 @@ with tabs[4]: # League Info
                 
     elif info_category == "Bets":
         st.subheader("🤝 Season Long Bets")
-        st.write("Track all official season-long wagers and side-action between players here.")
+        st.write("Track all bets for")
         st.divider()
         
         st.markdown("### Active Wagers")
         # Placeholder dataframe for bets
         bets_data = pd.DataFrame([
-            {"Name1": "Txv", "Name": "5Hundo", "Wager": "1 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-            {"Name1": "Txv", "Name": "5Hundo", "Wager": "100 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+            {"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+            {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
         ])
         st.dataframe(bets_data, use_container_width=True, hide_index=True)
         
