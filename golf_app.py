@@ -740,8 +740,8 @@ with tabs[4]: # League Info
         st.markdown("### Active Wagers")
         # Placeholder dataframe for bets
         bets_data = pd.DataFrame([
-            {"Name": "Txv", "Name": "5Hundo", "Wager": "1 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-            {"Name": "Txv", "Name": "5Hundo", "Wager": "1 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+            {"Name1": "Txv", "Name": "5Hundo", "Wager": "1 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+            {"Name1": "Txv", "Name": "5Hundo", "Wager": "100 pack of Ribeye for EoS picnic", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
         ])
         st.dataframe(bets_data, use_container_width=True, hide_index=True)
         
