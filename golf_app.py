@@ -336,18 +336,21 @@ with tabs[3]:  # GGG Challenge
             st.markdown("**How it works**")
             st.markdown(
                 "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
-                "2. Use the GGG balls during regular league and event play. If you lose all balls, you may REBUY (see timeline below).\n"
-                "3. At the season finale, return at least one ball from your sleeve to qualify for the top prize (or $100 cash option)."
+                "2. Use the GGG balls during regular league and event play.\n"
+                "3. At the start of each round your sleeve will be given to you.\n"
+                "4. At the end of each round the sleeve return your remaining balls to president for redistribution the following week until no more balls are left from the sleeve.\n"
+                "5. When you lose all balls from sleeve, you may REBUY (see timeline below).\n"
+                "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve."
             )
 
             st.divider()
             st.markdown("**Eligibility and Rebuy Options**")
             import pandas as _pd
             elig = _pd.DataFrame([
-                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "Top prize or $100"},
-                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd prize pick or $50"},
-                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th prize pick or $20"},
-                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th prize pick"}
+                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "1st pick EoS prize or $100"},
+                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd pick EoS prize or $50"},
+                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th pick EoS prize or $20"},
+                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th pick EoS prize}
             ])
             st.table(elig)
 
@@ -365,7 +368,8 @@ with tabs[3]:  # GGG Challenge
                     "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
                     "**Examples**\n\n"
                     "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n
+                    "- If you don't REBUY until Week 8, you willbe eligible for ONLY REBUY 3 tier price\n"
                 )
 
         elif challenge_selection == "Gold Card":
