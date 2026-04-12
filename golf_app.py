@@ -377,8 +377,8 @@ with tabs[3]:  # GGG Challenge
             st.markdown("1. Enter into the Ball Challenge.\n"
                        "2. Receive gold card.\n"
                        "3. Turn in gold card.\n"
-                       "4. Play from the front tee.\n
-                       "5. Win first or donate.\n)
+                       "4. Play from the front tee.\n"
+                       "5. Win first or donate.")
             st.divider()
             #st.write("**Participation**")
             #st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
