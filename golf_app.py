@@ -689,7 +689,8 @@ with tabs[4]: # League Info
         #st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.write("The GGGOLF FINALE will determine the order prize selection. Note: **GGG Challenge winners will override the FINALE order.**")
+        st.write("The GGGOLF FINALE will determine the order prize selection.\n"
+                 * Note: GGG Challenge winners will override the FINALE order.")
         
         # Prize 1
         col1, col2 = st.columns([1, 4])
