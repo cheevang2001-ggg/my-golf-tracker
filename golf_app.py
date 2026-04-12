@@ -392,7 +392,7 @@ with tabs[3]:  # GGG Challenge
                     "- Place First for the week.\n\n"
                     "**Examples**\n\n"
                     "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in first, Dale receives 100 points.\n"
-                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pays 4 ducks or $100 to the league as a donation fund for league expenses.\n"
+                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pay ducks or $100 to the league as a donation fund for league expenses.\n"
                 )
 
     with col_side:
