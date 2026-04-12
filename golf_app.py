@@ -368,8 +368,8 @@ with tabs[3]:  # GGG Challenge
                     "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
                     "**Examples**\n\n"
                     "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n
-                    "- If you don't REBUY until Week 8, you willbe eligible for ONLY REBUY 3 tier price\n"
+                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                    "- If you don't REBUY until Week 8, you willbe eligible for ONLY REBUY 3 tier price"
                 )
 
         elif challenge_selection == "Gold Card":
