@@ -805,20 +805,74 @@ with tabs[4]: # League Info
                 
                 st.markdown(f"**Total Members:** {len(members_df)}")
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
-                
+
     elif info_category == "Bets":
         st.subheader("🤝 Season Bets")
-        st.write("Track all bets")
-        st.divider()
-        
-        st.markdown("### Active Wagers")
-        # Placeholder dataframe for bets
-        bets_data = pd.DataFrame([
-            {"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-            {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
-        ])
-        st.dataframe(bets_data, use_container_width=True, hide_index=True)
+        st.write("Track all official side-action and friendly wagers here.")
+
+        # 1. Initialize session state for bets if it doesn't exist
+        if "bets_list" not in st.session_state:
+            # Starting with your current placeholder data
+            st.session_state["bets_list"] = [
+                {"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Masters Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+                {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
+            ]
+
+        # --- Section: Add a New Bet ---
+        with st.expander("➕ Log a New Bet", expanded=False):
+            with st.form("new_bet_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                # Using your EXISTING_PLAYERS list from the top of the script
+                p1 = col1.selectbox("Player 1", options=EXISTING_PLAYERS, key="bet_p1")
+                p2 = col2.selectbox("Player 2", options=EXISTING_PLAYERS, key="bet_p2")
                 
+                wager = st.text_input("The Wager", placeholder="e.g., 1 Duck, Lunch, $20")
+                terms = st.text_area("Terms / Conditions", placeholder="e.g., Whoever has the lower Net Score in Week 5")
+                
+                if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
+                    if p1 == p2:
+                        st.error("You can't bet against yourself!")
+                    elif not wager or not terms:
+                        st.warning("Please fill out both the Wager and the Terms.")
+                    else:
+                        new_bet = {"Player 1": p1, "Player 2": p2, "Wager": wager.strip(), "Terms": terms.strip()}
+                        st.session_state["bets_list"].append(new_bet)
+                        st.success(f"Bet logged between {p1} and {p2}!")
+                        time.sleep(1)
+                        st.rerun()
+
+        st.divider()
+
+        # --- Section: Display Bets ---
+        st.markdown("### Active Wagers")
+        if not st.session_state["bets_list"]:
+            st.info("No active bets recorded yet.")
+        else:
+            bets_df = pd.DataFrame(st.session_state["bets_list"])
+            st.dataframe(bets_df, use_container_width=True, hide_index=True)
+
+            # Optional: Admin/Delete check
+            if st.session_state.get("authenticated"):
+                with st.expander("⚙️ Admin: Clear Bets"):
+                    if st.button("Delete All Bets", type="secondary"):
+                        st.session_state["bets_list"] = []
+                        st.rerun()
+
+#OLD BET CODE -- Keeping for reference
+    #elif info_category == "Bets":
+        #st.subheader("🤝 Season Bets")
+        #st.write("Track all bets")
+        #st.divider()
+        
+        #st.markdown("### Active Wagers")
+        # Placeholder dataframe for bets
+        #bets_data = pd.DataFrame([
+            #{"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
+            #{"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
+        #])
+        #st.dataframe(bets_data, use_container_width=True, hide_index=True)
+
+
 with tabs[5]: # Registration
     st.header("👤 Registration")
     
