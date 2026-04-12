@@ -368,11 +368,10 @@ with tabs[3]:  # GGG Challenge
                     "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
                 )
 
-        elif challenge_selection == "Gold Card":
-            st.subheader("Current Challenge: Gold Card")
-            st.markdown("**Entry:** When you purchase the ball challenge before week 1, you automatically get a gold card")
-            st.markdown("**Overview:** Use your Gold Ticket to play from the front tees. you must finish first overall that week. If not, you owe at least $100 worth of food for the end‑of‑year GGGolf Picnic or $100 to GGGolf.")
-            st.markdown("**Note:** Gold Card cannot be used at Currie Golf Course or during GGGOLF events.")
+        elif challenge_selection == "Gold Ticket":
+            st.subheader("Current Challenge: Gold Ticket")
+            st.markdown("**Entry:** TBA")
+            st.markdown("**Overview:** Details for the Gold Ticket challenge will be revealed soon.")
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Stay tuned for official rules and mechanics.")
@@ -391,6 +390,7 @@ with tabs[3]:  # GGG Challenge
             "- Keep your sleeve balls separate so returned balls can be verified.\n"
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
+
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
