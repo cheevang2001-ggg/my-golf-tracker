@@ -807,8 +807,8 @@ with tabs[4]: # League Info
                 st.dataframe(members_df, use_container_width=True, hide_index=True)
                 
     elif info_category == "Bets":
-        st.subheader("🤝 Season Long Bets")
-        st.write("Track all bets for")
+        st.subheader("🤝 Season Bets")
+        st.write("Track all bets")
         st.divider()
         
         st.markdown("### Active Wagers")
