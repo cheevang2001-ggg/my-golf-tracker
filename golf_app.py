@@ -145,7 +145,13 @@ with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
         st.warning("No players registered yet.")
     else:
-        player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
+        player_select = st.segmented_control(
+            "Select Your Profile", 
+                options=EXISTING_PLAYERS,
+                selection_mode="single",
+                key="player_segment_select"
+            )
+        #player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         
         # Check if the session is still valid (2-hour timeout logic)
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
