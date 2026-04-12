@@ -810,52 +810,83 @@ with tabs[4]: # League Info
         st.subheader("🤝 Season Bets")
         st.write("Track all official side-action and friendly wagers here.")
 
-        # 1. Initialize session state for bets if it doesn't exist
+        # 1. Initialize session state for bets with a 'Status' field
         if "bets_list" not in st.session_state:
-            # Starting with your current placeholder data
             st.session_state["bets_list"] = [
-                {"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Masters Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-                {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
+                {"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins Masters", "Status": "⏳ Pending"},
+                {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match Score", "Status": "🏆 Lex Wins"},
             ]
 
         # --- Section: Add a New Bet ---
         with st.expander("➕ Log a New Bet", expanded=False):
             with st.form("new_bet_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
-                # Using your EXISTING_PLAYERS list from the top of the script
                 p1 = col1.selectbox("Player 1", options=EXISTING_PLAYERS, key="bet_p1")
                 p2 = col2.selectbox("Player 2", options=EXISTING_PLAYERS, key="bet_p2")
-                
-                wager = st.text_input("The Wager", placeholder="e.g., 1 Duck, Lunch, $20")
-                terms = st.text_area("Terms / Conditions", placeholder="e.g., Whoever has the lower Net Score in Week 5")
+                wager = st.text_input("The Wager", placeholder="e.g., 1 Duck")
+                terms = st.text_area("Terms / Conditions")
                 
                 if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
                     if p1 == p2:
                         st.error("You can't bet against yourself!")
                     elif not wager or not terms:
-                        st.warning("Please fill out both the Wager and the Terms.")
+                        st.warning("Fill out all fields.")
                     else:
-                        new_bet = {"Player 1": p1, "Player 2": p2, "Wager": wager.strip(), "Terms": terms.strip()}
+                        new_bet = {
+                            "Player 1": p1, "Player 2": p2, 
+                            "Wager": wager.strip(), "Terms": terms.strip(),
+                            "Status": "⏳ Pending" # Default status
+                        }
                         st.session_state["bets_list"].append(new_bet)
-                        st.success(f"Bet logged between {p1} and {p2}!")
-                        time.sleep(1)
                         st.rerun()
 
         st.divider()
 
-        # --- Section: Display Bets ---
+        # --- Section: Display & Identify Winners ---
         st.markdown("### Active Wagers")
         if not st.session_state["bets_list"]:
             st.info("No active bets recorded yet.")
         else:
             bets_df = pd.DataFrame(st.session_state["bets_list"])
-            st.dataframe(bets_df, use_container_width=True, hide_index=True)
+            
+            # This configures the table to look professional and highlight the Status
+            st.dataframe(
+                bets_df, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "Status": st.column_config.TextColumn(
+                        "Outcome",
+                        help="Winner status of the bet",
+                        width="medium",
+                    )
+                }
+            )
 
-            # Optional: Admin/Delete check
-            if st.session_state.get("authenticated"):
-                with st.expander("⚙️ Admin: Clear Bets"):
-                    if st.button("Delete All Bets", type="secondary"):
-                        st.session_state["bets_list"] = []
+            # --- Section: Update Winner (For Players/Admin) ---
+            with st.expander("🏅 Update a Bet Outcome"):
+                # Create labels to identify which bet to update
+                bet_labels = [f"{i+1}. {b['Player 1']} vs {b['Player 2']} ({b['Wager']})" for i, b in enumerate(st.session_state["bets_list"])]
+                selected_bet_label = st.selectbox("Select Bet to Update", ["Select..."] + bet_labels)
+                
+                if selected_bet_label != "Select...":
+                    idx = bet_labels.index(selected_bet_label)
+                    current_bet = st.session_state["bets_list"][idx]
+                    
+                    # Winners options based on the players in that specific bet
+                    winner_options = [
+                        "⏳ Pending", 
+                        f"🏆 {current_bet['Player 1']} Wins", 
+                        f"🏆 {current_bet['Player 2']} Wins", 
+                        "🤝 Draw/Void"
+                    ]
+                    
+                    new_status = st.radio("Who won?", options=winner_options, horizontal=True)
+                    
+                    if st.button("Save Outcome", use_container_width=True):
+                        st.session_state["bets_list"][idx]["Status"] = new_status
+                        st.success("Outcome updated!")
+                        time.sleep(1)
                         st.rerun()
 
 #OLD BET CODE -- Keeping for reference
