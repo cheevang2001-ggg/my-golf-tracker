@@ -690,7 +690,7 @@ with tabs[4]: # League Info
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("The GGGOLF FINALE will determine the order prize selection.\n"
-                 * Note: GGG Challenge winners will override the FINALE order.")
+                 "Note: **GGG Challenge winners will override the FINALE order.**")
         
         # Prize 1
         col1, col2 = st.columns([1, 4])
