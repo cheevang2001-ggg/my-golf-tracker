@@ -721,56 +721,67 @@ with tabs[4]: # League Info
         with col8:
             st.write("TAKEYA Insulated Stanless 18oz drink container.")
 
-    elif info_category == "Expenses":
+elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
-        # Initialize an in-memory expenses table in session_state (persists per app session)
+        # 1. Initialize session state
         if "expenses_table" not in st.session_state:
-            st.session_state["expenses_table"] = []  # list of dicts: {"Prize": str, "Cost": float}
+            st.session_state["expenses_table"] = []
 
         # --- Add new expense entry ---
         with st.expander("Add a Prize / Expense", expanded=True):
+            # We add unique keys to the inputs to ensure data is captured correctly
             with st.form("add_expense_form", clear_on_submit=True):
-                prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy, Gift Cards")
-                prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
+                prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy", key="new_prize_name")
+                prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f", key="new_prize_val")
                 add_sub = st.form_submit_button("Add Expense", use_container_width=True, type="primary")
 
                 if add_sub:
                     if not prize_desc:
                         st.warning("Please enter a prize description.")
                     else:
-                        st.session_state["expenses_table"].append({"Prize": prize_desc.strip(), "Cost": float(prize_cost)})
+                        # Force capture the value before the form resets
+                        st.session_state["expenses_table"].append({
+                            "Prize": prize_desc.strip(), 
+                            "Cost": float(prize_cost)
+                        })
                         st.success(f"Added: {prize_desc} — ${prize_cost:.2f}")
+                        st.rerun() # Refresh to update the table below
 
         st.divider()
 
         # --- Display current expenses table ---
         if not st.session_state["expenses_table"]:
-            st.info("No prize expenses recorded yet. Use the form above to add items.")
+            st.info("No prize expenses recorded yet.")
         else:
             expenses_df = pd.DataFrame(st.session_state["expenses_table"])
-            # Format Cost as currency for display
+            
+            # Formatting for display
             expenses_df_display = expenses_df.copy()
             expenses_df_display["Cost"] = expenses_df_display["Cost"].map(lambda x: f"${x:,.2f}")
 
             st.markdown("**Current Prize / Expense List**")
             st.dataframe(expenses_df_display.reset_index(drop=True), use_container_width=True, hide_index=True)
 
-            # Show total cost
             total_cost = expenses_df["Cost"].sum()
-            st.markdown(f"**Total Estimated Cost:** **${total_cost:,.2f}**")
+            st.markdown(f"**Total Estimated Cost: ${total_cost:,.2f}**")
 
-            # Option to remove an entry
-            with st.expander("Manage Expenses (Remove an item)", expanded=False):
+            # --- Manage Expenses (Remove an item) ---
+            with st.expander("Manage Expenses (Remove an item)"):
+                # Create labels for the selectbox
                 remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in enumerate(st.session_state["expenses_table"])]
-                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
+                
+                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0, key="remove_selector")
+                
                 if to_remove != "None":
-                    if st.button("Remove Selected Item", use_container_width=True, type="danger"):
+                    # KEY FIX: Added a unique key to the button to prevent the API Exception
+                    if st.button("Delete Selected Item", use_container_width=True, type="primary", key="delete_button_final"):
                         idx = remove_options.index(to_remove)
                         removed = st.session_state["expenses_table"].pop(idx)
-                        st.success(f"Removed: {removed['Prize']} — ${removed['Cost']:,.2f}")
-                        st.experimental_rerun()
+                        st.toast(f"Removed: {removed['Prize']}")
+                        time.sleep(0.5)
+                        st.rerun() # Use the modern rerun method
 
 
     elif info_category == "Members":
