@@ -113,7 +113,6 @@ def calculate_rolling_handicap(player_df, target_week):
     except Exception:
         return 0.0
 
-
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     st.cache_data.clear()
     existing_data = load_data()
@@ -127,6 +126,10 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
     updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
     conn.update(data=updated_df[MASTER_COLUMNS])
     st.cache_data.clear()
+    
+    # NEW: Visual confirmation before refresh
+    st.success(f"👍 Score Submitted Successfully for {player}!", icon="✅")
+    time.sleep(2) # Give them 2 seconds to see it
     st.rerun()
 
 # --- 3. DATA LOAD ---
