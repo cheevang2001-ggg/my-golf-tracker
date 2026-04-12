@@ -352,9 +352,9 @@ with tabs[3]:  # GGG Challenge
             st.table(elig)
 
             st.divider()
-            st.write("**Participation**")
-            st.button("Join Season Ball Challenge", disabled=True, key="join_season_ball")
-            st.caption("Admin will enable signups and payment links when the challenge is active.")
+            #st.write("**Participation**")
+            #st.button("Join Season Ball Challenge", disabled=True, key="join_season_ball")
+            #st.caption("Admin will enable signups and payment links when the challenge is active.")
 
             with st.expander("Full Rules and Examples", expanded=False):
                 st.markdown(
@@ -376,20 +376,19 @@ with tabs[3]:  # GGG Challenge
             st.markdown("**How it works**")
             st.markdown("1. Stay tuned for official rules and mechanics.")
             st.divider()
-            st.write("**Participation**")
-            st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
-            st.caption("Admin will enable signups when the challenge goes live.")
+            #st.write("**Participation**")
+            #st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
+            #st.caption("Admin will enable signups when the challenge goes live.")
 
             with st.expander("Full Rules and Examples", expanded=False):
                 st.markdown(
                     "**Key Rules**\n\n"
-                    "- qwerPurchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
-                    "- qwerIf you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
-                    "- qwer Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
-                    "- qerTo claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
+                    "- Play from the front tee.\n"
+                    "- No handicap.\n"
+                    "- Place First for the week.\n\n"
                     "**Examples**\n\n"
-                    "- qwerIf you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                    "- qwerIf you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in first, Dale receives 100 points.\n"
+                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pays 4 ducks or $100 to the league as a donation fund for league expenses.\n"
                 )
 
     with col_side:
