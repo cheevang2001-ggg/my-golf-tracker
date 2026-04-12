@@ -721,7 +721,7 @@ with tabs[4]: # League Info
         with col8:
             st.write("TAKEYA Insulated Stanless 18oz drink container.")
 
-elif info_category == "Expenses":
+    elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
