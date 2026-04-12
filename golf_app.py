@@ -682,11 +682,32 @@ with tabs[4]: # League Info
                     else:
                         st.write("Standard league play rules and rolling handicaps apply.")
 
+    #elif info_category == "Prizes":
+        #st.subheader("🏆 Prize Pool")
+        #st.write("Prizes are based on GGG Point standings at the end of Week 13.")
+        #st.image("rockstarBag1.jpg", width=120, caption="Rockstar Stand Bag")
+        #st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
-        st.image("rockstarBag1.jpg", width=120, caption="Rockstar Stand Bag")
-        st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
+        
+        # Prize 1
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image("rockstarBag1.jpg", width=120)
+        with col2:
+            st.markdown("**1st Place Prize:**")
+            st.write("Limited Edition Rockstar Cart Bag with premium strap system.")
+
+        st.divider() # Adds a thin line between prizes
+
+        # Prize 2
+        col3, col4 = st.columns([1, 4])
+        with col3:
+            st.image("taylormadeBag.jpg", width=120)
+        with col4:
+            st.markdown("**2nd Place Prize:**")
+            st.write("TaylorMade Select ST Stand Bag - Lightweight and durable.")
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
