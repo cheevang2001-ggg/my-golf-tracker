@@ -350,7 +350,7 @@ with tabs[3]:  # GGG Challenge
                 {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "1st pick EoS prize or $100"},
                 {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd pick EoS prize or $50"},
                 {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th pick EoS prize or $20"},
-                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th pick EoS prize}
+                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th pick EoS prize"}
             ])
             st.table(elig)
 
