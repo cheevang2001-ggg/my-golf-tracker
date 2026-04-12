@@ -696,8 +696,8 @@ with tabs[4]: # League Info
         with col1:
             st.image("rockstarBag1.jpg", width=120)
         with col2:
-            st.markdown("**1st Place Prize:**")
-            st.write("Limited Edition Rockstar Cart Bag with premium strap system.")
+            #st.markdown("**1st Place Prize:**")
+            st.write("Limited Edition OGIO Rockstar carry/stand golf Bag.")
 
         st.divider() # Adds a thin line between prizes
 
@@ -706,8 +706,21 @@ with tabs[4]: # League Info
         with col3:
             st.image("taylormadeBag.jpg", width=120)
         with col4:
-            st.markdown("**2nd Place Prize:**")
             st.write("TaylorMade Select ST Stand Bag - Lightweight and durable.")
+
+            # Prize 3
+        col5, col6 = st.columns([1, 4])
+        with col5:
+            st.image("PackerJacket.jpg", width=120)
+        with col6:
+            st.write("GB Packers 3 layer softshell jacker. Size: XL")
+
+                # Prize 4
+        col7, col8 = st.columns([1, 4])
+        with col7:
+            st.image("takeya.jpg", width=120)
+        with col8:
+            st.write("TAKEYA Insulated Stanless 18oz drink container.")
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
