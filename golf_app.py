@@ -371,10 +371,14 @@ with tabs[3]:  # GGG Challenge
         elif challenge_selection == "Gold Card":
             st.subheader("Current Challenge: Gold Card")
             st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
-            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Win first place that week, no handicap. If you do not come in first, you will owe $100 to the league or equvilent to 4 ducks for the picnic.")
+            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Win first place that week, no handicap. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.")
             st.divider()
             st.markdown("**How it works**")
-            st.markdown("1. Stay tuned for official rules and mechanics.")
+            st.markdown("1. Enter into the Ball Challenge.\n"
+                       "2. Receive gold card.\n"
+                       "3. Turn in gold card.\n"
+                       "4. Play from the front tee.\n
+                       "5. Win first or donate.\n)
             st.divider()
             #st.write("**Participation**")
             #st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
