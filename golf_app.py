@@ -818,11 +818,7 @@ with tabs[4]: # League Info
             {"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
         ])
         st.dataframe(bets_data, use_container_width=True, hide_index=True)
-        
-        st.info("To officially register a new season-long bet on the board, please contact the League Officers.")
-
-
-
+                
 with tabs[5]: # Registration
     st.header("👤 Registration")
     
