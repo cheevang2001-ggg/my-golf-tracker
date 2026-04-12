@@ -685,8 +685,8 @@ with tabs[4]: # League Info
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.write("Prizes are based on GGG Point standings at the end of Week 13.")
-        st.image("rockstarBag1.jpg", width=120)
-        st.image("taylormadeBag.jpg", width=120)
+        st.image("rockstarBag1.jpg", width=120, caption="Rockstar Stand Bag")
+        st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
