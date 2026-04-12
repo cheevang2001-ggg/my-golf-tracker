@@ -320,7 +320,7 @@ with tabs[3]:  # GGG Challenge
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
 
-    challenge_selection = st.radio("Select Challenge:", ["Season Ball Challenge", "Gold Ticket"], horizontal=True)
+    challenge_selection = st.radio("Select Challenge:", ["Season Ball Challenge", "Gold Card"], horizontal=True)
 
     st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost (if any), eligibility rules, and how to participate.")
 
@@ -368,17 +368,29 @@ with tabs[3]:  # GGG Challenge
                     "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
                 )
 
-        elif challenge_selection == "Gold Ticket":
-            st.subheader("Current Challenge: Gold Ticket")
-            st.markdown("**Entry:** TBA")
-            st.markdown("**Overview:** Details for the Gold Ticket challenge will be revealed soon.")
+        elif challenge_selection == "Gold Card":
+            st.subheader("Current Challenge: Gold Card")
+            st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
+            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Win first place that week, no handicap. If you do not come in first, you will owe $100 to the league or equvilent to 4 ducks for the picnic.")
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Stay tuned for official rules and mechanics.")
             st.divider()
             st.write("**Participation**")
-            st.button("Join Gold Ticket Challenge", disabled=True, key="join_gold_ticket")
+            st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
             st.caption("Admin will enable signups when the challenge goes live.")
+
+            with st.expander("Full Rules and Examples", expanded=False):
+                st.markdown(
+                    "**Key Rules**\n\n"
+                    "- qwerPurchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
+                    "- qwerIf you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
+                    "- qwer Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
+                    "- qerTo claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
+                    "**Examples**\n\n"
+                    "- qwerIf you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
+                    "- qwerIf you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
+                )
 
     with col_side:
         st.subheader("Quick Actions")
