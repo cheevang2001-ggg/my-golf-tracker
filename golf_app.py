@@ -372,7 +372,7 @@ with tabs[3]:  # GGG Challenge
             st.subheader("Current Challenge: Gold Card")
             st.markdown("**Entry:** When you purchase the ball challenge before week 1, you automatically get a gold card")
             st.markdown("**Overview:** Use your Gold Ticket to play from the front tees. you must finish first overall that week. If not, you owe at least $100 worth of food for the end‑of‑year GGGolf Picnic or $100 to GGGolf.")
-            st.markdown("**Note:** Gold Card cannot be used at Currie Golf Course or during GGGOLF events.)
+            st.markdown("**Note:** Gold Card cannot be used at Currie Golf Course or during GGGOLF events.")
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Stay tuned for official rules and mechanics.")
