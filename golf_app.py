@@ -405,7 +405,7 @@ with tabs[3]:  # GGG Challenge
             st.markdown("**How it works**")
             st.markdown("1. Enter into the Ball Challenge.\n"
                        "2. Receive gold card.\n"
-                       "3. Turn in gold card.\n"
+                       "3. Turn in gold card before teeing off.\n"
                        "4. Play from the front tee.\n"
                        "5. Win first or donate.")
             st.divider()
@@ -417,8 +417,11 @@ with tabs[3]:  # GGG Challenge
                 st.markdown(
                     "**Key Rules**\n\n"
                     "- Play from the front tee.\n"
+                    "- Multiple players can turn in their GOLD card on the same week.\n"
                     "- No handicap.\n"
-                    "- Place First for the week.\n\n"
+                    "- Place First overall for the week.\n"
+                    "- Any ties that occur, will continue on until one winner is decided in playoff rules. Win the hole or lose, ties keep moving onto the next hole until winner is decided.\n"
+                    "- In the event of tie through 18 holes, Chip & Putt will decide.\n\n"
                     "**Examples**\n\n"
                     "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in first, Dale receives 100 points.\n"
                     "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pay ducks or $100 to the league as a donation fund for league expenses.\n"
