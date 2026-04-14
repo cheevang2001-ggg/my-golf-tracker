@@ -745,63 +745,45 @@ with tabs[4]: # League Info
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
-        st.info("⚠️ **Note:** Expenses are saved to the current session. Refreshing the browser will clear this list.")
 
-        # 1. Initialize session state for expenses if it doesn't exist
-        if "expenses_list" not in st.session_state:
-            st.session_state["expenses_list"] = []
+        # Load existing data from GSheets
+        try:
+            expenses_df = conn.read(worksheet="Expenses", ttl=0)
+            # Clean up any completely empty rows/cols if they exist
+            expenses_df = expenses_df.dropna(how='all')
+        except Exception:
+            expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
 
-        # --- Add new expense entry ---
+        # --- Form to Add Expense ---
         with st.expander("Add a Prize / Expense", expanded=True):
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                add_sub = st.form_submit_button("Add Expense", use_container_width=True, type="primary")
-
-                if add_sub:
-                    if not prize_desc:
-                        st.warning("Please enter a prize description.")
-                    else:
-                        # Append to session state list instead of Google Sheets
-                        new_item = {"Prize": prize_desc.strip(), "Cost": float(prize_cost)}
-                        st.session_state["expenses_list"].append(new_item)
-                        st.success(f"Added: {prize_desc} — ${prize_cost:.2f}")
+                if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
+                    if prize_desc:
+                        new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
+                        updated_df = pd.concat([expenses_df, new_row], ignore_index=True)
+                        conn.update(worksheet="Expenses", data=updated_df)
+                        st.cache_data.clear()
+                        st.success(f"Saved: {prize_desc}")
                         time.sleep(1)
                         st.rerun()
+                    else:
+                        st.warning("Please enter a description.")
 
         st.divider()
 
-        # --- Display current expenses table ---
-        if not st.session_state["expenses_list"]:
-            st.info("No prize expenses recorded in this session yet.")
-        else:
-            # Convert list of dictionaries to a DataFrame for display
-            expenses_df = pd.DataFrame(st.session_state["expenses_list"])
+        # --- Display Table ---
+        if not expenses_df.empty:
+            # Formatting for display only
+            disp_df = expenses_df.copy()
+            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
+            st.dataframe(disp_df, use_container_width=True, hide_index=True)
             
-            # Formatting for the UI
-            display_df = expenses_df.copy()
-            display_df["Cost"] = display_df["Cost"].map(lambda x: f"${x:,.2f}")
-
-            st.markdown("**Current Prize / Expense List**")
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-            total_cost = expenses_df["Cost"].sum()
-            st.markdown(f"### Total Estimated Cost: ${total_cost:,.2f}")
-
-            # --- Manage Expenses (Remove an item) ---
-            with st.expander("Manage Expenses (Remove an item)"):
-                remove_options = [f"{i+1}. {r['Prize']} — ${r['Cost']:,.2f}" for i, r in expenses_df.iterrows()]
-                to_remove = st.selectbox("Select an item to remove", ["None"] + remove_options, index=0)
-                
-                if to_remove != "None":
-                    if st.button("Delete Selected Item", use_container_width=True, type="primary"):
-                        # Get index from the selection string
-                        idx = remove_options.index(to_remove)
-                        st.session_state["expenses_list"].pop(idx)
-                        st.toast("Item removed successfully!")
-                        time.sleep(1)
-                        st.rerun()
-
+            total = pd.to_numeric(expenses_df["Cost"]).sum()
+            st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
+        else:
+            st.info("No expenses found in the Google Sheet.")
 
     elif info_category == "Members":
         st.subheader("👥 League Members")
@@ -827,88 +809,55 @@ with tabs[4]: # League Info
 
     elif info_category == "Bets":
         st.subheader("🤝 Season Bets")
-        st.write("Track all official side-action and friendly wagers here.")
         
-        # Adding a visual reminder about how the data is stored
-        st.info("⚠️ **Note:** Bets are currently saved only to your active session. If you refresh the page or close the app, this list will clear.")
+        # Load existing data from GSheets
+        try:
+            bets_df = conn.read(worksheet="Bets", ttl=0)
+            bets_df = bets_df.dropna(how='all')
+        except Exception:
+            bets_df = pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
 
-        # 1. Initialize session state for bets 
-        if "bets_list" not in st.session_state:
-            st.session_state["bets_list"] = []
-
-        # --- Section: Add a New Bet ---
-        with st.expander("➕ Log a New Bet", expanded=False):
+        # --- Form to Add Bet ---
+        with st.expander("➕ Log a New Bet"):
             with st.form("new_bet_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
-                p1 = col1.selectbox("Player 1", options=EXISTING_PLAYERS, key="bet_p1")
-                p2 = col2.selectbox("Player 2", options=EXISTING_PLAYERS, key="bet_p2")
-                wager = st.text_input("The Wager", placeholder="e.g., 1 Duck")
-                terms = st.text_area("Terms / Conditions")
+                p1 = col1.selectbox("Player 1", options=EXISTING_PLAYERS)
+                p2 = col2.selectbox("Player 2", options=EXISTING_PLAYERS)
+                wager = st.text_input("The Wager")
+                terms = st.text_area("Terms")
                 
                 if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
-                    if p1 == p2:
-                        st.error("You can't bet against yourself!")
-                    elif not wager or not terms:
-                        st.warning("Fill out all fields.")
-                    else:
-                        new_bet = {
+                    if p1 != p2 and wager:
+                        new_bet = pd.DataFrame([{
                             "Player 1": p1, "Player 2": p2, 
-                            "Wager": wager.strip(), "Terms": terms.strip(),
-                            "Status": "⏳ Pending" 
-                        }
-                        st.session_state["bets_list"].append(new_bet)
-                        st.success("Bet logged to current session!")
+                            "Wager": wager, "Terms": terms, "Status": "⏳ Pending"
+                        }])
+                        updated_bets = pd.concat([bets_df, new_bet], ignore_index=True)
+                        conn.update(worksheet="Bets", data=updated_bets)
+                        st.cache_data.clear()
+                        st.success("Bet saved to Google Sheets!")
                         time.sleep(1)
                         st.rerun()
+                    else:
+                        st.error("Check player selection and wager details.")
 
         st.divider()
 
-        # --- Section: Display & Identify Winners ---
-        st.markdown("### Active Wagers")
-        if not st.session_state["bets_list"]:
-            st.info("No active bets recorded in this session yet.")
-        else:
-            bets_df = pd.DataFrame(st.session_state["bets_list"])
+        # --- Display & Update Section ---
+        if not bets_df.empty:
+            st.dataframe(bets_df, use_container_width=True, hide_index=True)
             
-            # Display the table
-            st.dataframe(
-                bets_df, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "Status": st.column_config.TextColumn(
-                        "Outcome",
-                        help="Winner status of the bet",
-                        width="medium",
-                    )
-                }
-            )
-
-            # --- Section: Update Winner ---
-            with st.expander("🏅 Update a Bet Outcome"):
-                # Create labels to identify which bet to update
-                bet_labels = [f"{i+1}. {b['Player 1']} vs {b['Player 2']} ({b['Wager']})" for i, b in enumerate(st.session_state["bets_list"])]
-                selected_bet_label = st.selectbox("Select Bet to Update", ["Select..."] + bet_labels)
-                
-                if selected_bet_label != "Select...":
-                    idx = bet_labels.index(selected_bet_label)
-                    current_bet = st.session_state["bets_list"][idx]
-                    
-                    # Winners options based on the players in that specific bet
-                    winner_options = [
-                        "⏳ Pending", 
-                        f"🏆 {current_bet['Player 1']} Wins", 
-                        f"🏆 {current_bet['Player 2']} Wins", 
-                        "🤝 Draw/Void"
-                    ]
-                    
-                    new_status = st.radio("Who won?", options=winner_options, horizontal=True)
-                    
-                    if st.button("Save Outcome", use_container_width=True):
-                        st.session_state["bets_list"][idx]["Status"] = new_status
-                        st.success("Outcome updated!")
-                        time.sleep(1)
-                        st.rerun()
+            # Simple Update Tool
+            with st.expander("🏅 Update a Bet Status"):
+                bet_idx = st.selectbox("Select Bet #", range(len(bets_df)), format_func=lambda x: f"Bet {x+1}: {bets_df.iloc[x]['Player 1']} vs {bets_df.iloc[x]['Player 2']}")
+                new_status = st.radio("Outcome", ["⏳ Pending", "🏆 P1 Wins", "🏆 P2 Wins", "🤝 Draw"])
+                if st.button("Update Status"):
+                    bets_df.at[bet_idx, "Status"] = new_status
+                    conn.update(worksheet="Bets", data=bets_df)
+                    st.cache_data.clear()
+                    st.rerun()
+        else:
+            st.info("No active bets found in the Google Sheet.")
                         
 #OLD BET CODE -- Keeping for reference
     #elif info_category == "Bets":
