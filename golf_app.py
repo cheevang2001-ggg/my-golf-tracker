@@ -680,8 +680,8 @@ with tabs[4]: # League Info
                         * Team members receives the same GGG points for the week.
                         * **Handicap:** No handicap applied for this round.
                         * **Partners:** Entire field of players cut in half. Bottom tier will enter into a Draft Lottery.
-                        * **Lottery: ** Lowest ranked player will receive 6 balls in the lottery. Second lowest will receive 4 balls, Third lowest will receive 2 balls. The rest will receive 1 ball.
-                        * **Draft: ** All balls are randomly picked, which ever players name is picked, that player can pick any player from the top tier to play as their partner.
+                        * **Lottery:** Lowest ranked player will receive 6 balls in the lottery. Second lowest will receive 4 balls, Third lowest will receive 2 balls. The rest will receive 1 ball.
+                        * **Draft:** All balls are randomly picked, which ever players name is picked, that player can pick any player from the top tier to play as their partner.
                         """)
                     elif "4 Man Team Scramble" in entry['Note']:
                         st.info("""
