@@ -361,7 +361,7 @@ with tabs[3]:  # GGG Challenge
                 "3. At the start of each round your sleeve will be given to you.\n"
                 "4. At the end of each round the sleeve return your remaining balls to president for redistribution the following week until no more balls are left from the sleeve.\n"
                 "5. When you lose all balls from sleeve, you may REBUY (see timeline below).\n"
-                "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve."
+                "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve.\n\n"
                 "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
             )
 
