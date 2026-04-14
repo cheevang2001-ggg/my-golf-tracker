@@ -359,8 +359,9 @@ with tabs[3]:  # GGG Challenge
                 "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
                 "2. Use the GGG balls during regular league and event play.\n"
                 "3. At the start of each round your sleeve will be given to you.\n"
-                "4. At the end of each round the sleeve must be returned with the remaining balls to president Txoovnom for redistribution the following week, until no more balls are left from the sleeve to return.\n"
-                "5. When you lose all balls from sleeve, you may REBUY (see timeline below).\n"
+                "4. At the end of each round the sleeve must be returned with the remaining balls to one of the League Officials.\n"
+                "5. At the start of the next round/week your sleeve will be redistributed from the previous week for you to continue the challenge.\n"
+                "5. When you have lost all balls from the sleeve, you may REBUY (see timeline below).\n"
                 "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve.\n\n"
                 "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
             )
@@ -398,7 +399,8 @@ with tabs[3]:  # GGG Challenge
         elif challenge_selection == "Gold Card":
             st.subheader("Current Challenge: Gold Card")
             st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
-            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Win first place that week, no handicap. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.")
+            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Finish the round in first place overall net score without handicap that week. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.\n\n"
+                       "**NOTE:** GOLD Card is not accepted at Currie Golf course)
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Enter into the Ball Challenge.\n"
