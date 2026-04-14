@@ -359,7 +359,7 @@ with tabs[3]:  # GGG Challenge
                 "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
                 "2. Use the GGG balls during regular league and event play.\n"
                 "3. At the start of each round your sleeve will be given to you.\n"
-                "4. At the end of each round the sleeve return your remaining balls to president for redistribution the following week until no more balls are left from the sleeve.\n"
+                "4. At the end of each round the sleeve must be returned with the remaining balls to president Txoovnom for redistribution the following week, until no more balls are left from the sleeve to return.\n"
                 "5. When you lose all balls from sleeve, you may REBUY (see timeline below).\n"
                 "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve.\n\n"
                 "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
@@ -369,10 +369,10 @@ with tabs[3]:  # GGG Challenge
             st.markdown("**Eligibility and Rebuy Options**")
             import pandas as _pd
             elig = _pd.DataFrame([
-                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1", "Prize Eligibility": "1st pick EoS prize or $100"},
-                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3", "Prize Eligibility": "2nd pick EoS prize or $50"},
-                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7", "Prize Eligibility": "4th pick EoS prize or $20"},
-                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11", "Prize Eligibility": "6th pick EoS prize"}
+                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1 April thru May 31", "Prize Eligibility": "1st pick EoS prize or $100"},
+                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3 - June 1 thru June 14", "Prize Eligibility": "2nd pick EoS prize or $50"},
+                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7 - June 15 thru July 12", "Prize Eligibility": "4th pick EoS prize or $20"},
+                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11 - July 13 thru Aug 9", "Prize Eligibility": "6th pick EoS prize"}
             ])
             st.table(elig)
 
@@ -389,9 +389,10 @@ with tabs[3]:  # GGG Challenge
                     "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
                     "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
                     "**Examples**\n\n"
-                    "- If you buy before Week 1 and return a ball at the finale, you qualify for the top prize or $100 cash.\n"
-                    "- If you buy as REBUY 1 (before Week 3), you are not eligible for the top prize but can claim the REBUY 1 prize (2nd pick or $50).\n"
-                    "- If you don't REBUY until Week 8, you will be eligible for ONLY REBUY 3 tier prize"
+                    "- If your initial buy is before Week 1 and return a ball after the finale at the picnic, you qualify for the top prize or $100 cash.\n"
+                    "- If your initial buy is Week 2, you are not eligible for the top prize but can claim the REBUY 1 tier prize (2nd pick or $50).\n"
+                    "- If you BUY at Week 1 and lose all your ball by Week 4, you decide to REBUY week 6, your prize tier will be REBUY 2"
+                    "- If you BUY at Week 1 and lose all your ball by Week 8, you decide to REBUY week 10, your prize tier will be REBUY 3"
                 )
 
         elif challenge_selection == "Gold Card":
