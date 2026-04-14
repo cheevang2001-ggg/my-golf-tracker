@@ -362,6 +362,7 @@ with tabs[3]:  # GGG Challenge
                 "4. At the end of each round the sleeve return your remaining balls to president for redistribution the following week until no more balls are left from the sleeve.\n"
                 "5. When you lose all balls from sleeve, you may REBUY (see timeline below).\n"
                 "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve."
+                "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
             )
 
             st.divider()
@@ -686,10 +687,14 @@ with tabs[4]: # League Info
                     elif "4 Man Team Scramble" in entry['Note']:
                         st.info("""
                         **4-Man Team Battle Scramble:**
+                        * Any team with less then 4 players, the team can choose to play as the fourht player but MUST rotate alternate shot to play as the fourth player.
                         * All players tee off and selects the desired drive.
                         * All players continue play from best desired shot until hole is complete.
                         * Team members receives the same GGG points for the week.
                         * **Handicap:** No handicap applied for this round.
+                        * **Partners:** Lowest points players will enter into lottery.
+                        * **Lottery:** Lowest points player pick first for position to draft. Continue on until all capitans have a position.
+                        * **Draft:** Capitans draft in their order any player until all players has been selected.
                         """)
                     elif "Double Points" in entry['Note']:
                         st.success("""
