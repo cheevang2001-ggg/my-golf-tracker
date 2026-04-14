@@ -400,7 +400,7 @@ with tabs[3]:  # GGG Challenge
             st.subheader("Current Challenge: Gold Card")
             st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
             st.markdown("**Overview:** Use your Gold Card to play from the front tees. Finish the round in first place overall net score without handicap that week. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.\n\n"
-                       "**NOTE:** GOLD Card is not accepted at Currie Golf course")
+                       "**NOTE:** GOLD Card is ***NOT*** accepted at Currie Golf course or at any GGG events!")
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Enter into the Ball Challenge.\n"
