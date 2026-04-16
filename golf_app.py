@@ -717,16 +717,11 @@ with tabs[4]: # League Info
                     else:
                         st.write("Standard league play rules and rolling handicaps apply.")
 
-    #elif info_category == "Prizes":
-        #st.subheader("🏆 Prize Pool")
-        #st.write("The GGGOLF FINALE will determine the order prize selection.\n\n"
-        "**Note:** GGG Challenge winners will override the FINALE order for prize picks.")
-        #st.image("rockstarBag1.jpg", width=120, caption="Rockstar Stand Bag")
-        #st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
+
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.write("The GGGOLF FINALE will determine the order prize selection.\n"
-                 "Note: **GGG Challenge winners will override the FINALE order.**")
+        st.write("The GGGOLF FINALE will determine the order prize selection.\n\n"
+                 "**Note:** ***GGG Challenge winners will override the FINALE order.***")
         
         # Prize 1
         col1, col2 = st.columns([1, 4])
@@ -814,7 +809,7 @@ with tabs[4]: # League Info
         st.subheader("👥 League Members")
         st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
                 "GGGOLF 2026 league fee is **$140**, Please pay fee by **Week 1** to Finance Officer: Mike Yang.\n\n"
-                "Accepted form of payment: PayPal Cash")
+                "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
 
         # Build members list from df_main: registration rows are Week == 0
         if df_main is None or df_main.empty:
