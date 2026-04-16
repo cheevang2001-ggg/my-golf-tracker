@@ -812,7 +812,8 @@ with tabs[4]: # League Info
     elif info_category == "Members":
         st.subheader("👥 League Members")
         st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
-                "GGGOLF 2026 League Fee is $140, Please pay fee to GGG Finance Office Mike Yang")
+                "GGGOLF 2026 league fee is **$140**, Please pay fee by **Week 1** to Finance Officer: Mike Yang\n"
+                "Accepted form of payment: [PayPal] [Cash] [CashAp] [FaceBook Pay]")
 
         # Build members list from df_main: registration rows are Week == 0
         if df_main is None or df_main.empty:
