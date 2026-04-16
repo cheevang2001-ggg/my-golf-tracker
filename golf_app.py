@@ -755,6 +755,15 @@ with tabs[4]: # League Info
             st.image("takeya.jpg", width=120)
         with col8:
             st.write("TAKEYA Insulated Stanless 18oz drink container.")
+            
+                #Priz 5
+            col7, col8 = st.columns([1, 4])
+        with col7:
+            st.image("radgolfgps.jpg", width=120)
+        with col8:
+            st.write("RADGOLF GPS Watch.")
+
+    
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
