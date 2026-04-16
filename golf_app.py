@@ -719,8 +719,8 @@ with tabs[4]: # League Info
 
     #elif info_category == "Prizes":
         #st.subheader("🏆 Prize Pool")
-        #st.write("The GGGOLF FINALE will determine the order prize selection.\n\n
-    "**Note:** GGG Challenge winners will override the FINALE order.")
+        #st.write("The GGGOLF FINALE will determine the order prize selection.\n\n"
+        "**Note:** GGG Challenge winners will override the FINALE order for prize picks.")
         #st.image("rockstarBag1.jpg", width=120, caption="Rockstar Stand Bag")
         #st.image("taylormadeBag.jpg", width=120, caption="Taylormade Stand Bag")
     elif info_category == "Prizes":
