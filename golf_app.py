@@ -750,53 +750,53 @@ with tabs[4]: # League Info
                 st.caption(prize["desc"])
 
 elif info_category == "Expenses":
-        st.subheader("💵 League Expenses")
-        st.write("Breakdown of league fees and administrative costs.")
+    st.subheader("💵 League Expenses")
+    st.write("Breakdown of league fees and administrative costs.")
 
         # Load existing data from GSheets
-        try:
-            expenses_df = conn.read(worksheet="Expenses", ttl=0)
+    try:
+        expenses_df = conn.read(worksheet="Expenses", ttl=0)
             # Clean up any completely empty rows/cols if they exist
-            expenses_df = expenses_df.dropna(how='all')
-        except Exception:
-            expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
+        expenses_df = expenses_df.dropna(how='all')
+    except Exception:
+        expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
 
         # --- Form to Add Expense ---
-        with st.expander("Add a Prize / Expense", expanded=True):
-            with st.form("add_expense_form", clear_on_submit=True):
-                prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
-                prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
-                    if prize_desc:
-                        new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
-                        updated_df = pd.concat([expenses_df, new_row], ignore_index=True)
-                        conn.update(worksheet="Expenses", data=updated_df)
-                        st.cache_data.clear()
-                        st.success(f"Saved: {prize_desc}")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.warning("Please enter a description.")
+    with st.expander("Add a Prize / Expense", expanded=True):
+        with st.form("add_expense_form", clear_on_submit=True):
+            prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
+            prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
+            if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
+                 if prize_desc:
+                    new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
+                    updated_df = pd.concat([expenses_df, new_row], ignore_index=True)
+                    conn.update(worksheet="Expenses", data=updated_df)
+                    st.cache_data.clear()
+                    st.success(f"Saved: {prize_desc}")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.warning("Please enter a description.")
 
-        st.divider()
+    st.divider()
 
         # --- Display Table ---
-        if not expenses_df.empty:
-            # Formatting for display only
-            disp_df = expenses_df.copy()
-            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
-            st.dataframe(disp_df, use_container_width=True, hide_index=True)
+    if not expenses_df.empty:
+        # Formatting for display only
+        disp_df = expenses_df.copy()
+        disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
+        st.dataframe(disp_df, use_container_width=True, hide_index=True)
             
-            total = pd.to_numeric(expenses_df["Cost"]).sum()
-            st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
-        else:
-            st.info("No expenses found in the Google Sheet.")
+        total = pd.to_numeric(expenses_df["Cost"]).sum()
+        st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
+    else:
+        st.info("No expenses found in the Google Sheet.")
 
-    elif info_category == "Members":
-        st.subheader("👥 League Members")
-        st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
-                "GGGOLF 2026 league fee is **$140**, Please pay fee by **Week 1** to Finance Officer: Mike Yang.\n\n"
-                "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
+elif info_category == "Members":
+    st.subheader("👥 League Members")
+    st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
+            "GGGOLF 2026 league fee is **$140**, Please pay fee by **Week 1** to Finance Officer: Mike Yang.\n\n"
+            "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
 
         # Build members list from df_main: registration rows are Week == 0
         if df_main is None or df_main.empty:
