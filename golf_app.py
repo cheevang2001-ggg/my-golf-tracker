@@ -722,7 +722,7 @@ with tabs[4]: # League Info
                         st.write("Standard league play rules and rolling handicaps apply.")
 
 
-                    elif info_category == "Prizes":
+        elif info_category == "Prizes":
                         st.subheader("🏆 Prize Pool")
                         st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
                             "**Note:** GGG Challenge winners override the FINALE prize pick order.")
