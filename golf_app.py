@@ -193,15 +193,42 @@ with tabs[0]: # Scorecard
         else:
             # --- UNLOCKED STATE: Show everything else ---
             p_data = df_main[df_main['Player'] == player_select]
-            
-            # 1. Week Selection
-            week_options = list(range(-2, 1)) + list(range(1, 15))
-            w_s = st.selectbox(
-                "Select Week", 
-                week_options, 
-                format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}",
-                key=f"week_selector_{player_select}"
+                       
+
+            # 1. Compact Week Selection
+            st.markdown("### 📅 Select Week")
+
+            # Creating categories to keep the UI clean
+            week_categories = {
+                "Pre-Season": [-2, -1, 0],
+                "Phase 1": [1, 2, 3, 4],
+                "Phase 2": [5, 6, 7, 8],
+                "Phase 3": [9, 10, 11, 12],
+                "Finals": [13, 14]
+            }
+
+            # Create three columns or a single container for the segmented control
+            # Using segmented_control for a "Tab" feel
+            w_s = st.segmented_control(
+                "Choose Week",
+                options=[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                format_func=lambda x: f"P{abs(x-1)}" if x <= 0 else f"W{x}",
+                selection_mode="single",
+                default=1, # Sets Week 1 as default
+                key=f"week_tabs_{player_select}"
             )
+
+            # If they haven't clicked one yet, default to Week 1
+            if w_s is None:
+                w_s = 1
+
+            # Display a quick label so they know exactly what they picked
+            if w_s <= 0:
+                st.caption(f"📍 Currently Entering: **Pre-Season Round {abs(w_s-1)}**")
+            elif w_s in [4, 8, 12]:
+                st.caption(f"📍 Currently Entering: **Week {w_s} (Event Week)**")
+            else:
+                st.caption(f"📍 Currently Entering: **Week {w_s}**")
 
             # 2. Handicap Logic
             if w_s <= 0:
