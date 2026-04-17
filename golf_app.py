@@ -749,7 +749,7 @@ with tabs[4]: # League Info
                 st.markdown(f"**Prize #{i+1}**")
                 st.caption(prize["desc"])
 
-    elif info_category == "Expenses":
+elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
@@ -766,6 +766,7 @@ with tabs[4]: # League Info
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
+                
                 if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
                     if prize_desc:
                         new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
