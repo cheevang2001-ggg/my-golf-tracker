@@ -723,61 +723,33 @@ with tabs[4]: # League Info
 
 
     elif info_category == "Prizes":
-        st.subheader("🏆 Prize Pool")
-        st.write("The GGGOLF FINALE will determine the order prize selection.\n\n"
-                 "**Note:** ***GGG Challenge winners will override the FINALE prize pick order.***")
-        
-        # Prize 1
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.image("rockstarBag1.jpg", width=120)
-        with col2:
-            #st.markdown("**1st Place Prize:**")
-            st.write("Limited Edition OGIO Rockstar carry/stand golf Bag.")
-            
+    st.subheader("🏆 Prize Pool")
+    st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
+            "**Note:** GGG Challenge winners override the FINALE prize pick order.")
 
-        # Prize 2
-        col3, col4 = st.columns([1, 4])
-        with col3:
-            st.image("taylormadeBag.jpg", width=120)
-        with col4:
-            st.write("TaylorMade Select ST Stand Bag - Lightweight and durable.")
+    # 1. Organize data into a list of dictionaries for easier management
+    prizes = [
+        {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
+        {"img": "taylormadeBag.jpg", "desc": "TaylorMade Select ST Stand Bag - Lightweight and durable."},
+        {"img": "PackerJacket.jpg", "desc": "GB Packers 3 layer softshell jacket. Size: XL"},
+        {"img": "takeya.jpg", "desc": "TAKEYA Insulated Stainless 18oz drink container."},
+        {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
+        {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
+        {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."}
+    ]
 
-            # Prize 3
-        col5, col6 = st.columns([1, 4])
-        with col5:
-            st.image("PackerJacket.jpg", width=120)
-        with col6:
-            st.write("GB Packers 3 layer softshell jacker. Size: XL")
+    # 2. Use columns to create a responsive grid (2 columns wide)
+    # This looks much better on both mobile and desktop
+    cols = st.columns(2)
 
-                # Prize 4
-        col7, col8 = st.columns([1, 4])
-        with col7:
-            st.image("takeya.jpg", width=120)
-        with col8:
-            st.write("TAKEYA Insulated Stanless 18oz drink container.")
-            
-                #Priz 5
-            col9, col10 = st.columns([1, 4])
-        with col9:
-            st.image("radgolfgps.jpg", width=120)
-        with col10:
-            st.write("RADGOLF GPS Watch.")
-
-                    #Priz 6
-            col11, col12 = st.columns([1, 4])
-        with col9:
-            st.image("70wedge.jpg", width=120)
-        with col10:
-            st.write("FULL CHOICE 70 degree Wedge.")
-
-                        #Priz 7
-            col13, col14 = st.columns([1, 4])
-        with col9:
-            st.image("ForezoBallMarkers.jpg", width=120)
-        with col10:
-            st.write("Slope Master Ball Marker AND Forezo Putter Grip.")
-
+    for i, prize in enumerate(prizes):
+        # Alternate between the two columns
+        with cols[i % 2]:
+            with st.container(border=True): # Adds a nice "Card" look
+                # use_container_width=True makes images look consistent
+                st.image(prize["img"], use_container_width=True)
+                st.markdown(f"**Prize #{i+1}**")
+                st.caption(prize["desc"])
     
 
     elif info_category == "Expenses":
