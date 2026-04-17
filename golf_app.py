@@ -53,42 +53,20 @@ def load_data():
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
+        # 1. Immediately return 0 for exception weeks (4, 8, and 12)
+        if target_week in [4, 8, 12]:
+            return 0.0
+
         if 'Total_Score' in player_df.columns:
             player_df = player_df.copy()
             player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
 
-        # Gather all eligible rounds prior to the target_week
-        # (Week <= 0 is pre-season; 4 and 8 are excluded event weeks)
-        excluded_weeks = [0, 4, 8]
+        # 2. Define weeks that do not count toward handicap history
+        excluded_weeks = [4, 8, 12]
         
+        # 3. Gather all eligible rounds prior to the target_week
+        # This automatically includes pre-season (Week <= 0) and valid regular season weeks
         eligible_rounds = player_df[
-            ((player_df['Week'] <= 0) | (~player_df['Week'].isin(excluded_weeks))) &
-            (player_df['DNF'] == False) &
-            (player_df['Week'] < target_week) &
-            (player_df['Total_Score'].notna()) &
-            (player_df['Total_Score'] > 0)
-        ].sort_values('Week', ascending=False)
-
-        # Require a minimum of 3 completed rounds (pre-season or regular)
-        if len(eligible_rounds) < 3:
-            return 0.0
-
-        # Get the most recent 4 eligible rounds
-        last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
-
-        # Calculate using the best 3 of the available rounds (up to 4)
-        last_scores.sort()
-        hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
-
-        return float(hcp)
-    except Exception:
-        return 0.0
-
-        # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
-        excluded_weeks = [0, 4, 8]
-
-        rounds = player_df[
-            (player_df['Week'] > 0) &
             (~player_df['Week'].isin(excluded_weeks)) &
             (player_df['DNF'] == False) &
             (player_df['Week'] < target_week) &
@@ -96,20 +74,19 @@ def calculate_rolling_handicap(player_df, target_week):
             (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
 
-        # If no regular season rounds played yet, fallback to Week 1 logic (which may return 0.0)
-        if rounds.empty:
-            return calculate_rolling_handicap(player_df, 1)
+        # 4. Require a minimum of 3 completed rounds (pre-season or regular)
+        if len(eligible_rounds) < 3:
+            return 0.0
 
-        last_scores = rounds.head(4)['Total_Score'].tolist()
+        # 5. Get the most recent 4 eligible rounds
+        last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
 
-        # Standard "Best 3 of last 4" logic
-        if len(last_scores) >= 4:
-            last_scores.sort()
-            hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
-        else:
-            hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
+        # 6. Calculate using the best 3 of the available rounds (lowest scores)
+        last_scores.sort() # Sorts ascending, putting the 3 lowest scores at the front
+        hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
         return float(hcp)
+
     except Exception:
         return 0.0
 
@@ -175,9 +152,9 @@ with tabs[0]: # Scorecard
                 selection_mode="single",
                 key="player_segment_select"
             )
-        #player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         
         # Check if the session is still valid (2-hour timeout logic)
+        # Ensure SESSION_TIMEOUT = 7200 is defined globally
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
                       (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
@@ -215,7 +192,6 @@ with tabs[0]: # Scorecard
         
         else:
             # --- UNLOCKED STATE: Show everything else ---
-            # Now p_data is defined safely inside this block
             p_data = df_main[df_main['Player'] == player_select]
             
             # 1. Week Selection
@@ -231,10 +207,11 @@ with tabs[0]: # Scorecard
             if w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
-            elif w_s in [4, 8]:
+            elif w_s in [4, 8, 12]:  # <--- UPDATED to include Week 12
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
             else:
+                # Calls the new, consolidated logic that handles empty eligible rounds automatically
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
             # 3. Stats Dashboard
