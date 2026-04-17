@@ -749,7 +749,7 @@ with tabs[4]: # League Info
                 st.markdown(f"**Prize #{i+1}**")
                 st.caption(prize["desc"])
 
-    elif info_category == "Expenses":
+elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
