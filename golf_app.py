@@ -53,42 +53,20 @@ def load_data():
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
+        # 1. Immediately return 0 for exception weeks (4, 8, and 12)
+        if target_week in [4, 8, 12]:
+            return 0.0
+
         if 'Total_Score' in player_df.columns:
             player_df = player_df.copy()
             player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
 
-        # Gather all eligible rounds prior to the target_week
-        # (Week <= 0 is pre-season; 4 and 8 are excluded event weeks)
-        excluded_weeks = [0, 4, 8]
+        # 2. Define weeks that do not count toward handicap history
+        excluded_weeks = [4, 8, 12]
         
+        # 3. Gather all eligible rounds prior to the target_week
+        # This automatically includes pre-season (Week <= 0) and valid regular season weeks
         eligible_rounds = player_df[
-            ((player_df['Week'] <= 0) | (~player_df['Week'].isin(excluded_weeks))) &
-            (player_df['DNF'] == False) &
-            (player_df['Week'] < target_week) &
-            (player_df['Total_Score'].notna()) &
-            (player_df['Total_Score'] > 0)
-        ].sort_values('Week', ascending=False)
-
-        # Require a minimum of 3 completed rounds (pre-season or regular)
-        if len(eligible_rounds) < 3:
-            return 0.0
-
-        # Get the most recent 4 eligible rounds
-        last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
-
-        # Calculate using the best 3 of the available rounds (up to 4)
-        last_scores.sort()
-        hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
-
-        return float(hcp)
-    except Exception:
-        return 0.0
-
-        # --- PHASE 2: REGULAR SEASON ROLLING LOGIC ---
-        excluded_weeks = [0, 4, 8]
-
-        rounds = player_df[
-            (player_df['Week'] > 0) &
             (~player_df['Week'].isin(excluded_weeks)) &
             (player_df['DNF'] == False) &
             (player_df['Week'] < target_week) &
@@ -96,20 +74,19 @@ def calculate_rolling_handicap(player_df, target_week):
             (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
 
-        # If no regular season rounds played yet, fallback to Week 1 logic (which may return 0.0)
-        if rounds.empty:
-            return calculate_rolling_handicap(player_df, 1)
+        # 4. Require a minimum of 3 completed rounds (pre-season or regular)
+        if len(eligible_rounds) < 3:
+            return 0.0
 
-        last_scores = rounds.head(4)['Total_Score'].tolist()
+        # 5. Get the most recent 4 eligible rounds
+        last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
 
-        # Standard "Best 3 of last 4" logic
-        if len(last_scores) >= 4:
-            last_scores.sort()
-            hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
-        else:
-            hcp = round((sum(last_scores) / len(last_scores)) - 36, 1)
+        # 6. Calculate using the best 3 of the available rounds (lowest scores)
+        last_scores.sort() # Sorts ascending, putting the 3 lowest scores at the front
+        hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
         return float(hcp)
+
     except Exception:
         return 0.0
 
@@ -175,9 +152,9 @@ with tabs[0]: # Scorecard
                 selection_mode="single",
                 key="player_segment_select"
             )
-        #player_select = st.selectbox("Select Player", EXISTING_PLAYERS)
         
         # Check if the session is still valid (2-hour timeout logic)
+        # Ensure SESSION_TIMEOUT = 7200 is defined globally
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
                       (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
@@ -215,26 +192,53 @@ with tabs[0]: # Scorecard
         
         else:
             # --- UNLOCKED STATE: Show everything else ---
-            # Now p_data is defined safely inside this block
             p_data = df_main[df_main['Player'] == player_select]
-            
-            # 1. Week Selection
-            week_options = list(range(-2, 1)) + list(range(1, 15))
-            w_s = st.selectbox(
-                "Select Week", 
-                week_options, 
-                format_func=lambda x: f"Pre-Season Round {abs(x-1)}" if x <= 0 else f"Week {x}",
-                key=f"week_selector_{player_select}"
+                       
+
+            # 1. Compact Week Selection
+            st.markdown("### 📅 Select Week")
+
+            # Creating categories to keep the UI clean
+            week_categories = {
+                "Pre-Season": [-2, -1, 0],
+                "Phase 1": [1, 2, 3, 4],
+                "Phase 2": [5, 6, 7, 8],
+                "Phase 3": [9, 10, 11, 12],
+                "Finals": [13, 14]
+            }
+
+            # Create three columns or a single container for the segmented control
+            # Using segmented_control for a "Tab" feel
+            w_s = st.segmented_control(
+                "Choose Week",
+                options=[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                format_func=lambda x: f"P{abs(x-1)}" if x <= 0 else f"W{x}",
+                selection_mode="single",
+                default=1, # Sets Week 1 as default
+                key=f"week_tabs_{player_select}"
             )
+
+            # If they haven't clicked one yet, default to Week 1
+            if w_s is None:
+                w_s = 1
+
+            # Display a quick label so they know exactly what they picked
+            if w_s <= 0:
+                st.caption(f"📍 Currently Entering: **Pre-Season Round {abs(w_s-1)}**")
+            elif w_s in [4, 8, 12]:
+                st.caption(f"📍 Currently Entering: **Week {w_s} (Event Week)**")
+            else:
+                st.caption(f"📍 Currently Entering: **Week {w_s}**")
 
             # 2. Handicap Logic
             if w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
-            elif w_s in [4, 8]:
+            elif w_s in [4, 8, 12]:  # <--- UPDATED to include Week 12
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
             else:
+                # Calls the new, consolidated logic that handles empty eligible rounds automatically
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
             # 3. Stats Dashboard
@@ -720,54 +724,30 @@ with tabs[4]: # League Info
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.write("The GGGOLF FINALE will determine the order prize selection.\n\n"
-                 "**Note:** ***GGG Challenge winners will override the FINALE prize pick order.***")
-        
-        # Prize 1
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.image("rockstarBag1.jpg", width=120)
-        with col2:
-            #st.markdown("**1st Place Prize:**")
-            st.write("Limited Edition OGIO Rockstar carry/stand golf Bag.")
-            
+        st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
+        "**Note:** GGG Challenge winners override the FINALE prize pick order.")
 
-        # Prize 2
-        col3, col4 = st.columns([1, 4])
-        with col3:
-            st.image("taylormadeBag.jpg", width=120)
-        with col4:
-            st.write("TaylorMade Select ST Stand Bag - Lightweight and durable.")
+    # 1. Organize data into a list of dictionaries for easier management
+        prizes = [
+            {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
+            {"img": "taylormadeBag.jpg", "desc": "TaylorMade Select ST Stand Bag - Lightweight and durable."},
+            {"img": "PackerJacket.jpg", "desc": "GB Packers 3 layer softshell jacket. Size: XL"},
+            {"img": "takeya.jpg", "desc": "TAKEYA Insulated Stainless 18oz drink container."},
+            {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
+            {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
+            {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."}
+        ]
 
-            # Prize 3
-        col5, col6 = st.columns([1, 4])
-        with col5:
-            st.image("PackerJacket.jpg", width=120)
-        with col6:
-            st.write("GB Packers 3 layer softshell jacker. Size: XL")
-
-                # Prize 4
-        col7, col8 = st.columns([1, 4])
-        with col7:
-            st.image("takeya.jpg", width=120)
-        with col8:
-            st.write("TAKEYA Insulated Stanless 18oz drink container.")
-            
-                #Priz 5
-            col9, col10 = st.columns([1, 4])
-        with col9:
-            st.image("radgolfgps.jpg", width=120)
-        with col10:
-            st.write("RADGOLF GPS Watch.")
-
-                    #Priz 6
-            col9, col10 = st.columns([1, 4])
-        with col9:
-            st.image("70wedge.jpg", width=120)
-        with col10:
-            st.write("FULL CHOICE 70 degree Wedge.")
-
-    
+    # 2. Use columns to create a responsive grid (2 columns wide)
+    for i, prize in enumerate(prizes):
+        # 1. This line defines which column to use
+        with cols[i % 2]:
+            # 2. This line MUST be indented relative to the 'with' above
+            with st.container(border=True): 
+                # 3. These lines MUST be indented relative to the 'container' above
+                st.image(prize["img"], use_container_width=True)
+                st.markdown(f"**Prize #{i+1}**")
+                st.caption(prize["desc"])
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
