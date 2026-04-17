@@ -741,14 +741,14 @@ with tabs[4]: # League Info
     # 2. Use columns to create a responsive grid (2 columns wide)
     # This looks much better on both mobile and desktop
         cols = st.columns(2)
-            for i, prize in enumerate(prizes):
+        for i, prize in enumerate(prizes):
                     # Alternate between the two columns
-                    with cols[i % 2]:
-                        with st.container(border=True): # Adds a nice "Card" look
-                            # use_container_width=True makes images look consistent
-                            st.image(prize["img"], use_container_width=True)
-                            st.markdown(f"**Prize #{i+1}**")
-                            st.caption(prize["desc"])
+            with cols[i % 2]:
+            with st.container(border=True): # Adds a nice "Card" look
+            # use_container_width=True makes images look consistent
+                st.image(prize["img"], use_container_width=True)
+                st.markdown(f"**Prize #{i+1}**")
+                st.caption(prize["desc"])
     
 
     elif info_category == "Expenses":
