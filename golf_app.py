@@ -765,11 +765,18 @@ with tabs[4]: # League Info
             st.write("RADGOLF GPS Watch.")
 
                     #Priz 6
-            col9, col10 = st.columns([1, 4])
+            col11, col12 = st.columns([1, 4])
         with col9:
             st.image("70wedge.jpg", width=120)
         with col10:
             st.write("FULL CHOICE 70 degree Wedge.")
+
+                        #Priz 7
+            col13, col14 = st.columns([1, 4])
+        with col9:
+            st.image("ForezoBallMarkers.jpg", width=120)
+        with col10:
+            st.write("Slope Master Ball Marker AND Forezo Putter Grip.")
 
     
 
