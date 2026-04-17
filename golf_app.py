@@ -799,7 +799,7 @@ with tabs[4]: # League Info
     elif info_category == "Members":
         st.subheader("👥 League Members")
         st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
-                "GGGOLF 2026 registration fees is **$140**.\n\n
+                "GGGOLF 2026 registration fees is **$140**.\n\n"
                 "Please pay registration fees by **Week 1** to Finance Officer: Mike Yang.\n\n"
                 "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
 
