@@ -750,7 +750,7 @@ with tabs[4]: # League Info
                 with st.container(border=True): 
                     # 3. These lines MUST be indented relative to the 'container' above
                     st.image(prize["img"], use_container_width=True)
-                    st.markdown(f"**Prize #{i+1}**")
+                    #st.markdown(f"**Prize #{i+1}**")
                     st.caption(prize["desc"])
 
     elif info_category == "Expenses":
