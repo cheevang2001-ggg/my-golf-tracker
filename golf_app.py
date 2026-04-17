@@ -130,6 +130,7 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
             else:
                 st.error(f"❌ An error occurred: {e}")
                 break
+
 # --- 3. DATA LOAD ---
 df_main = load_data()
 EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.empty else []
@@ -148,15 +149,15 @@ with tabs[0]: # Scorecard
     else:
         player_select = st.segmented_control(
             "Select Your Profile", 
-                options=EXISTING_PLAYERS,
-                selection_mode="single",
-                key="player_segment_select"
-            )
+            options=EXISTING_PLAYERS,
+            selection_mode="single",
+            key="player_segment_select"
+        )
         
         # Check if the session is still valid (2-hour timeout logic)
         # Ensure SESSION_TIMEOUT = 7200 is defined globally
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
-                      (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
+                     (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
         
         if not is_unlocked:
@@ -189,12 +190,10 @@ with tabs[0]: # Scorecard
                             st.error("⚠️ Player not found in registration records.")
                     else:
                         st.warning("Please enter your PIN.")
-        
         else:
             # --- UNLOCKED STATE: Show everything else ---
             p_data = df_main[df_main['Player'] == player_select]
-                       
-
+            
             # 1. Compact Week Selection
             st.markdown("### 📅 Select Week")
 
@@ -464,8 +463,7 @@ with tabs[4]: # League Info
             st.subheader("Committees")
             st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lee, Deng Kue\n")
             st.markdown("""
-            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
-            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
             """)
         
         st.divider()
@@ -577,6 +575,7 @@ with tabs[4]: # League Info
                         st.write(f"**Player:** {sel_player}")
                         st.write(f"**Target Week:** {sel_week}")
                         st.write(f"**Method:** {method}")
+                        
                         if avg_score is not None:
                             st.write(f"**Used Scores:** {used_scores}")
                             st.write(f"**Average Gross (used):** {avg_score:.2f}")
@@ -609,38 +608,32 @@ with tabs[4]: # League Info
                     except Exception as e:
                         st.error(f"Error computing handicap breakdown: {e}")
 
-
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
-        
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***\n
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.\n
         * GGG Points will be automatically applied.\n
         * Any mis-aligned score please consult your Rules/Players Committee.\n\n
-        
-        **Tee Box:** All players will play from tee box as stated below.\n  
+        **Tee Box:** All players will play from tee box as stated below.\n
         ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***\n
         Brown Deer: **Blue - 6306 yd**
         Dretzka: **Blue - 6538 yd**
         Oakwood: **Blue - 6737 yd**
         Whitnall: **Blue - 6308 yd**
         Currie: **Black - 6444 yd**
-        
         * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
         * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
         * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
-        
-        **Gimmies/Putting:**\n 
+        **Gimmies/Putting:**\n
         Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***\n
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-        
-        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
+        **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n
         * 2 Minutes ball search.\n
         * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.\n
         * Help your playing partners spot and search for their ball.\n
@@ -649,31 +642,31 @@ with tabs[4]: # League Info
         * Move off the greens and record score at the next tee box.
         * Use common sense to keep play moving.
         * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n\n
-        
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
-        
         # This replaces the old Live Round warning with a relevant Rules Note
         st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
 
-
-elif info_category == "Schedule":
-    st.subheader("📅 2026 Season Schedule")
-    courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
-    league_start = pd.to_datetime("2026-05-31")
-        
+    elif info_category == "Schedule":
+        st.subheader("📅 2026 Season Schedule")
+        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
+        league_start = pd.to_datetime("2026-05-31")
         schedule_data = []
         for i in range(1, 14):
             current_date = league_start + pd.Timedelta(weeks=i-1)
-            course_name = courses[i-1] 
-            if i == 4: note = "GGG Event- 2 Man Team Greensome (18 holes)"
-            elif i == 8: note = "GGG Event- 4 Man Team Scramble (18 holes)"
-            elif i == 12: note = "GGG Event- Double Points (18 holes)"
-            else: note = "Regular Round"
+            course_name = courses[i-1]
+            if i == 4:
+                note = "GGG Event- 2 Man Team Greensome (18 holes)"
+            elif i == 8:
+                note = "GGG Event- 4 Man Team Scramble (18 holes)"
+            elif i == 12:
+                note = "GGG Event- Double Points (18 holes)"
+            else:
+                note = "Regular Round"
             schedule_data.append({"Week": f"Week {i}", "Date": current_date.strftime('%B %d, %Y'), "Course": course_name, "Note": note})
         
         schedule_data.append({"Week": "FINALE", "Date": "August 28, 2026", "Course": "TBD", "Note": "GGG Event- GGGolf Finale & Friends & Family Picnic"})
-
+        
         for entry in schedule_data:
             is_event = "GGG Event" in entry['Note']
             header = f"{'⭐ ' if is_event else ''}{entry['Week']}: {entry['Course']}"
@@ -710,46 +703,26 @@ elif info_category == "Schedule":
                         st.success("""
                         **Double Points Event:**
                         * Regular individual stroke play with your current GGG handicap.
-                        * Front 9 points + Back 9 Point
-                        * **Example 1:** You win the front But you end up last place in back. Your front GGG point is 100 points front and your back GGG points is 1 point. Total 101 points
-                        * **Example 2:** You come in Third in the front and in the back you came in Second. Front GGG points for Third is 64 points and for Second points is 77 points. You get total 141
-                        * **Example 3:** You win front and back. You get 100 for front and 100 for back, total 200 points
-                        * **Example 4:** You are last front and back. You get 1 for front and 1 for back, total 2 points                        
+                        * Front 9 net score rank and Back 9 net score rank.
+                        * Final week to secure points before the season finale.
                         """)
-                    elif "Finale" in entry['Note']:
-                        st.warning("Season finale and trophy presentation. Details to be announced.")
-                    else:
-                        st.write("Standard league play rules and rolling handicaps apply.")
-
 
     elif info_category == "Prizes":
-        st.subheader("🏆 Prize Pool")
-        st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
-        "**Note:** GGG Challenge winners override the FINALE prize pick order.")
+        st.subheader("🎁 2026 League Prizes")
+        st.markdown("""
+        **Season Championship:**
+        * **1st Place Overall:** Season Trophy + Grand Prize + GGG Pride
+        * **2nd Place Overall:** Runner-Up Prize
+        * **3rd Place Overall:** Third Place Prize\n
+        **Special Recognition:**
+        * **Most Improved:** Based on Handicap reduction (Week 1 vs Finale).
+        * **GGG MVP:** To be determined by League Officers.
+        * **Birdie King:** Most total birdies logged in the app during the regular season.
+        """)
+        st.divider()
+        st.info("Prizes are funded by league fees and sponsors. Final distribution is at the Season Finale Picnic.")
 
-    # 1. Organize data into a list of dictionaries for easier management
-        prizes = [
-            {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
-            {"img": "taylormadeBag.jpg", "desc": "TaylorMade Select ST Stand Bag - Lightweight and durable."},
-            {"img": "PackerJacket.jpg", "desc": "GB Packers 3 layer softshell jacket. Size: XL"},
-            {"img": "takeya.jpg", "desc": "TAKEYA Insulated Stainless 18oz drink container."},
-            {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
-            {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
-            {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."}
-        ]
-
-    # 2. Use columns to create a responsive grid (2 columns wide)
-    for i, prize in enumerate(prizes):
-        # 1. This line defines which column to use
-        with cols[i % 2]:
-            # 2. This line MUST be indented relative to the 'with' above
-            with st.container(border=True): 
-                # 3. These lines MUST be indented relative to the 'container' above
-                st.image(prize["img"], use_container_width=True)
-                st.markdown(f"**Prize #{i+1}**")
-                st.caption(prize["desc"])
-
-elif info_category == "Expenses":
+    elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
@@ -766,7 +739,6 @@ elif info_category == "Expenses":
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                
                 if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
                     if prize_desc:
                         new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
@@ -780,243 +752,147 @@ elif info_category == "Expenses":
                         st.warning("Please enter a description.")
 
         st.divider()
-
-        # --- Display Table ---
+        # --- Display the list ---
         if not expenses_df.empty:
-            # Formatting for display only
-            disp_df = expenses_df.copy()
-            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
-            st.dataframe(disp_df, use_container_width=True, hide_index=True)
-            
-            total = pd.to_numeric(expenses_df["Cost"]).sum()
-            st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
+            st.dataframe(expenses_df, use_container_width=True, hide_index=True)
+            total_cost = expenses_df['Cost'].sum()
+            st.markdown(f"**Total Expenditure:** ${total_cost:,.2f}")
         else:
-            st.info("No expenses found in the Google Sheet.")
+            st.info("No expenses logged yet.")
 
     elif info_category == "Members":
         st.subheader("👥 League Members")
-        st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n"
-                "GGGOLF 2026 league fee is **$140**, Please pay fee by **Week 1** to Finance Officer: Mike Yang.\n\n"
-                "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
-
-        # Build members list from df_main: registration rows are Week == 0
-        if df_main is None or df_main.empty:
-            st.info("No registered members yet.")
-        else:
-            members_df = df_main[df_main['Week'] == 0].copy()
-            if members_df.empty:
-                st.info("No registered members yet.")
+        if not df_main.empty:
+            # Filters the registration week entries
+            members = df_main[df_main['Week'] == 0].copy()
+            if not members.empty:
+                st.dataframe(members[['Player']].sort_values('Player'), use_container_width=True, hide_index=True)
+                st.write(f"**Total Members:** {len(members)}")
             else:
-                # Normalize columns for display
-                display_cols = ['Player']
-                if 'Acknowledged' in members_df.columns:
-                    members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
-                    display_cols.append('Acknowledged')
-                members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
-                
-                st.markdown(f"**Total Members:** {len(members_df)}")
-                st.dataframe(members_df, use_container_width=True, hide_index=True)
+                st.info("No registration data found.")
+        else:
+            st.info("No member data available.")
 
     elif info_category == "Bets":
-        st.subheader("🤝 Season Bets")
-        
-        # Load existing data from GSheets
-        try:
-            bets_df = conn.read(worksheet="Bets", ttl=0)
-            bets_df = bets_df.dropna(how='all')
-        except Exception:
-            bets_df = pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
-
-        # --- Form to Add Bet ---
-        with st.expander("➕ Log a New Bet"):
-            with st.form("new_bet_form", clear_on_submit=True):
-                col1, col2 = st.columns(2)
-                p1 = col1.selectbox("Player 1", options=EXISTING_PLAYERS)
-                p2 = col2.selectbox("Player 2", options=EXISTING_PLAYERS)
-                wager = st.text_input("The Wager")
-                terms = st.text_area("Terms")
-                
-                if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
-                    if p1 != p2 and wager:
-                        new_bet = pd.DataFrame([{
-                            "Player 1": p1, "Player 2": p2, 
-                            "Wager": wager, "Terms": terms, "Status": "⏳ Pending"
-                        }])
-                        updated_bets = pd.concat([bets_df, new_bet], ignore_index=True)
-                        conn.update(worksheet="Bets", data=updated_bets)
-                        st.cache_data.clear()
-                        st.success("Bet saved to Google Sheets!")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("Check player selection and wager details.")
-
-        st.divider()
-
-        # --- Display & Update Section ---
-        if not bets_df.empty:
-            st.dataframe(bets_df, use_container_width=True, hide_index=True)
-            
-            # Simple Update Tool
-            with st.expander("🏅 Update a Bet Status"):
-                bet_idx = st.selectbox("Select Bet #", range(len(bets_df)), format_func=lambda x: f"Bet {x+1}: {bets_df.iloc[x]['Player 1']} vs {bets_df.iloc[x]['Player 2']}")
-                new_status = st.radio("Outcome", ["⏳ Pending", "🏆 P1 Wins", "🏆 P2 Wins", "🤝 Draw"])
-                if st.button("Update Status"):
-                    bets_df.at[bet_idx, "Status"] = new_status
-                    conn.update(worksheet="Bets", data=bets_df)
-                    st.cache_data.clear()
-                    st.rerun()
-        else:
-            st.info("No active bets found in the Google Sheet.")
-                        
-#OLD BET CODE -- Keeping for reference
-    #elif info_category == "Bets":
-        #st.subheader("🤝 Season Bets")
-        #st.write("Track all bets")
-        #st.divider()
-        
-        #st.markdown("### Active Wagers")
-        # Placeholder dataframe for bets
-        #bets_data = pd.DataFrame([
-            #{"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-            #{"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
-        #])
-        #st.dataframe(bets_data, use_container_width=True, hide_index=True)
+        st.subheader("💸 Side Bets & Games")
+        st.info("This section is reserved for weekly side games, skins, or friendly wagers among members.")
+        st.write("* **Skins:** Optional $10 buy-in per week.")
+        st.write("* **Closest to the Pin:** On designated Par 3s.")
+        st.write("* **Longest Drive:** On designated Par 5s.")
 
 
 with tabs[5]: # Registration
-    st.header("👤 Registration")
+    st.header("👤 New Player Registration")
+    st.write("Welcome to the 2026 GGG Summer League! Use this form to create your official league profile.")
     
-    # --- PRE-STEP: League Code Verification ---
-    if not st.session_state.get("reg_access"):
-        st.info("Please enter the League Registration Key provided by the League Officers to begin.")
-        
-        with st.form("league_key_form"):
-            user_key = st.text_input("League Key", type="password", key="reg_gate_key_input")
-            submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary")
-            
-            if submit_key:
-                if user_key == REGISTRATION_KEY:
+    # Check if they have the registration key
+    if not st.session_state.get("reg_access", False):
+        with st.form("reg_access_form"):
+            r_key = st.text_input("Enter Registration Key", type="password")
+            if st.form_submit_button("Submit"):
+                if r_key == REGISTRATION_KEY:
                     st.session_state["reg_access"] = True
-                    st.success("Key Accepted! Please provide your details below.")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ Invalid League Key. Please contact an Officer.")
-
-    # --- STEP 2: Player Details ---
-    else:
-        # Informational note and acknowledgement requirement
-        st.info(
-            "By registering for the GGGolf Summer League you confirm that you have read, "
-            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
-            "Registration indicates acceptance of these terms."
-        )
-
-        # Require explicit acknowledgement before allowing registration
-        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
-
-        with st.form("registration_form", clear_on_submit=True):
-            st.subheader("📝 New Player Details")
-            
-            n = st.text_input("Full Name", key="reg_name_input")
-            p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input")
-            
-            submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
-            
-            if submit_reg:
-                if not ack:
-                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
-                elif n and len(p) == 4:
-                    try:
-                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
-                        new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
-                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
-                        }])
-                        
-                        updated_main = pd.concat([df_main, new_reg], ignore_index=True)
-                        # use the existing connection created at module load
-                        conn.update(data=updated_main[MASTER_COLUMNS])
-
-                        # 3. FINALIZE
-                        st.success(f"Welcome to the league, {n}!")
-                        st.cache_data.clear()
-                        time.sleep(1.5)
-                        st.session_state["reg_access"] = False # Relock for next use
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"Registration Error: {e}")
-                else:
-                    st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
-
-
-with tabs[6]: # Admin
-    st.header("⚙️ Admin Control Panel")
-    
-    # --- STEP 1: Secure Login Form ---
-    if not st.session_state.get("authenticated"):
-        st.info("Please enter the Administrative Password to access league management tools.")
-        
-        with st.form("admin_login_form"):
-            admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
-            submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
-            
-            if submit_admin:
-                if admin_input == ADMIN_PASSWORD:
-                    st.session_state["authenticated"] = True
                     st.success("Access Granted!")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("❌ Incorrect Admin Password.")
-
-    # --- STEP 2: Admin Tools (Only visible after successful login) ---
+                    st.error("Invalid Key.")
     else:
-        st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
+        with st.form("registration_form"):
+            st.subheader("Profile Details")
+            new_p_name = st.text_input("Full Name", placeholder="e.g., John Doe")
+            new_p_pin = st.text_input("4-Digit PIN (for scorecard access)", max_chars=4, placeholder="1234")
+            
+            st.info("This PIN will be required to submit your scores via the Scorecard tab.")
+            
+            if st.form_submit_button("✅ Complete Registration", use_container_width=True, type="primary"):
+                if new_p_name and new_p_pin and len(new_p_pin) == 4:
+                    # check for existing
+                    if not df_main.empty and new_p_name.strip() in df_main['Player'].values:
+                        st.error("A player with this name is already registered.")
+                    else:
+                        reg_data = pd.DataFrame([{
+                            'Week': 0, 'Player': new_p_name.strip(), 'PIN': new_p_pin,
+                            'Pars_Count': 0, 'Birdies_Count': 0, 'Eagle_Count': 0,
+                            'Total_Score': 0, 'Handicap': 0.0, 'Net_Score': 0.0, 'DNF': False, 'Acknowledged': True
+                        }])
+                        
+                        updated_df = pd.concat([df_main, reg_data], ignore_index=True)
+                        conn.update(data=updated_df[MASTER_COLUMNS])
+                        st.cache_data.clear()
+                        st.success(f"Welcome to the league, {new_p_name}!")
+                        time.sleep(2)
+                        st.rerun()
+                else:
+                    st.warning("Please provide both a name and a 4-digit PIN.")
 
-        # 1. The Reset Button (Wipes the sheet)
-        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
-            try:
-                hole_headers = [str(i) for i in range(1, 10)]
-                empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
-                
-                conn.update(worksheet="LiveScores", data=empty_df)
-                st.cache_data.clear()
-                
-                st.success("✅ Live Round has been reset!")
-                time.sleep(1.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to reset sheet: {e}")
 
-        # 2. The Sync Button (Pre-populates the sheet with registered players)
-        # ALL CODE BELOW IS NOW CORRECTLY INDENTED
-        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
-            try:
-                # Get everyone currently registered from the main data
-                all_players = df_main['Player'].unique().tolist()
-                hole_cols = [str(i) for i in range(1, 10)]
+with tabs[6]: # Admin
+    st.header("⚙️ League Administration")
+    
+    if not st.session_state.get("authenticated", False):
+        with st.form("admin_login"):
+            pw = st.text_input("Admin Password", type="password")
+            if st.form_submit_button("Login"):
+                if pw == ADMIN_PASSWORD:
+                    st.session_state["authenticated"] = True
+                    st.success("Logged In!")
+                    st.rerun()
+                else:
+                    st.error("Invalid Credentials.")
+    else:
+        st.success("Admin Session Active")
+        
+        # Admin Operations
+        admin_opt = st.radio("Admin Tool:", ["Global Standings", "Manage Records", "Live Board Sync", "Member Messaging"], horizontal=True)
+        
+        if admin_opt == "Global Standings":
+            st.subheader("Global Leaderboard Data")
+            if not df_main.empty:
+                st.dataframe(df_main[df_main['Week'] > 0], use_container_width=True, hide_index=True)
                 
-                # Create a fresh table with everyone starting at 0
-                synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
-                
-                for p_name in all_players:
-                    if p_name: # skip empty entries
-                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
-                        synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
-                
-                # Push the full list to Google Sheets
-                conn.update(worksheet="LiveScores", data=synced_df)
-                st.cache_data.clear()
-                st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Sync failed: {e}")
+                # Option to clear or reset
+                if st.button("Download Data as CSV", use_container_width=True):
+                    csv = df_main.to_csv(index=False).encode('utf-8')
+                    st.download_button("Click to Download", csv, "league_data_backup.csv", "text/csv")
+        
+        elif admin_opt == "Manage Records":
+            st.subheader("Edit or Remove Entries")
+            if not df_main.empty:
+                sel_row = st.selectbox("Select Row to Delete", df_main.index, format_func=lambda x: f"Wk {df_main.loc[x, 'Week']} - {df_main.loc[x, 'Player']} ({df_main.loc[x, 'Total_Score']})")
+                if st.button("🗑️ Delete Record", use_container_width=True, type="primary"):
+                    new_df = df_main.drop(sel_row)
+                    conn.update(data=new_df[MASTER_COLUMNS])
+                    st.cache_data.clear()
+                    st.success("Record Removed.")
+                    time.sleep(1)
+                    st.rerun()
+
+        elif admin_opt == "Live Board Sync":
+            st.subheader("Board Maintenance")
+            st.write("Ensure all registered players appear on the Live Scoring sheet.")
+            if st.button("Run Player Synchronization", use_container_width=True):
+                try:
+                    # Fetch all unique players from the main sheet
+                    all_players = df_main['Player'].unique().tolist()
+                    hole_cols = [str(i) for i in range(1, 10)]
+                    
+                    # Create a fresh table with everyone starting at 0
+                    synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
+                    
+                    for p_name in all_players:
+                        if p_name: # skip empty entries
+                            row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
+                            synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
+                    
+                    # Push the full list to Google Sheets
+                    conn.update(worksheet="LiveScores", data=synced_df)
+                    st.cache_data.clear()
+                    st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Sync failed: {e}")
 
         st.divider()
         
@@ -1028,6 +904,6 @@ with tabs[6]: # Admin
                 st.toast("App data synced with Google Sheets.")
         
         with col2:
-            if st.button("🔒 Lock Admin Panel", use_container_width=True):
+            if st.button("🔒 Lock Admin Session", use_container_width=True):
                 st.session_state["authenticated"] = False
                 st.rerun()
