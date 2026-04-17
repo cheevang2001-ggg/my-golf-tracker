@@ -760,6 +760,13 @@ with tabs[4]: # League Info
         with col10:
             st.write("RADGOLF GPS Watch.")
 
+                    #Priz 6
+            col9, col10 = st.columns([1, 4])
+        with col9:
+            st.image("70wedge.jpg", width=120)
+        with col10:
+            st.write("FULL CHOICE 70 degree Wedge.")
+
     
 
     elif info_category == "Expenses":
