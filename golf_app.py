@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import random
 import altair as alt
+from PIL import Image # Ensure this is at the top of your file
 
 # --- 1. CONFIGURATION & SESSION STATE ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
@@ -811,11 +812,19 @@ with tabs[4]: # League Info
             # 1. This line defines which column to use
             with cols[i % 2]:
                 # 2. This line MUST be indented relative to the 'with' above
-                with st.container(border=True): 
-                    # 3. These lines MUST be indented relative to the 'container' above
-                    st.image(prize["img"], use_container_width=True)
-                    #st.markdown(f"**Prize #{i+1}**")
+                with st.container(border=True):
+                    image_to_display = prize["img"]
+                    if prize["img"] == "GGGopenBanner2.jpg":
+                        img = Image.open("GGGopenBanner2.jpg")
+                        image_to_display = img.rotate(-90, expand=True)
+                    st.image(image_to_display, use_container_width=True)
                     st.caption(prize["desc"])
+     # ----------------------  OLD CODE             
+    # 3. These lines MUST be indented relative to the 'container' above
+                    #st.image(prize["img"], use_container_width=True)
+                    #st.markdown(f"**Prize #{i+1}**")
+    # ---------------------- OLD CODE
+                    
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
