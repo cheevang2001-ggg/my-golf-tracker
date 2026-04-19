@@ -794,7 +794,7 @@ with tabs[4]: # League Info
 
         # 1. Organize data into a list of dictionaries for easier management
         prizes = [
-            {"img": "GGGopenBanner1.jpg", "desc": "GGG 2026 Open Banner."},
+            {"img": "GGGopenBanner2.jpg", "desc": "GGG 2026 Open Banner."},
             {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
             {"img": "taylormadeBag.jpg", "desc": "TaylorMade Select ST Stand Bag - Lightweight and durable."},
             {"img": "PackerJacket.jpg", "desc": "GB Packers 3 layer softshell jacket. Size: XL"},
