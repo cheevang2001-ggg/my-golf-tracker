@@ -794,6 +794,7 @@ with tabs[4]: # League Info
 
         # 1. Organize data into a list of dictionaries for easier management
         prizes = [
+            {"img": "GGGopenBanner.jpg", "desc": "GGG 2026 Open Banner."},
             {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
             {"img": "taylormadeBag.jpg", "desc": "TaylorMade Select ST Stand Bag - Lightweight and durable."},
             {"img": "PackerJacket.jpg", "desc": "GB Packers 3 layer softshell jacket. Size: XL"},
@@ -801,6 +802,7 @@ with tabs[4]: # League Info
             {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
             {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."}
+            
         ]
 
         # 2. Use columns to create a responsive grid (2 columns wide)
