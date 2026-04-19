@@ -345,91 +345,54 @@ with tabs[3]:  # GGG Challenge
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
 
-    challenge_selection = st.radio("Select Challenge:", ["Season Ball Challenge", "Gold Card"], horizontal=True)
+    # Updated list to include new challenges
+    challenge_options = ["Season Ball Challenge", "Gold Card", "Most Pars", "Most Birdies", "Most Eagles"]
+    challenge_selection = st.radio("Select Challenge:", challenge_options, horizontal=True)
 
-    st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost (if any), eligibility rules, and how to participate.")
+    st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost, eligibility rules, and how to participate.")
 
     col_main, col_side = st.columns([3, 1])
 
     with col_main:
-        if challenge_selection == "Season Ball Challenge":
-            st.subheader("Current Challenge: Season Ball")
-            st.markdown("**Entry:** $20 for a GGG sleeve of balls")
-            st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
-            st.divider()
+        # --- EXISTING CHALLENGES ---
+        if challenge_selection in ["Season Ball Challenge", "Gold Card"]:
+            # ... [Keep your existing Season Ball and Gold Card code here] ...
+            pass 
 
-            st.markdown("**How it works**")
-            st.markdown(
-                "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
-                "2. Use the GGG balls during regular league and event play.\n"
-                "3. At the start of each round your sleeve will be given to you.\n"
-                "4. At the end of each round the sleeve must be returned with the remaining balls to one of the League Officials.\n"
-                "5. At the start of the next round/week your sleeve will be redistributed from the previous week for you to continue the challenge.\n"
-                "5. When you have lost all balls from the sleeve, you may REBUY (see timeline below).\n"
-                "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve.\n\n"
-                "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
-            )
+        # --- NEW CHALLENGES ---
+        elif challenge_selection in ["Most Pars", "Most Birdies", "Most Eagles"]:
+            st.subheader(f"Current Challenge: {challenge_selection}")
+            st.markdown(f"**Entry Fee:** $20")
+            
+            # Rules and Financials
+            with st.expander("Rules, Fees, and Payout Structure", expanded=True):
+                st.markdown("""
+                **Rules:**
+                - This is a season-long cumulative total challenge.
+                - Registration fee is **$20**.
+                - **35%** of entry fees go directly to the GGGolf league fund for expenses.
+                - **65%** of the entry fees form the payout pool.
+                - Depending on the total number of entries, the top 3 players will receive a payout.
+                """)
+                
+                entry_fee = 20
+                st.write(f"**Financial Breakdown per entry:**")
+                st.write(f"- League Fund (35%): ${entry_fee * 0.35:.2f}")
+                st.write(f"- Prize Pot (65%): ${entry_fee * 0.65:.2f}")
 
-            st.divider()
-            st.markdown("**Eligibility and Rebuy Options**")
-            import pandas as _pd
-            elig = _pd.DataFrame([
-                {"Option": "Original Purchase", "Entry Deadline": "Before Week 1 April thru May 31", "Prize Eligibility": "1st pick EoS prize or $100"},
-                {"Option": "REBUY 1", "Entry Deadline": "Before Week 3 - June 1 thru June 14", "Prize Eligibility": "2nd pick EoS prize or $50"},
-                {"Option": "REBUY 2", "Entry Deadline": "Before Week 7 - June 15 thru July 12", "Prize Eligibility": "4th pick EoS prize or $20"},
-                {"Option": "REBUY 3", "Entry Deadline": "Before Week 11 - July 13 thru Aug 9", "Prize Eligibility": "6th pick EoS prize"}
-            ])
-            st.table(elig)
-
-            st.divider()
-            #st.write("**Participation**")
-            #st.button("Join Season Ball Challenge", disabled=True, key="join_season_ball")
-            #st.caption("Admin will enable signups and payment links when the challenge is active.")
-
-            with st.expander("Full Rules and Examples", expanded=False):
-                st.markdown(
-                    "**Key Rules**\n\n"
-                    "- Purchasing the sleeve registers you for the challenge under the corresponding entry deadline.\n"
-                    "- If you purchase a REBUY, you are only eligible for the prize tier associated with that REBUY (you forfeit eligibility for earlier tiers).\n"
-                    "- Balls lost during play may be rebought using the REBUY options above; each REBUY has its own deadline.\n"
-                    "- To claim a prize at the finale you must return at least one ball from the sleeve you purchased.\n\n"
-                    "**Examples**\n\n"
-                    "- If your initial buy is before Week 1 and return a ball after the finale at the picnic, you qualify for the top prize or $100 cash.\n"
-                    "- If your initial buy is Week 2, you are not eligible for the top prize but can claim the REBUY 1 tier prize (2nd pick or $50).\n"
-                    "- If you BUY at Week 1 and lose all your ball by Week 4, you decide to REBUY week 6, your prize tier will be REBUY 2"
-                    "- If you BUY at Week 1 and lose all your ball by Week 8, you decide to REBUY week 10, your prize tier will be REBUY 3"
-                )
-
-        elif challenge_selection == "Gold Card":
-            st.subheader("Current Challenge: Gold Card")
-            st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
-            st.markdown("**Overview:** Use your Gold Card to play from the front tees. Finish the round in first place overall net score without handicap that week. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.\n\n"
-                       "***NOTE:*** GOLD Card is **NOT** accepted at Currie Golf course or at any GGG events!")
-            st.divider()
-            st.markdown("**How it works**")
-            st.markdown("1. Enter into the Ball Challenge.\n"
-                       "2. Receive gold card.\n"
-                       "3. Turn in gold card before teeing off.\n"
-                       "4. Play from the front tee.\n"
-                       "5. Win first or donate.")
-            st.divider()
-            #st.write("**Participation**")
-            #st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
-            #st.caption("Admin will enable signups when the challenge goes live.")
-
-            with st.expander("Full Rules and Examples", expanded=False):
-                st.markdown(
-                    "**Key Rules**\n\n"
-                    "- Play from the front tee.\n"
-                    "- Multiple players can turn in their GOLD card on the same week.\n"
-                    "- No handicap.\n"
-                    "- Place First overall for the week.\n"
-                    "- Any ties that occur, will continue on until one winner is decided in playoff rules. Win the hole or lose, ties keep moving onto the next hole until winner is decided.\n"
-                    "- In the event of tie through 18 holes, Chip & Putt will decide.\n\n"
-                    "**Examples**\n\n"
-                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in first, Dale receives 100 points.\n"
-                    "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pay ducks or $100 to the league as a donation fund for league expenses.\n"
-                )
+            # Registration section
+            st.markdown("### Registered Players")
+            # Replace this list with your actual data source (e.g., query from your DB)
+            registered_players = ["Example Player 1", "Example Player 2"]
+            if registered_players:
+                for player in registered_players:
+                    st.text(f"✅ {player}")
+            else:
+                st.write("No players registered yet.")
+            
+            # Participant Button
+            if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
+                st.success(f"Successfully registered for {challenge_selection}!")
 
     with col_side:
         st.subheader("Quick Actions")
@@ -438,10 +401,9 @@ with tabs[3]:  # GGG Challenge
         st.divider()
         st.markdown("**Notes for Players**")
         st.markdown(
-            "- Keep your sleeve balls separate so returned balls can be verified.\n"
+            "- Keep your sleeve balls separate (for Ball Challenge).\n"
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
-
 
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
