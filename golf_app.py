@@ -435,7 +435,7 @@ with tabs[3]:  # GGG Challenge
                 - Registration fee is **$20**.
                 - **35%** ($7.00) of entry fees go directly to the GGGolf league fund for expenses.
                 - **65%** ($13.00) of the entry fees form the payout pool.
-                - Payouts will be awarded to the top 3 players (based on final tally).
+                - Payouts TBD (based on final entries percentage will be calculated).
                 """)
                 
             #st.markdown("### Registered Players")
