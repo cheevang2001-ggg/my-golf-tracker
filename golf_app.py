@@ -821,6 +821,13 @@ with tabs[4]: # League Info
                     elif prize["img"] == "radgolfgps.jpg":
                         img = Image.open("radgolfgps.jpg")
                         image_to_display = img.rotate(90, expand=True)
+
+                    elif prize["img"] == "ForezoBallMarkers.jpg":
+                        img = Image.open("ForezoBallMarkers.jpg")
+                        image_to_display = img.rotate(-90, expand=True)
+
+
+                    
                     st.image(image_to_display, use_container_width=True)
                     st.caption(prize["desc"])
                    
