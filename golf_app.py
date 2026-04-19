@@ -437,12 +437,55 @@ with tabs[3]:  # GGG Challenge
                 - Payouts will be awarded to the top 3 players (based on final tally).
                 """)
                 
-            st.markdown("### Registered Players")
+            #st.markdown("### Registered Players")
             # Placeholder: Replace with your actual participant list logic
-            st.write("*(List of accepted participants will appear here)*")
+            #st.write("*(List of accepted participants will appear here)*")
             
-            if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
-                st.success(f"Registration request submitted for {challenge_selection}!")
+            #if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
+                #st.success(f"Registration request submitted for {challenge_selection}!")
+
+    # --- Registration Logic for GGG Challenges ---
+        st.markdown("### Registered Players")
+        
+        # 1. Fetch current registrations
+        try:
+            reg_df = conn.read(worksheet="ChallengeRegistrations") # Ensure this tab exists
+            participants = reg_df[reg_df['ChallengeName'] == challenge_selection]['PlayerName'].unique().tolist()
+            
+            if participants:
+                for p in participants:
+                    st.text(f"✅ {p}")
+            else:
+                st.write("No players registered yet.")
+        except Exception:
+            st.warning("Could not load registration list. Please check the 'ChallengeRegistrations' sheet.")
+
+        # 2. Add Registration button
+        if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
+            # Get player name from session (assuming player is logged in)
+            player_name = st.session_state.get("unlocked_player")
+            
+            if not player_name:
+                st.error("Please log in to register.")
+            elif player_name in participants:
+                st.info("You are already registered for this challenge.")
+            else:
+                # 3. Append new registration
+                new_reg = pd.DataFrame([{
+                    "PlayerName": player_name,
+                    "ChallengeName": challenge_selection,
+                    "RegistrationDate": pd.Timestamp.now().strftime("%Y-%m-%d")
+                }])
+                
+                updated_reg_df = pd.concat([reg_df, new_reg], ignore_index=True)
+                
+                try:
+                    conn.update(worksheet="ChallengeRegistrations", data=updated_reg_df)
+                    st.success(f"Successfully joined {challenge_selection}!")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Registration failed: {e}")
 
     with col_side:
         st.subheader("Quick Actions")
