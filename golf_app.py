@@ -817,14 +817,13 @@ with tabs[4]: # League Info
                     if prize["img"] == "GGGopenBanner2.jpg":
                         img = Image.open("GGGopenBanner2.jpg")
                         image_to_display = img.rotate(-90, expand=True)
+
+                    elif prize["img"] == "radgolfgps.jpg":
+                        img = Image.open("radgolfgps.jpg")
+                        image_to_display = img.rotate(90, expand=True)
                     st.image(image_to_display, use_container_width=True)
                     st.caption(prize["desc"])
-     # ----------------------  OLD CODE             
-    # 3. These lines MUST be indented relative to the 'container' above
-                    #st.image(prize["img"], use_container_width=True)
-                    #st.markdown(f"**Prize #{i+1}**")
-    # ---------------------- OLD CODE
-                    
+                   
 
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
