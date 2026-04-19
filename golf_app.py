@@ -345,21 +345,20 @@ with tabs[3]:  # GGG Challenge
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
 
-    # Updated list to include new challenges
     challenge_options = ["Season Ball Challenge", "Gold Card", "Most Pars", "Most Birdies", "Most Eagles"]
     challenge_selection = st.radio("Select Challenge:", challenge_options, horizontal=True)
 
-    st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost, eligibility rules, and how to participate.")
+    st.info("Challenges will be announced here during the season. Each challenge includes a short description, cost (if any), eligibility rules, and how to participate.")
 
     col_main, col_side = st.columns([3, 1])
 
     with col_main:
+        # --- EXISTING CHALLENGES ---
         if challenge_selection == "Season Ball Challenge":
             st.subheader("Current Challenge: Season Ball")
             st.markdown("**Entry:** $20 for a GGG sleeve of balls")
             st.markdown("**Overview:** Use the GGG sleeve during league play. Return at least one ball from the sleeve at the season finale to qualify for the top prize.")
             st.divider()
-
             st.markdown("**How it works**")
             st.markdown(
                 "1. Purchase a GGG sleeve for $20 to join the challenge.\n"
@@ -371,7 +370,6 @@ with tabs[3]:  # GGG Challenge
                 "6. At the season finale, return at least one ball from your sleeve to qualify for prize tier of the returning sleeve.\n\n"
                 "**Note:** On GGG events you must play your ball. In 2 man Greensomes, you must play your ball when its your shot on the alternate. This is the same for the 4-Man Scramble. Since you are able to play your own ball in these events."
             )
-
             st.divider()
             st.markdown("**Eligibility and Rebuy Options**")
             import pandas as _pd
@@ -382,12 +380,7 @@ with tabs[3]:  # GGG Challenge
                 {"Option": "REBUY 3", "Entry Deadline": "Before Week 11 - July 13 thru Aug 9", "Prize Eligibility": "6th pick EoS prize"}
             ])
             st.table(elig)
-
             st.divider()
-            #st.write("**Participation**")
-            #st.button("Join Season Ball Challenge", disabled=True, key="join_season_ball")
-            #st.caption("Admin will enable signups and payment links when the challenge is active.")
-
             with st.expander("Full Rules and Examples", expanded=False):
                 st.markdown(
                     "**Key Rules**\n\n"
@@ -398,7 +391,7 @@ with tabs[3]:  # GGG Challenge
                     "**Examples**\n\n"
                     "- If your initial buy is before Week 1 and return a ball after the finale at the picnic, you qualify for the top prize or $100 cash.\n"
                     "- If your initial buy is Week 2, you are not eligible for the top prize but can claim the REBUY 1 tier prize (2nd pick or $50).\n"
-                    "- If you BUY at Week 1 and lose all your ball by Week 4, you decide to REBUY week 6, your prize tier will be REBUY 2"
+                    "- If you BUY at Week 1 and lose all your ball by Week 4, you decide to REBUY week 6, your prize tier will be REBUY 2\n"
                     "- If you BUY at Week 1 and lose all your ball by Week 8, you decide to REBUY week 10, your prize tier will be REBUY 3"
                 )
 
@@ -406,19 +399,15 @@ with tabs[3]:  # GGG Challenge
             st.subheader("Current Challenge: Gold Card")
             st.markdown("**Entry:** Enter into the **Season Ball Challenge** before Week 1 to be eligible.")
             st.markdown("**Overview:** Use your Gold Card to play from the front tees. Finish the round in first place overall net score without handicap that week. If you do not come in first, you will donate $100 to the league or equvilent to 2 ducks for the picnic.\n\n"
-                       "***NOTE:*** GOLD Card is **NOT** accepted at Currie Golf course or at any GGG events!")
+                        "***NOTE:*** GOLD Card is **NOT** accepted at Currie Golf course or at any GGG events!")
             st.divider()
             st.markdown("**How it works**")
             st.markdown("1. Enter into the Ball Challenge.\n"
-                       "2. Receive gold card.\n"
-                       "3. Turn in gold card before teeing off.\n"
-                       "4. Play from the front tee.\n"
-                       "5. Win first or donate.")
+                        "2. Receive gold card.\n"
+                        "3. Turn in gold card before teeing off.\n"
+                        "4. Play from the front tee.\n"
+                        "5. Win first or donate.")
             st.divider()
-            #st.write("**Participation**")
-            #st.button("Join Gold Card Challenge", disabled=True, key="join_gold_Card")
-            #st.caption("Admin will enable signups when the challenge goes live.")
-
             with st.expander("Full Rules and Examples", expanded=False):
                 st.markdown(
                     "**Key Rules**\n\n"
@@ -433,6 +422,28 @@ with tabs[3]:  # GGG Challenge
                     "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pay ducks or $100 to the league as a donation fund for league expenses.\n"
                 )
 
+        # --- NEW CHALLENGES ---
+        elif challenge_selection in ["Most Pars", "Most Birdies", "Most Eagles"]:
+            st.subheader(f"Current Challenge: {challenge_selection}")
+            st.markdown(f"**Entry Fee:** $20")
+            
+            with st.expander("Rules, Fees, and Payout Structure", expanded=True):
+                st.markdown(f"""
+                **Rules for {challenge_selection}:**
+                - This is a season-long cumulative total challenge.
+                - Registration fee is **$20**.
+                - **35%** ($7.00) of entry fees go directly to the GGGolf league fund for expenses.
+                - **65%** ($13.00) of the entry fees form the payout pool.
+                - Payouts will be awarded to the top 3 players (based on final tally).
+                """)
+                
+            st.markdown("### Registered Players")
+            # Placeholder: Replace with your actual participant list logic
+            st.write("*(List of accepted participants will appear here)*")
+            
+            if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
+                st.success(f"Registration request submitted for {challenge_selection}!")
+
     with col_side:
         st.subheader("Quick Actions")
         st.write("Admin controls will appear here when implemented.")
@@ -443,53 +454,7 @@ with tabs[3]:  # GGG Challenge
             "- Keep your sleeve balls separate so returned balls can be verified.\n"
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
-
-        # --- NEW CHALLENGES ---
-        elif challenge_selection in ["Most Pars", "Most Birdies", "Most Eagles"]:
-            st.subheader(f"Current Challenge: {challenge_selection}")
-            st.markdown(f"**Entry Fee:** $20")
-            
-            # Rules and Financials
-            with st.expander("Rules, Fees, and Payout Structure", expanded=True):
-                st.markdown("""
-                **Rules:**
-                - This is a season-long cumulative total challenge.
-                - Registration fee is **$20**.
-                - **35%** of entry fees go directly to the GGGolf league fund for expenses.
-                - **65%** of the entry fees form the payout pool.
-                - Depending on the total number of entries, the top 3 players will receive a payout.
-                """)
-                
-                entry_fee = 20
-                st.write(f"**Financial Breakdown per entry:**")
-                st.write(f"- League Fund (35%): ${entry_fee * 0.35:.2f}")
-                st.write(f"- Prize Pot (65%): ${entry_fee * 0.65:.2f}")
-
-            # Registration section
-            st.markdown("### Registered Players")
-            # Replace this list with your actual data source (e.g., query from your DB)
-            registered_players = ["Example Player 1", "Example Player 2"]
-            if registered_players:
-                for player in registered_players:
-                    st.text(f"✅ {player}")
-            else:
-                st.write("No players registered yet.")
-            
-            # Participant Button
-            if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
-                st.success(f"Successfully registered for {challenge_selection}!")
-
-    with col_side:
-        st.subheader("Quick Actions")
-        st.write("Admin controls will appear here when implemented.")
-        st.button("Request Challenge Edit Access", disabled=True, key="req_edit_access")
-        st.divider()
-        st.markdown("**Notes for Players**")
-        st.markdown(
-            "- Keep your sleeve balls separate (for Ball Challenge).\n"
-            "- Questions about eligibility should be directed to the Rules and Players Committee."
-        )
-
+        
 with tabs[4]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets"], horizontal=True)
