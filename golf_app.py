@@ -802,7 +802,8 @@ with tabs[4]: # League Info
             {"img": "takeya.jpg", "desc": "TAKEYA Insulated Stainless 18oz drink container."},
             {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
-            {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."}
+            {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."},
+            {"img": "Sandals.jpg", "desc": "Sandals."}
             
         ]
 
