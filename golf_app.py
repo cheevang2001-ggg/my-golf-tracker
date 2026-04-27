@@ -676,7 +676,9 @@ with tabs[4]: # League Info
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
+        * Handicaps are capped at Max 20 per tee box.
+        
 
         
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
@@ -688,13 +690,15 @@ with tabs[4]: # League Info
         
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
-        Brown Deer: **Blue - 6306 yd**
-        Dretzka: **Blue - 6538 yd**
-        Oakwood: **Blue - 6737 yd**
-        Whitnall: **Blue - 6308 yd**
-        Currie: **Black - 6444 yd**
+        * Brown Deer: **Blue - 6306 yd**
+        * Dretzka: **Blue - 6538 yd**
+        * Oakwood: **Blue - 6737 yd**
+        * Whitnall: **Blue - 6308 yd**
+        * Currie: **Black - 6444 yd**
         
-        * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
+        ***C1:*** If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.\n
+        * Brown Deer:
+        * Dretzka:
         * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
         * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
 
