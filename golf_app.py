@@ -36,8 +36,8 @@ GGG_POINTS = {
 
 def load_data():
     try:
-        # Supabase syntax to read data
-        response = conn.query("*", table="league_data", ttl=10).execute()
+        # Correct Supabase syntax to read all data from the table
+        response = conn.table("league_data").select("*").execute()
         
         # Convert the Supabase response to a Pandas DataFrame
         data = pd.DataFrame(response.data) 
@@ -407,7 +407,7 @@ with tabs[3]:  # GGG Challenge
         participants = []
         try:
             # SUPABASE READ
-            response = conn.query("*", table="ChallengeRegistrations", ttl=0).execute()
+            response = conn.table("ChallengeRegistrations").select("*").execute()
             reg_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["ChallengeName", "PlayerName"])
             
             if not reg_df.empty and 'ChallengeName' in reg_df.columns:
