@@ -1,3 +1,4 @@
 streamlit
 pandas
-st-gsheets-connection
+st-supabase-connection
+supabase
