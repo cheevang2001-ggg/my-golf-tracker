@@ -689,7 +689,7 @@ with tabs[4]: # League Info
 
         
         **Tee Box:** All players will play from tee box as stated below.\n  
-        ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
+        ***Unless you meet the criteria of C1, or C2 or have approval from the players committee to play from a forward tee box:***
         * Brown Deer: **Blue - 6306 yd**
         * Dretzka: **Blue - 6538 yd**
         * Oakwood: **Blue - 6737 yd**
@@ -705,7 +705,7 @@ with tabs[4]: # League Info
         
         ***C2: If you are of Senior Age (60+), you may play from the forward tee.**
         * Brown Deer: **Gold - 4996 yd**
-        * Dretzka: **Yellow - 4924 yd**
+        * Dretzka: **Gold - 4924 yd**
         * Oakwood: **Gold - 5562 yd**
         * Whitnall: **Gold - 5342 yd**
         * Currie: **Gold - 5246 yd**
