@@ -677,7 +677,7 @@ with tabs[4]: # League Info
         st.subheader("League Rules and Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
-        * Handicaps are capped at Max 20 per tee box.
+        * Handicaps are capped at Max 20 per player.
         
 
         
@@ -696,11 +696,19 @@ with tabs[4]: # League Info
         * Whitnall: **Blue - 6308 yd**
         * Currie: **Black - 6444 yd**
         
-        ***C1:*** If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.\n
-        * Brown Deer:
-        * Dretzka:
-        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
-        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
+        ***C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.***
+        * Brown Deer: **White - 5893 yd**
+        * Dretzka: **White - 5970 yd**
+        * Oakwood: **White - 6301 yd**
+        * Whitnall: **White - 5909 yd**
+        * Currie: **White - 6105 yd**
+        
+        ***C2: If you are of Senior Age (60+), you may play from the forward tee.**
+        * Brown Deer: **Gold - 4996 yd**
+        * Dretzka: **Yellow - 4924 yd**
+        * Oakwood: **Gold - 5562 yd**
+        * Whitnall: **Gold - 5342 yd**
+        * Currie: **Gold - 5246 yd**
 
         
         **Gimmies/Putting:**\n 
