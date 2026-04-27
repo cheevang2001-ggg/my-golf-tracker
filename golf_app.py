@@ -38,9 +38,13 @@ GGG_POINTS = {
 
 def load_data():
     try:
-        # Increase TTL to 10 seconds to reduce API hits
-        data = conn.read(ttl=10) 
-        if data is None or data.empty or 'Player' not in data.columns: 
+        # Supabase syntax to read data
+        response = conn.query("*", table="league_data", ttl=10).execute()
+        
+        # Convert the Supabase response to a Pandas DataFrame so the rest of your app works
+        data = pd.DataFrame(response.data) 
+        
+        if data.empty or 'Player' not in data.columns: 
             return pd.DataFrame(columns=MASTER_COLUMNS)
         
         df = data.dropna(how='all')
@@ -48,9 +52,10 @@ def load_data():
         df = df[df['Player'].str.lower() != 'john']
         
         return df[df['Player'] != ""]
+        
     except Exception as e:
-        if "429" in str(e):
-            st.warning("⚠️ High traffic: Using cached data while Google Sheets rests...")
+        # Print the actual error so you can debug if something is wrong with the table
+        st.warning(f"Database error: {e}")
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def calculate_rolling_handicap(player_df, target_week):
@@ -93,45 +98,35 @@ def calculate_rolling_handicap(player_df, target_week):
         return 0.0
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
-    max_retries = 3
-    retry_delay = 2 # Initial pause in seconds
-    
-    for attempt in range(max_retries):
-        try:
-            st.cache_data.clear()
-            existing_data = load_data()
-            is_dnf = (score_val == "DNF")
-            final_gross = 0 if is_dnf else int(score_val)
+    try:
+        is_dnf = (score_val == "DNF")
+        final_gross = 0 if is_dnf else int(score_val)
+        
+        new_entry = {
+            'Week': int(week),
+            'Player': player,
+            'Pars_Count': int(pars),
+            'Birdies_Count': int(birdies),
+            'Eagle_Count': int(eagles),
+            'Total_Score': int(final_gross),
+            'Handicap': float(hcp_val),
+            'Net_Score': float(final_gross - hcp_val) if not is_dnf else 0.0,
+            'DNF': is_dnf,
+            'PIN': str(pin)
+        }
+        
+        # Upsert adds a new row, or updates the existing one if the player/week combo exists
+        conn.table("league_data").upsert(new_entry).execute()
+        st.cache_data.clear()
+        
+        st.success(f"👍 Score Submitted Successfully for {player}!", icon="✅")
+        time.sleep(1) 
+        st.rerun()
             
-            new_entry = pd.DataFrame([{
-                'Week': week, 'Player': player, 'Pars_Count': pars, 'Birdies_Count': birdies, 
-                'Eagle_Count': eagles, 'Total_Score': final_gross, 'Handicap': hcp_val, 
-                'Net_Score': (final_gross - hcp_val) if not is_dnf else 0, 'DNF': is_dnf, 'PIN': pin
-            }])
+    except Exception as e:
+        st.error(f"❌ An error occurred: {e}")
             
-            # Remove any existing entry for this player/week to avoid duplicates, then append the new one
-            updated_df = pd.concat([existing_data[~((existing_data['Week'] == week) & (existing_data['Player'] == player))], new_entry], ignore_index=True)
-            
-            conn.update(data=updated_df[MASTER_COLUMNS])
-            st.cache_data.clear()
-            
-            st.success(f"👍 Score Submitted Successfully for {player}!", icon="✅")
-            time.sleep(2) 
-            st.rerun()
-            return # Exit function on success
-            
-        except Exception as e:
-            if "429" in str(e) or "Quota" in str(e):
-                if attempt < max_retries - 1:
-                    st.warning(f"⚠️ High traffic. Queueing your score... (Retrying in {retry_delay}s)")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2 # Double the wait time for the next attempt
-                else:
-                    st.error("❌ The server is experiencing very high traffic. Please wait 60 seconds and submit your score again.")
-                    break
-            else:
-                st.error(f"❌ An error occurred: {e}")
-                break
+
 # --- 3. DATA LOAD ---
 df_main = load_data()
 EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.empty else []
