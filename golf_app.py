@@ -20,7 +20,8 @@ if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
 if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+from st_supabase_connection import SupabaseConnection
+conn = st.connection("supabase", type=SupabaseConnection)
 
 MASTER_COLUMNS = [
     'Week', 'Player', 'PIN', 'Pars_Count', 'Birdies_Count', 
