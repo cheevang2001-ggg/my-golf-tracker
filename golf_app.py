@@ -1,10 +1,9 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import time
 import random
 import altair as alt
-from PIL import Image # Ensure this is at the top of your file
+from PIL import Image 
 
 # --- 1. CONFIGURATION & SESSION STATE ---
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
@@ -16,7 +15,6 @@ SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
 if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "authenticated" not in st.session_state: st.session_state["authenticated"] = False
-if "unlocked_player" not in st.session_state: st.session_state["unlocked_player"] = None
 if "login_timestamp" not in st.session_state: st.session_state["login_timestamp"] = 0
 if "reg_access" not in st.session_state: st.session_state["reg_access"] = False
 
@@ -41,7 +39,7 @@ def load_data():
         # Supabase syntax to read data
         response = conn.query("*", table="league_data", ttl=10).execute()
         
-        # Convert the Supabase response to a Pandas DataFrame so the rest of your app works
+        # Convert the Supabase response to a Pandas DataFrame
         data = pd.DataFrame(response.data) 
         
         if data.empty or 'Player' not in data.columns: 
@@ -54,13 +52,11 @@ def load_data():
         return df[df['Player'] != ""]
         
     except Exception as e:
-        # Print the actual error so you can debug if something is wrong with the table
         st.warning(f"Database error: {e}")
         return pd.DataFrame(columns=MASTER_COLUMNS)
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        # 1. Immediately return 0 for exception weeks (4, 8, and 12)
         if target_week in [4, 8, 12]:
             return 0.0
 
@@ -68,11 +64,8 @@ def calculate_rolling_handicap(player_df, target_week):
             player_df = player_df.copy()
             player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
 
-        # 2. Define weeks that do not count toward handicap history
         excluded_weeks = [4, 8, 12]
         
-        # 3. Gather all eligible rounds prior to the target_week
-        # This automatically includes pre-season (Week <= 0) and valid regular season weeks
         eligible_rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) &
             (player_df['DNF'] == False) &
@@ -81,15 +74,11 @@ def calculate_rolling_handicap(player_df, target_week):
             (player_df['Total_Score'] > 0)
         ].sort_values('Week', ascending=False)
 
-        # 4. Require a minimum of 3 completed rounds (pre-season or regular)
         if len(eligible_rounds) < 3:
             return 0.0
 
-        # 5. Get the most recent 4 eligible rounds
         last_scores = eligible_rounds.head(4)['Total_Score'].tolist()
-
-        # 6. Calculate using the best 3 of the available rounds (lowest scores)
-        last_scores.sort() # Sorts ascending, putting the 3 lowest scores at the front
+        last_scores.sort() 
         hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
         return float(hcp)
@@ -115,7 +104,6 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
             'PIN': str(pin)
         }
         
-        # Upsert adds a new row, or updates the existing one if the player/week combo exists
         conn.table("league_data").upsert(new_entry).execute()
         st.cache_data.clear()
         
@@ -150,14 +138,11 @@ with tabs[0]: # Scorecard
                 key="player_segment_select"
             )
         
-        # Check if the session is still valid (2-hour timeout logic)
-        # Ensure SESSION_TIMEOUT = 7200 is defined globally
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
                       (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
         
         if not is_unlocked:
-            # --- LOCKED STATE: Only show PIN entry ---
             st.markdown("### 🔒 Player Verification")
             st.info(f"Please enter your 4-digit PIN to unlock the scorecard for **{player_select}**.")
 
@@ -188,14 +173,10 @@ with tabs[0]: # Scorecard
                         st.warning("Please enter your PIN.")
         
         else:
-            # --- UNLOCKED STATE: Show everything else ---
             p_data = df_main[df_main['Player'] == player_select]
                        
-
-            # 1. Compact Week Selection
             st.markdown("### 📅 Select Week")
 
-            # Creating categories to keep the UI clean
             week_categories = {
                 "Pre-Season": [-2, -1, 0],
                 "Phase 1": [1, 2, 3, 4],
@@ -204,22 +185,18 @@ with tabs[0]: # Scorecard
                 "Finals": [13, 14]
             }
 
-            # Create three columns or a single container for the segmented control
-            # Using segmented_control for a "Tab" feel
             w_s = st.segmented_control(
                 "Choose Week",
                 options=[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
                 format_func=lambda x: f"P{abs(x-1)}" if x <= 0 else f"W{x}",
                 selection_mode="single",
-                default=1, # Sets Week 1 as default
+                default=1,
                 key=f"week_tabs_{player_select}"
             )
 
-            # If they haven't clicked one yet, default to Week 1
             if w_s is None:
                 w_s = 1
 
-            # Display a quick label so they know exactly what they picked
             if w_s <= 0:
                 st.caption(f"📍 Currently Entering: **Pre-Season Round {abs(w_s-1)}**")
             elif w_s in [4, 8, 12]:
@@ -227,18 +204,15 @@ with tabs[0]: # Scorecard
             else:
                 st.caption(f"📍 Currently Entering: **Week {w_s}**")
 
-            # 2. Handicap Logic
             if w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
-            elif w_s in [4, 8, 12]:  # <--- UPDATED to include Week 12
+            elif w_s in [4, 8, 12]:
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
             else:
-                # Calls the new, consolidated logic that handles empty eligible rounds automatically
                 current_hcp = calculate_rolling_handicap(p_data, w_s)
             
-            # 3. Stats Dashboard
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
             
@@ -250,7 +224,6 @@ with tabs[0]: # Scorecard
             m4.metric("Total Birdies", int(played_rounds['Birdies_Count'].sum()))
             m5.metric("Total Eagles", int(played_rounds['Eagle_Count'].sum()))
 
-            # 4. Progress Chart
             if not played_rounds.empty:
                 chart = alt.Chart(played_rounds).mark_line(color='#2e7d32', strokeWidth=3).encode(
                     x=alt.X('Week:O'),
@@ -260,7 +233,6 @@ with tabs[0]: # Scorecard
 
             st.divider()
 
-            # 5. Score Entry Form
             with st.form("score_entry", clear_on_submit=True):
                 st.subheader("Submit Weekly Round")
                 s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
@@ -336,7 +308,6 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-# --- New streamlined GGG Challenge tab (replace the existing with tabs[3] block) ---
 with tabs[3]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
@@ -350,7 +321,6 @@ with tabs[3]:  # GGG Challenge
     col_main, col_side = st.columns([3, 1])
 
     with col_main:
-        # --- EXISTING CHALLENGES ---
         if challenge_selection == "Season Ball Challenge":
             st.subheader("Current Challenge: Season Ball")
             st.markdown("**Entry:** $20 for a GGG sleeve of balls")
@@ -419,11 +389,9 @@ with tabs[3]:  # GGG Challenge
                     "- Dale plays from froward tee in this case the Gold at Dretzka. Dale come in second, Dale pay ducks or $100 to the league as a donation fund for league expenses.\n"
                 )
 
-        # --- NEW CHALLENGES ---
         elif challenge_selection in ["Most Pars", "Most Birdies", "Most Eagles"]:
             st.subheader(f"Current Challenge: {challenge_selection}")
             st.markdown(f"**Entry Fee:** $20")
-            
             with st.expander("Rules, Fees, and Payout Structure", expanded=True):
                 st.markdown(f"""
                 **Rules for {challenge_selection}:**
@@ -433,25 +401,15 @@ with tabs[3]:  # GGG Challenge
                 - **65%** ($13.00) of the entry fees form the payout pool.
                 - Payouts TBD (based on final entries percentage will be calculated).
                 """)
-                
-            #st.markdown("### Registered Players")
-            # Placeholder: Replace with your actual participant list logic
-            #st.write("*(List of accepted participants will appear here)*")
-            
-            #if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
-                #st.success(f"Registration request submitted for {challenge_selection}!")
 
-
-# --- Registration Logic for GGG Challenges ---
         st.markdown("### Registered Players")
         
-        # 1. Initialize participants variable to prevent NameError
         participants = []
-        
-        # 2. Fetch current registrations
         try:
-            reg_df = conn.read(worksheet="ChallengeRegistrations")
-            # Ensure the DataFrame is not empty before filtering
+            # SUPABASE READ
+            response = conn.query("*", table="ChallengeRegistrations", ttl=0).execute()
+            reg_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["ChallengeName", "PlayerName"])
+            
             if not reg_df.empty and 'ChallengeName' in reg_df.columns:
                 participants = reg_df[reg_df['ChallengeName'] == challenge_selection]['PlayerName'].unique().tolist()
             
@@ -461,9 +419,8 @@ with tabs[3]:  # GGG Challenge
             else:
                 st.write("No players registered yet.")
         except Exception as e:
-            st.warning(f"Could not load registration list. Ensure 'ChallengeRegistrations' sheet exists and has headers. Error: {e}")
+            st.warning(f"Could not load registration list. Ensure 'ChallengeRegistrations' table exists. Error: {e}")
 
-        # 3. Add Registration button
         if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
             player_name = st.session_state.get("unlocked_player")
             
@@ -472,19 +429,15 @@ with tabs[3]:  # GGG Challenge
             elif player_name in participants:
                 st.info("You are already registered for this challenge.")
             else:
-                # Proceed with registration...
-                new_reg = pd.DataFrame([{
+                new_reg = {
                     "PlayerName": player_name,
                     "ChallengeName": challenge_selection,
                     "RegistrationDate": pd.Timestamp.now().strftime("%Y-%m-%d")
-                }])
-                
-                # Fetch fresh data to ensure we don't overwrite concurrent changes
-                reg_df = conn.read(worksheet="ChallengeRegistrations")
-                updated_reg_df = pd.concat([reg_df, new_reg], ignore_index=True)
+                }
                 
                 try:
-                    conn.update(worksheet="ChallengeRegistrations", data=updated_reg_df)
+                    # SUPABASE INSERT
+                    conn.table("ChallengeRegistrations").insert(new_reg).execute()
                     st.success(f"Successfully joined {challenge_selection}!")
                     time.sleep(1)
                     st.rerun()
@@ -523,8 +476,7 @@ with tabs[4]: # League Info
             st.subheader("Committees")
             st.markdown("* **Rules and Players Committee**: Lex Vue, Long Lee, Deng Kue\n")
             st.markdown("""
-            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. 
-            They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
+            **Player Advocacy:** This Committee serves as the formal link between the membership and leadership. They are tasked with **maintaining competitive integrity, hearing member grievances, and vetting player-driven initiatives.** Their role ensures that the evolution of the league is always informed by the needs of the players.
             """)
         
         st.divider()
@@ -566,11 +518,9 @@ with tabs[4]: # League Info
             "This shows pre-season rounds, the last eligible rounds used, and the exact math (best 3 of last 4 to par 36)."
         )
 
-        # Defensive: ensure df_main exists
         if 'df_main' not in globals() or df_main is None or df_main.empty:
             st.warning("No player data available to show handicap breakdown.")
         else:
-            # Build player list from registration rows (Week == 0) or all players if registration rows missing
             try:
                 reg_players = df_main[df_main['Week'] == 0]['Player'].dropna().unique().tolist()
                 all_players = sorted(df_main['Player'].dropna().unique().tolist())
@@ -584,14 +534,11 @@ with tabs[4]: # League Info
                 sel_player = st.selectbox("Select Player to Inspect", player_options, key="handicap_transparency_player")
                 sel_week = st.selectbox("Target Week (handicap to apply for)", list(range(1, 15)), index=0, key="handicap_transparency_week")
 
-                # Fetch player rows
                 p_df = df_main[df_main['Player'] == sel_player].copy()
                 if p_df.empty:
                     st.warning("No recorded rounds for this player.")
                 else:
-                    # Pre-season rounds (Week <= 0)
                     pre_season = p_df[(p_df['Week'] <= 0) & (p_df['DNF'] == False) & (p_df['Total_Score'] > 0)].sort_values('Week', ascending=False)
-                    # Regular eligible rounds: Week > 0, exclude event weeks, DNF False, and Week < target_week
                     excluded_weeks = [0, 4, 8]
                     regular_rounds = p_df[
                         (p_df['Week'] > 0) &
@@ -613,7 +560,6 @@ with tabs[4]: # League Info
                         else:
                             st.dataframe(regular_rounds[['Week', 'Total_Score', 'DNF']].reset_index(drop=True), use_container_width=True, hide_index=True)
 
-                    # Compute the handicap breakdown using the same logic as calculate_rolling_handicap
                     try:
                         all_eligible = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
                         
@@ -625,12 +571,11 @@ with tabs[4]: # League Info
                         else:
                             last_scores = all_eligible.head(4)['Total_Score'].tolist()
                             sorted_scores = sorted(last_scores)
-                            used_scores = sorted_scores[:3]  # best 3 of last 4 (or 3 of 3)
+                            used_scores = sorted_scores[:3]  
                             avg_score = sum(used_scores) / 3
                             hcp_val = round(avg_score - 36, 1)
                             method = f"Best 3 of last 4 eligible rounds ({len(last_scores)} available rounds evaluated)"
 
-                        # Display the numeric breakdown
                         st.divider()
                         st.markdown("### Handicap Breakdown Result")
                         st.write(f"**Player:** {sel_player}")
@@ -643,15 +588,12 @@ with tabs[4]: # League Info
                         else:
                             st.write("No scores available to compute an average. Handicap set to **0.0** by default.")
 
-                        # Show a small table marking which rounds were used
                         with st.expander("Detailed Rounds Table (marking used rounds)"):
-                            # Build a combined table of all relevant rounds for context
                             combined = pd.concat([pre_season, regular_rounds]).drop_duplicates().sort_values('Week', ascending=False)
                             if combined.empty:
                                 st.write("No rounds to display.")
                             else:
                                 combined_display = combined[['Week', 'Total_Score', 'DNF']].reset_index(drop=True).copy()
-                                # Mark used rows
                                 def mark_used(row):
                                     try:
                                         return row['Total_Score'] in used_scores
@@ -660,7 +602,6 @@ with tabs[4]: # League Info
                                 combined_display['UsedInCalc'] = combined_display.apply(mark_used, axis=1)
                                 st.dataframe(combined_display, use_container_width=True, hide_index=True)
 
-                        # Provide a short explanation and link back to rules
                         st.markdown(
                             "If you believe a round was incorrectly included or excluded, please contact the Rules and Players Committee. "
                             "Rounds from special event weeks (e.g., scrambles or team events) are excluded from handicap calculations by league policy."
@@ -668,20 +609,17 @@ with tabs[4]: # League Info
                     except Exception as e:
                         st.error(f"Error computing handicap breakdown: {e}")
 
-
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
 
-        
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * The Net score will be automatically applied using the handicap.
         * GGG Points will be automatically applied.
         * Any mis-aligned score please consult your Rules/Players Committee.\n\n
 
-        
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
         Brown Deer: **Blue - 6306 yd**
@@ -694,7 +632,6 @@ with tabs[4]: # League Info
         * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
         * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
 
-        
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***
@@ -711,13 +648,10 @@ with tabs[4]: # League Info
         * Use common sense to keep play moving.
         * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n\n
 
-        
         **DNFs:** If you cannot finish, mark 'DNF'.
         """)
         
-        # This replaces the old Live Round warning with a relevant Rules Note
         st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
-
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
@@ -783,13 +717,11 @@ with tabs[4]: # League Info
                     else:
                         st.write("Standard league play rules and rolling handicaps apply.")
 
-
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
         st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
         "**Note:** GGG Challenge winners override the FINALE prize pick order.")
 
-        # 1. Organize data into a list of dictionaries for easier management
         prizes = [
             {"img": "GGGopenBanner2.jpg", "desc": "GGG 2026 Open Banner."},
             {"img": "rockstarBag1.jpg", "desc": "Limited Edition OGIO Rockstar carry/stand golf Bag."},
@@ -800,57 +732,47 @@ with tabs[4]: # League Info
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
             {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."},
             {"img": "Sandals.jpg", "desc": "Sandals."}
-            
         ]
 
-        # 2. Use columns to create a responsive grid (2 columns wide)
         cols = st.columns(2)
         for i, prize in enumerate(prizes):
-            # 1. This line defines which column to use
             with cols[i % 2]:
-                # 2. This line MUST be indented relative to the 'with' above
                 with st.container(border=True):
                     image_to_display = prize["img"]
                     if prize["img"] == "GGGopenBanner2.jpg":
                         img = Image.open("GGGopenBanner2.jpg")
                         image_to_display = img.rotate(-90, expand=True)
-
                     elif prize["img"] == "radgolfgps.jpg":
                         img = Image.open("radgolfgps.jpg")
                         image_to_display = img.rotate(90, expand=True)
-
                     elif prize["img"] == "ForezoBallMarkers.jpg":
                         img = Image.open("ForezoBallMarkers.jpg")
                         image_to_display = img.rotate(-90, expand=True)
 
-
-                    
                     st.image(image_to_display, use_container_width=True)
                     st.caption(prize["desc"])
                    
-
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
 
-        # Load existing data from GSheets
         try:
-            expenses_df = conn.read(worksheet="Expenses", ttl=0)
-            # Clean up any completely empty rows/cols if they exist
+            # SUPABASE READ
+            response = conn.query("*", table="Expenses", ttl=0).execute()
+            expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Prize", "Cost"])
             expenses_df = expenses_df.dropna(how='all')
         except Exception:
             expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
 
-        # --- Form to Add Expense ---
         with st.expander("Add a Prize / Expense", expanded=True):
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
                 if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
                     if prize_desc:
-                        new_row = pd.DataFrame([{"Prize": prize_desc.strip(), "Cost": float(prize_cost)}])
-                        updated_df = pd.concat([expenses_df, new_row], ignore_index=True)
-                        conn.update(worksheet="Expenses", data=updated_df)
+                        new_entry = {"Prize": prize_desc.strip(), "Cost": float(prize_cost)}
+                        # SUPABASE INSERT
+                        conn.table("Expenses").insert(new_entry).execute()
                         st.cache_data.clear()
                         st.success(f"Saved: {prize_desc}")
                         time.sleep(1)
@@ -860,9 +782,7 @@ with tabs[4]: # League Info
 
         st.divider()
 
-        # --- Display Table ---
         if not expenses_df.empty:
-            # Formatting for display only
             disp_df = expenses_df.copy()
             disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
             st.dataframe(disp_df, use_container_width=True, hide_index=True)
@@ -870,7 +790,7 @@ with tabs[4]: # League Info
             total = pd.to_numeric(expenses_df["Cost"]).sum()
             st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
         else:
-            st.info("No expenses found in the Google Sheet.")
+            st.info("No expenses found in the database.")
 
     elif info_category == "Members":
         st.subheader("👥 League Members")
@@ -879,7 +799,6 @@ with tabs[4]: # League Info
                 "Please pay registration fees by **Week 1** to Finance Officer: Mike Yang.\n\n"
                 "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
 
-        # Build members list from df_main: registration rows are Week == 0
         if df_main is None or df_main.empty:
             st.info("No registered members yet.")
         else:
@@ -887,7 +806,6 @@ with tabs[4]: # League Info
             if members_df.empty:
                 st.info("No registered members yet.")
             else:
-                # Normalize columns for display
                 display_cols = ['Player']
                 if 'Acknowledged' in members_df.columns:
                     members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
@@ -900,14 +818,14 @@ with tabs[4]: # League Info
     elif info_category == "Bets":
         st.subheader("🤝 Season Bets")
         
-        # Load existing data from GSheets
         try:
-            bets_df = conn.read(worksheet="Bets", ttl=0)
+            # SUPABASE READ
+            response = conn.query("*", table="Bets", ttl=0).execute()
+            bets_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
             bets_df = bets_df.dropna(how='all')
         except Exception:
             bets_df = pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
 
-        # --- Form to Add Bet ---
         with st.expander("➕ Log a New Bet"):
             with st.form("new_bet_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
@@ -918,14 +836,14 @@ with tabs[4]: # League Info
                 
                 if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
                     if p1 != p2 and wager:
-                        new_bet = pd.DataFrame([{
+                        new_bet = {
                             "Player 1": p1, "Player 2": p2, 
                             "Wager": wager, "Terms": terms, "Status": "⏳ Pending"
-                        }])
-                        updated_bets = pd.concat([bets_df, new_bet], ignore_index=True)
-                        conn.update(worksheet="Bets", data=updated_bets)
+                        }
+                        # SUPABASE INSERT
+                        conn.table("Bets").insert(new_bet).execute()
                         st.cache_data.clear()
-                        st.success("Bet saved to Google Sheets!")
+                        st.success("Bet saved to database!")
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -933,44 +851,31 @@ with tabs[4]: # League Info
 
         st.divider()
 
-        # --- Display & Update Section ---
         if not bets_df.empty:
             st.dataframe(bets_df, use_container_width=True, hide_index=True)
             
-            # Simple Update Tool
             with st.expander("🏅 Update a Bet Status"):
                 bet_idx = st.selectbox("Select Bet #", range(len(bets_df)), format_func=lambda x: f"Bet {x+1}: {bets_df.iloc[x]['Player 1']} vs {bets_df.iloc[x]['Player 2']}")
                 new_status = st.radio("Outcome", ["⏳ Pending", "🏆 P1 Wins", "🏆 P2 Wins", "🤝 Draw"])
                 if st.button("Update Status"):
-                    bets_df.at[bet_idx, "Status"] = new_status
-                    conn.update(worksheet="Bets", data=bets_df)
+                    target_row = bets_df.iloc[bet_idx]
+                    
+                    # SUPABASE UPDATE (Matching by row data)
+                    conn.table("Bets").update({"Status": new_status}) \
+                        .eq("Player 1", target_row["Player 1"]) \
+                        .eq("Player 2", target_row["Player 2"]) \
+                        .eq("Wager", target_row["Wager"]).execute()
+                        
                     st.cache_data.clear()
                     st.rerun()
         else:
-            st.info("No active bets found in the Google Sheet.")
+            st.info("No active bets found in the database.")
                         
-#OLD BET CODE -- Keeping for reference
-    #elif info_category == "Bets":
-        #st.subheader("🤝 Season Bets")
-        #st.write("Track all bets")
-        #st.divider()
-        
-        #st.markdown("### Active Wagers")
-        # Placeholder dataframe for bets
-        #bets_data = pd.DataFrame([
-            #{"Player 1": "Txv", "Player 2": "5Hundo", "Wager": "1 pack of Ribeye", "Terms": "Rory wins 2026 Master Txv Lose, Rory Lose 2026 Masters 5Hundo Lose"},
-            #{"Player 1": "Lex", "Player 2": "Thunder", "Wager": "1 Duck", "Terms": "First Match, Loser pay 1 Duck"},
-        #])
-        #st.dataframe(bets_data, use_container_width=True, hide_index=True)
-
-
 with tabs[5]: # Registration
     st.header("👤 Registration")
     
-    # --- PRE-STEP: League Code Verification ---
     if not st.session_state.get("reg_access"):
         st.info("Please enter the League Registration Key provided by the League Officers to begin.")
-        
         with st.form("league_key_form"):
             user_key = st.text_input("League Key", type="password", key="reg_gate_key_input")
             submit_key = st.form_submit_button("🔓 Unlock Registration", use_container_width=True, type="primary")
@@ -984,16 +889,13 @@ with tabs[5]: # Registration
                 else:
                     st.error("❌ Invalid League Key. Please contact an Officer.")
 
-    # --- STEP 2: Player Details ---
     else:
-        # Informational note and acknowledgement requirement
         st.info(
             "By registering for the GGGolf Summer League you confirm that you have read, "
             "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
             "Registration indicates acceptance of these terms."
         )
 
-        # Require explicit acknowledgement before allowing registration
         ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
 
         with st.form("registration_form", clear_on_submit=True):
@@ -1009,22 +911,19 @@ with tabs[5]: # Registration
                     st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
                 elif n and len(p) == 4:
                     try:
-                        # 1. ADD TO MAIN DATABASE (now includes Acknowledged)
-                        new_reg = pd.DataFrame([{
-                            "Week": 0, "Player": n, "PIN": p, "Handicap": 0.0, "DNF": True,
+                        new_reg = {
+                            "Week": 0, "Player": n, "PIN": str(p), "Handicap": 0.0, "DNF": True,
                             "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
-                            "Total_Score": 0, "Net_Score": 0, "Acknowledged": True
-                        }])
+                            "Total_Score": 0, "Net_Score": 0.0, "Acknowledged": True
+                        }
                         
-                        updated_main = pd.concat([df_main, new_reg], ignore_index=True)
-                        # use the existing connection created at module load
-                        conn.update(data=updated_main[MASTER_COLUMNS])
+                        # SUPABASE INSERT
+                        conn.table("league_data").insert(new_reg).execute()
 
-                        # 3. FINALIZE
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
                         time.sleep(1.5)
-                        st.session_state["reg_access"] = False # Relock for next use
+                        st.session_state["reg_access"] = False 
                         st.rerun()
                         
                     except Exception as e:
@@ -1035,7 +934,6 @@ with tabs[5]: # Registration
 with tabs[6]: # Admin
     st.header("⚙️ Admin Control Panel")
     
-    # --- STEP 1: Secure Login Form ---
     if not st.session_state.get("authenticated"):
         st.info("Please enter the Administrative Password to access league management tools.")
         
@@ -1052,46 +950,43 @@ with tabs[6]: # Admin
                 else:
                     st.error("❌ Incorrect Admin Password.")
 
-    # --- STEP 2: Admin Tools (Only visible after successful login) ---
     else:
         st.subheader("Leaderboard Management")
         st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
 
-        # 1. The Reset Button (Wipes the sheet)
         if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
             try:
-                hole_headers = [str(i) for i in range(1, 10)]
-                empty_df = pd.DataFrame(columns=['Player'] + hole_headers)
-                
-                conn.update(worksheet="LiveScores", data=empty_df)
+                # SUPABASE DELETE (Clear out table without dropping it)
+                conn.table("LiveScores").delete().neq("Player", "").execute()
                 st.cache_data.clear()
                 
                 st.success("✅ Live Round has been reset!")
                 time.sleep(1.5)
                 st.rerun()
             except Exception as e:
-                st.error(f"Failed to reset sheet: {e}")
+                st.error(f"Failed to reset table: {e}")
 
-        # 2. The Sync Button (Pre-populates the sheet with registered players)
-        # ALL CODE BELOW IS NOW CORRECTLY INDENTED
         if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
             try:
-                # Get everyone currently registered from the main data
                 all_players = df_main['Player'].unique().tolist()
                 hole_cols = [str(i) for i in range(1, 10)]
                 
-                # Create a fresh table with everyone starting at 0
-                synced_df = pd.DataFrame(columns=['Player'] + hole_cols)
+                # SUPABASE WIPE OLD DATA
+                conn.table("LiveScores").delete().neq("Player", "").execute()
                 
+                # BUILD NEW DICTIONARIES
+                records_to_insert = []
                 for p_name in all_players:
-                    if p_name: # skip empty entries
+                    if p_name: 
                         row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
-                        synced_df = pd.concat([synced_df, pd.DataFrame([row_data])], ignore_index=True)
+                        records_to_insert.append(row_data)
                 
-                # Push the full list to Google Sheets
-                conn.update(worksheet="LiveScores", data=synced_df)
+                # SUPABASE BATCH INSERT
+                if records_to_insert:
+                    conn.table("LiveScores").insert(records_to_insert).execute()
+                    
                 st.cache_data.clear()
-                st.success(f"Success! {len(synced_df)} players synced to the Live Board.")
+                st.success(f"Success! {len(records_to_insert)} players synced to the Live Board.")
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
@@ -1099,12 +994,11 @@ with tabs[6]: # Admin
 
         st.divider()
         
-        # Logout / Maintenance Section
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Refresh Data Cache", use_container_width=True):
                 st.cache_data.clear()
-                st.toast("App data synced with Google Sheets.")
+                st.toast("App data synced with database.")
         
         with col2:
             if st.button("🔒 Lock Admin Panel", use_container_width=True):
