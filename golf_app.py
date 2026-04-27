@@ -37,10 +37,10 @@ GGG_POINTS = {
 def load_data():
     try:
         # Correct Supabase syntax to read all data from the table
-        response = conn.query("*", table="league_scores", ttl=10).execute()
+        response = conn.table("league_scores").select("*").execute()
         
         # Convert the Supabase response to a Pandas DataFrame
-        data = pd.DataFrame(response.data) 
+        data = pd.DataFrame(response.data)
         
         if data.empty or 'Player' not in data.columns: 
             return pd.DataFrame(columns=MASTER_COLUMNS)
