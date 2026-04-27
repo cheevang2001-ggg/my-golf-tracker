@@ -37,7 +37,7 @@ GGG_POINTS = {
 def load_data():
     try:
         # Correct Supabase syntax to read all data from the table
-        response = conn.table("league_scores").select("*").execute()
+        response = conn.table("league_scores_2026").select("*").execute()
         
         # Convert the Supabase response to a Pandas DataFrame
         data = pd.DataFrame(response.data)
@@ -104,7 +104,7 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
             'PIN': str(pin)
         }
         
-        conn.table("league_scores").upsert(new_entry).execute()
+        conn.table("league_scores_2026").upsert(new_entry).execute()
         st.cache_data.clear()
         
         st.success(f"👍 Score Submitted Successfully for {player}!", icon="✅")
