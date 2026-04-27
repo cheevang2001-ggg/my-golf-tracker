@@ -918,7 +918,7 @@ with tabs[5]: # Registration
                         }
                         
                         # SUPABASE INSERT
-                        conn.table("league_data").insert(new_reg).execute()
+                        conn.table("league_scores_2026").insert(new_reg).execute()
 
                         st.success(f"Welcome to the league, {n}!")
                         st.cache_data.clear()
