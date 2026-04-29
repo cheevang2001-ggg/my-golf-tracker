@@ -622,11 +622,11 @@ with tabs[4]: # League Info
 
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1, C2, C3 or have approval from the players committee to play from a forward tee box:***
-        Brown Deer: **Blue - 6306 yd**
-        Dretzka: **Blue - 6538 yd**
-        Oakwood: **Blue - 6737 yd**
-        Whitnall: **Blue - 6308 yd**
-        Currie: **Black - 6444 yd**
+        *Brown Deer: **Blue - 6306 yd**
+        *Dretzka: **Blue - 6538 yd**
+        *Oakwood: **Blue - 6737 yd**
+        *Whitnall: **Blue - 6308 yd**
+        *Currie: **Black - 6444 yd**
         
         ***C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.***
         * Brown Deer: **White - 5893 yd**
