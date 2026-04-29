@@ -769,25 +769,27 @@ with tabs[4]: # League Info
 
         try:
             # SUPABASE READ
-            response = conn.table("Expenses").select("*").execute()
+            response = conn.table("expenses").select("*").execute()
             expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Prize", "Cost"])
             expenses_df = expenses_df.dropna(how='all')
         except Exception as e:
             st.error(f"Error loading expenses: {e}")
             expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
 
+
         with st.expander("Add a Prize / Expense", expanded=True):
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
+                if st.form_submit_button("Add Expense", type="primary"):
                     if prize_desc:
+                        # OPTIMIZED: Ensure consistent casing for keys
                         new_entry = {"Prize": prize_desc.strip(), "Cost": float(prize_cost)}
-                        # SUPABASE INSERT
-                        conn.table("Expenses").insert(new_entry).execute()
+                        # INSERT using the correct lowercase table name
+                        conn.table("expenses").insert(new_entry).execute()
                         st.cache_data.clear()
                         st.success(f"Saved: {prize_desc}")
-                        time.sleep(1)
+                        time.sleep(0.5) # Reduced sleep for better UX
                         st.rerun()
                     else:
                         st.warning("Please enter a description.")
