@@ -1,6 +1,7 @@
 ###################################################DDDDDDDDDDDDDDDDDDDDDDDDDDEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV##################################################################
 import streamlit as st
 import pandas as pd
+import datetime
 import time
 import random
 import altair as alt
@@ -118,24 +119,34 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # --- 1. SECURITY CHECK ---
-    # Ensure the user is logged in via your PIN system
-    if not st.session_state.get("signed_in"):
-        st.warning("🔒 Please sign in with your PIN to enter scores.")
-        # We still show the scorecard below so they can see the board
-    else:
-        # Lock the scoring to the authenticated user
-        logged_in_user = st.session_state.get("username")
-        st.success(f"Logged in as: **{logged_in_user}**")
+    # --- 1. SESSION & TIMEOUT CHECK ---
+    now = datetime.datetime.now()
+    is_logged_in = False
+    
+    # Check if a player is unlocked and if the session is still valid (within 2 hours)
+    if "unlocked_player" in st.session_state and "login_timestamp" in st.session_state:
+        elapsed = now - st.session_state["login_timestamp"]
+        if elapsed < datetime.timedelta(hours=2):
+            is_logged_in = True
+        else:
+            # Session expired
+            del st.session_state["unlocked_player"]
+            del st.session_state["login_timestamp"]
 
-        # --- 2. INPUT SECTION (Locked to Logged-in User) ---
+    # --- 2. CONDITIONAL UI ---
+    if not is_logged_in:
+        st.warning("🔒 Please go to the **Scorecard** tab and enter your PIN to unlock live scoring.")
+    else:
+        logged_in_user = st.session_state["unlocked_player"]
+        st.success(f"Authenticated as: **{logged_in_user}**")
+
+        # --- 3. INPUT SECTION (Locked to Logged-in User) ---
         with st.expander(f"📝 Enter Score for {logged_in_user}", expanded=True):
             if 'active_hole' not in st.session_state:
                 st.session_state.active_hole = 1
 
-            st.write(f"**Select Hole: {st.session_state.active_hole}**")
-            
             # Hole Selection Grid
+            st.write(f"**Select Hole: {st.session_state.active_hole}**")
             f9_cols = st.columns(9)
             for i in range(1, 10):
                 if f9_cols[i-1].button(f"{i}", key=f"f9_{i}", 
@@ -153,21 +164,21 @@ def render_live_scoring():
                     st.rerun()
 
             with st.form("live_score_form", clear_on_submit=True):
-                score = st.selectbox("Score", options=range(1, 11), index=3) # Defaults to 4
+                score = st.selectbox("Score", options=range(1, 11), index=3)
                 
                 if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                     try:
                         new_score = {
                             "week": 1, 
-                            "player_name": logged_in_user, # Hardcoded to the user
+                            "player_name": logged_in_user,
                             "hole_number": st.session_state.active_hole,
                             "score": score,
                             "updated_at": "now()"
                         }
                         conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                        st.success(f"Score of {score} saved for Hole {st.session_state.active_hole}!")
+                        st.success(f"Saved: Hole {st.session_state.active_hole} - Score: {score}")
                         
-                        # Auto-advance
+                        # Auto-advance to next hole
                         if st.session_state.active_hole < 18:
                             st.session_state.active_hole += 1
                         
