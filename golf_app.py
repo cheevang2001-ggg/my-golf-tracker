@@ -148,11 +148,19 @@ def render_live_scoring():
     # The variable 'selected_player' is now safely defined above
     with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
         with st.form("live_score_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            hole = col1.number_input("Hole #", min_value=1, max_value=18, step=1)
-            score = col2.number_input("Score", min_value=1, max_value=10, step=1)
+            # Select Hole Number
+            st.write("**Select Hole**")
             
-            if st.form_submit_button("Submit Score", type="primary"):
+            # Create two rows of 9 buttons for better mobile layout
+            cols_front = st.columns(9)
+            cols_back = st.columns(9)
+            
+            hole = st.radio("Hole", options=range(1, 19), index=0, horizontal=True, label_visibility="collapsed")
+            
+            # Select Score
+            score = st.slider("Score", min_value=1, max_value=10, value=3)
+            
+            if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                 try:
                     new_score = {
                         "week": 1, 
@@ -162,7 +170,7 @@ def render_live_scoring():
                         "updated_at": "now()"
                     }
                     conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                    st.success(f"Saved: {selected_player} got a {score} on Hole {hole}")
+                    st.success(f"Saved: Hole {hole} - Score: {score}")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Save Failed: {e}")
