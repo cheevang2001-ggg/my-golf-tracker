@@ -147,56 +147,34 @@ def render_live_scoring():
     # --- 2. INPUT SECTION ---
     # The variable 'selected_player' is now safely defined above
     with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
-        # We'll use session state to track the hole so we don't need a clunky radio
-        if 'active_hole' not in st.session_state:
-            st.session_state.active_hole = 1
-
-        # 1. Hole Selection Grid (Front 9 & Back 9)
-        st.write(f"**Select Hole: {st.session_state.active_hole}**")
-        
-        f9_cols = st.columns(9)
-        for i in range(1, 10):
-            if f9_cols[i-1].button(f"{i}", key=f"f9_{i}", 
-                                   type="primary" if st.session_state.active_hole == i else "secondary",
-                                   use_container_width=True):
-                st.session_state.active_hole = i
-                st.rerun()
-
-        b9_cols = st.columns(9)
-        for i in range(10, 19):
-            if b9_cols[i-10].button(f"{i}", key=f"b9_{i}", 
-                                    type="primary" if st.session_state.active_hole == i else "secondary",
-                                    use_container_width=True):
-                st.session_state.active_hole = i
-                st.rerun()
-
-        # 2. Score Input Form
         with st.form("live_score_form", clear_on_submit=True):
-            # Using a selectbox for score is actually very fast on mobile 
-            # as it opens the native "spinner" or "picker"
-            score = st.selectbox("Score", options=range(1, 11), index=2) # Defaults to 3
+            # Select Hole Number
+            st.write("**Select Hole**")
+            
+            # Create two rows of 9 buttons for better mobile layout
+            cols_front = st.columns(9)
+            cols_back = st.columns(9)
+            
+            hole = st.radio("Hole", options=range(1, 19), index=0, horizontal=True, label_visibility="collapsed")
+            
+            # Select Score
+            score = st.slider("Score", min_value=1, max_value=10, value=3)
             
             if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                 try:
                     new_score = {
                         "week": 1, 
                         "player_name": selected_player,
-                        "hole_number": st.session_state.active_hole,
+                        "hole_number": hole,
                         "score": score,
                         "updated_at": "now()"
                     }
                     conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                    st.success(f"Saved: Hole {st.session_state.active_hole} - Score: {score}")
-                    
-                    # Auto-advance to next hole for convenience
-                    if st.session_state.active_hole < 18:
-                        st.session_state.active_hole += 1
-                    
-                    time.sleep(1)
+                    st.success(f"Saved: Hole {hole} - Score: {score}")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Save Failed: {e}")
-                    
+
     # 3. Live Scorecard Section
     st.divider()
     st.subheader("📊 Current Scorecard")
@@ -241,7 +219,7 @@ def render_live_scoring():
             
     except Exception as e:
         st.warning(f"Could not load leaderboard: {e}")
-            
+        
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
