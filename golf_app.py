@@ -197,10 +197,10 @@ def render_live_scoring():
                         st.rerun()
 
                 with st.form("live_score_entry_form", clear_on_submit=True):
-                    score = st.selectbox("Score", options=range(1, 11), index=3)
+                    # Replaced selectbox with a slider for faster mobile entry
+                    score = st.slider("Score", min_value=1, max_value=10, value=4, help="Slide to select your score")
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
-                        # --- INDENTATION FIXED BELOW ---
                         try:
                             new_score = {
                                 "week": 1, 
@@ -216,6 +216,7 @@ def render_live_scoring():
                             
                             st.success(f"Hole {st.session_state.active_hole} saved!")
                             
+                            # Auto-advance to next hole
                             if st.session_state.active_hole < 18:
                                 st.session_state.active_hole += 1
                             
