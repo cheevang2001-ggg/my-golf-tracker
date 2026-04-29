@@ -1,4 +1,4 @@
-###################################################DDDDDDDDDDDDDDDDDDDDDDDDDDEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV##################################################################
+# THIS IS THE DEV ENVIRONMENT FOR THE APP ----------------------------------------
 import streamlit as st
 import pandas as pd
 import datetime
@@ -119,92 +119,111 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # --- 1. SESSION & TIMEOUT CHECK ---
-    now = datetime.datetime.now().replace(tzinfo=None)
-    is_logged_in = False
-    
-    if "unlocked_player" in st.session_state and "login_timestamp" in st.session_state:
-        raw_timestamp = st.session_state["login_timestamp"]
-        
-        try:
-            # Check if it's a date only (no time), and convert to datetime
-            if isinstance(raw_timestamp, datetime.date) and not isinstance(raw_timestamp, datetime.datetime):
-                stored_time = datetime.datetime.combine(raw_timestamp, datetime.time.min)
-            else:
-                # It's already a datetime, just strip timezone
-                stored_time = raw_timestamp.replace(tzinfo=None)
-            
-            elapsed = now - stored_time
-            
-            # Check if within 2 hours
-            if elapsed < datetime.timedelta(hours=2):
-                is_logged_in = True
-            else:
-                # Session expired
-                del st.session_state["unlocked_player"]
-                del st.session_state["login_timestamp"]
-                st.info("🕒 Your 2-hour scoring session has expired.")
-                
-        except Exception as e:
-            # If any conversion fails, we default to logged out for safety
-            is_logged_in = False
-            
-    # --- 2. CONDITIONAL UI ---
-    if not is_logged_in:
-        st.warning("🔒 Please go to the **Scorecard** tab and enter your PIN to unlock live scoring.")
+    if not EXISTING_PLAYERS: 
+        st.warning("No players registered yet.")
+        return
+
+    # --- 1. PLAYER SELECTION ---
+    # We use the same segmented control style as your Scorecard tab
+    player_select = st.segmented_control(
+        "Select Your Profile to Score", 
+        options=EXISTING_PLAYERS,
+        selection_mode="single",
+        key="live_player_select"
+    )
+
+    if not player_select:
+        st.info("Please select your name above to begin live scoring.")
     else:
-        logged_in_user = st.session_state["unlocked_player"]
-        st.success(f"Authenticated as: **{logged_in_user}**")
+        # --- 2. SECURITY CHECK (Matching Scorecard Tab Logic) ---
+        # Checks if: 1. Name matches, 2. Within 2-hour window, OR 3. Global Admin is authenticated
+        is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
+                      (time.time() - st.session_state.get("login_timestamp", 0)) < 7200) or \
+                      st.session_state.get("authenticated", False)
 
-        # --- 3. INPUT SECTION (Locked to Logged-in User) ---
-        with st.expander(f"📝 Enter Score for {logged_in_user}", expanded=True):
-            if 'active_hole' not in st.session_state:
-                st.session_state.active_hole = 1
+        if not is_unlocked:
+            st.markdown("### 🔒 Live Scoring Lock")
+            st.info(f"Please enter your 4-digit PIN to unlock live scoring for **{player_select}**.")
 
-            # Hole Selection Grid
-            st.write(f"**Select Hole: {st.session_state.active_hole}**")
-            f9_cols = st.columns(9)
-            for i in range(1, 10):
-                if f9_cols[i-1].button(f"{i}", key=f"f9_{i}", 
-                                       type="primary" if st.session_state.active_hole == i else "secondary",
-                                       use_container_width=True):
-                    st.session_state.active_hole = i
-                    st.rerun()
-
-            b9_cols = st.columns(9)
-            for i in range(10, 19):
-                if b9_cols[i-10].button(f"{i}", key=f"b9_{i}", 
-                                        type="primary" if st.session_state.active_hole == i else "secondary",
-                                        use_container_width=True):
-                    st.session_state.active_hole = i
-                    st.rerun()
-
-            with st.form("live_score_form", clear_on_submit=True):
-                score = st.selectbox("Score", options=range(1, 11), index=3)
+            with st.form("live_unlock_form"):
+                user_pin = st.text_input("Enter PIN", type="password", key=f"live_pin_{player_select}")
+                submit_unlock = st.form_submit_button("🔓 Unlock Live Scoring", use_container_width=True, type="primary")
                 
-                if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
-                    try:
-                        new_score = {
-                            "week": 1, 
-                            "player_name": logged_in_user,
-                            "hole_number": st.session_state.active_hole,
-                            "score": score,
-                            "updated_at": "now()"
-                        }
-                        conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                        st.success(f"Saved: Hole {st.session_state.active_hole} - Score: {score}")
+                if submit_unlock:
+                    if user_pin:
+                        # Fetch PIN from the main dataframe (Week 0 is registration row)
+                        p_info = df_main[df_main['Player'] == player_select]
+                        reg_row = p_info[p_info['Week'] == 0]
                         
-                        # Auto-advance to next hole
-                        if st.session_state.active_hole < 18:
-                            st.session_state.active_hole += 1
-                        
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Save Failed: {e}")
+                        if not reg_row.empty:
+                            stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
+                            if user_pin.strip() == stored_pin:
+                                st.session_state.update({
+                                    "unlocked_player": player_select, 
+                                    "login_timestamp": time.time()
+                                })
+                                st.success(f"Identity Verified! Welcome, {player_select}.")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("❌ Incorrect PIN.")
+                        else:
+                            st.error("⚠️ Player not found in records.")
+                    else:
+                        st.warning("Please enter your PIN.")
+        
+        else:
+            # --- 3. INPUT SECTION (Only visible when unlocked) ---
+            st.success(f"Scoring active for: **{player_select}**")
+            
+            with st.expander(f"📝 Enter Score for {player_select}", expanded=True):
+                if 'active_hole' not in st.session_state:
+                    st.session_state.active_hole = 1
 
-    # --- 3. PUBLIC VIEW SECTION ---
-    # This remains outside the 'if signed_in' block so everyone can see it
+                st.write(f"**Select Hole: {st.session_state.active_hole}**")
+                
+                # Hole Selection Grid (2 rows of 9)
+                f9_cols = st.columns(9)
+                for i in range(1, 10):
+                    if f9_cols[i-1].button(f"{i}", key=f"live_f9_{i}", 
+                                           type="primary" if st.session_state.active_hole == i else "secondary",
+                                           use_container_width=True):
+                        st.session_state.active_hole = i
+                        st.rerun()
+
+                b9_cols = st.columns(9)
+                for i in range(10, 19):
+                    if b9_cols[i-10].button(f"{i}", key=f"live_b9_{i}", 
+                                            type="primary" if st.session_state.active_hole == i else "secondary",
+                                            use_container_width=True):
+                        st.session_state.active_hole = i
+                        st.rerun()
+
+                with st.form("live_score_entry_form", clear_on_submit=True):
+                    score = st.selectbox("Score", options=range(1, 11), index=3)
+                    
+                    if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
+                        try:
+                            new_score = {
+                                "week": 1, # Update this based on current active week if needed
+                                "player_name": player_select,
+                                "hole_number": st.session_state.active_hole,
+                                "score": score,
+                                "updated_at": "now()"
+                            }
+                            conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                            st.success(f"Hole {st.session_state.active_hole} saved!")
+                            
+                            # Auto-advance
+                            if st.session_state.active_hole < 18:
+                                st.session_state.active_hole += 1
+                            
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Save Failed: {e}")
+
+    # --- 4. PUBLIC VIEW SECTION (Always visible to all) ---
     st.divider()
     st.subheader("📊 League Scorecard")
     
@@ -213,10 +232,10 @@ def render_live_scoring():
     
     try:
         response = conn.table("live_scores").select("*").eq("week", 1).execute()
-        df = pd.DataFrame(response.data)
+        df_live = pd.DataFrame(response.data)
         
-        if not df.empty:
-            scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
+        if not df_live.empty:
+            scorecard = df_live.pivot(index="player_name", columns="hole_number", values="score")
             for i in range(1, 19):
                 if i not in scorecard.columns: scorecard[i] = None
             
