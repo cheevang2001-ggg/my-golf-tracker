@@ -769,10 +769,11 @@ with tabs[4]: # League Info
 
         try:
             # SUPABASE READ
-            response = conn.query("*", table="Expenses", ttl=0).execute()
+            response = conn.table("Expenses").select("*").execute()
             expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Prize", "Cost"])
             expenses_df = expenses_df.dropna(how='all')
-        except Exception:
+        except Exception as e:
+            st.error(f"Error loading expenses: {e}")
             expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
 
         with st.expander("Add a Prize / Expense", expanded=True):
