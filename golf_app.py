@@ -125,7 +125,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>QA ENVIRONMENT GGGolf</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "⛳ Live Scoring", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -308,7 +308,12 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[3]:  # GGG Challenge
+with tabs[3]:  # Live Scoring
+    st.header("⛳ Live Scoring")
+    st.write("Live Scoring")
+    st.divider()
+
+with tabs[4]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
@@ -455,7 +460,7 @@ with tabs[3]:  # GGG Challenge
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
         
-with tabs[4]: # League Info
+with tabs[5]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets"], horizontal=True)
     st.divider()
@@ -923,7 +928,7 @@ with tabs[4]: # League Info
         else:
             st.info("No active bets found in the database.")
                         
-with tabs[5]: # Registration
+with tabs[6]: # Registration
     st.header("👤 Registration")
     
     if not st.session_state.get("reg_access"):
@@ -983,7 +988,7 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[7]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     if not st.session_state.get("authenticated"):
