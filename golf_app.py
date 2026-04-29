@@ -796,12 +796,20 @@ with tabs[4]: # League Info
 
         st.divider()
 
-        if not expenses_df.empty:
+        # Check if the DataFrame has the necessary columns before proceeding
+        if not expenses_df.empty and "Cost" in expenses_df.columns:
             disp_df = expenses_df.copy()
-            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
-            st.dataframe(disp_df, use_container_width=True, hide_index=True)
             
-            total = pd.to_numeric(expenses_df["Cost"]).sum()
+            # Ensure the column is numeric before formatting
+            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"], errors='coerce').fillna(0)
+            
+            # Now apply the formatting
+            disp_df["Cost_Display"] = disp_df["Cost"].map(lambda x: f"${x:,.2f}")
+            
+            # Display only the columns you want to show
+            st.dataframe(disp_df[["Prize", "Cost_Display"]], use_container_width=True, hide_index=True)
+            
+            total = disp_df["Cost"].sum()
             st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
         else:
             st.info("No expenses found in the database.")
