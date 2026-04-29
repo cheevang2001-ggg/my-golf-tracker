@@ -769,25 +769,32 @@ with tabs[4]: # League Info
 
         try:
             # SUPABASE READ
-            response = conn.query("*", table="Expenses", ttl=0).execute()
-            expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Prize", "Cost"])
+            response = conn.table("expenses").select("*").execute()
+            expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["prize", "cost"])
             expenses_df = expenses_df.dropna(how='all')
-        except Exception:
-            expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
+        except Exception as e:
+            st.error(f"Error loading expenses: {e}")
+            expenses_df = pd.DataFrame(columns=["prize", "cost"])
+
 
         with st.expander("Add a Prize / Expense", expanded=True):
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
-                if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
+                if st.form_submit_button("Add Expense", type="primary"):
                     if prize_desc:
-                        new_entry = {"Prize": prize_desc.strip(), "Cost": float(prize_cost)}
-                        # SUPABASE INSERT
-                        conn.table("Expenses").insert(new_entry).execute()
+                        # OPTIMIZED: Ensure consistent casing for keys
+                        new_entry = {"prize": prize_desc.strip(), "cost": float(prize_cost)}
+                        # INSERT using the correct lowercase table name
+                    try:
+                        conn.table("expenses").insert(new_entry).execute()
                         st.cache_data.clear()
                         st.success(f"Saved: {prize_desc}")
-                        time.sleep(1)
+                        time.sleep(0.5) # Reduced sleep for better UX
                         st.rerun()
+                    except Exception as e:
+                            # This catches the APIError and prints the REAL message
+                            st.error(f"⚠️ Database Error: {e}")
                     else:
                         st.warning("Please enter a description.")
 
@@ -795,13 +802,34 @@ with tabs[4]: # League Info
 
         if not expenses_df.empty:
             disp_df = expenses_df.copy()
-            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"]).map(lambda x: f"${x:,.2f}")
-            st.dataframe(disp_df, use_container_width=True, hide_index=True)
             
-            total = pd.to_numeric(expenses_df["Cost"]).sum()
-            st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
+            # 1. Standardize column names to handle Case Sensitivity
+            # This makes sure we find the cost column regardless of if it's 'Cost' or 'cost'
+            cols = {col.lower(): col for col in disp_df.columns}
+            
+            target_cost = cols.get('cost')
+            target_prize = cols.get('prize')
+
+            if target_cost and target_prize:
+                # 2. Prepare the numeric data
+                disp_df[target_cost] = pd.to_numeric(disp_df[target_cost], errors='coerce').fillna(0)
+                
+                # 3. Create a formatted display column
+                disp_df["Amount"] = disp_df[target_cost].map(lambda x: f"${x:,.2f}")
+                
+                # 4. Show the table with the correct columns
+                st.dataframe(
+                    disp_df[[target_prize, "Amount"]], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
+                
+                total = disp_df[target_cost].sum()
+                st.markdown(f"### 💰 Total League Costs: ${total:,.2f}")
+            else:
+                st.warning(f"Found data, but couldn't find 'Prize' or 'Cost' columns. Found: {list(disp_df.columns)}")
         else:
-            st.info("No expenses found in the database.")
+            st.info("No expenses found in the database yet.")
 
     elif info_category == "Members":
         st.subheader("👥 League Members")
@@ -830,12 +858,12 @@ with tabs[4]: # League Info
         st.subheader("🤝 Season Bets")
         
         try:
-            # SUPABASE READ
-            response = conn.query("*", table="Bets", ttl=0).execute()
-            bets_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
-            bets_df = bets_df.dropna(how='all')
-        except Exception:
-            bets_df = pd.DataFrame(columns=["Player 1", "Player 2", "Wager", "Terms", "Status"])
+            # OPTIMIZED: Standard Supabase Read
+            response = conn.table("bets").select("*").execute()
+            bets_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["id", "player_1", "player_2", "wager", "terms", "status"])
+        except Exception as e:
+            st.error(f"Error loading bets: {e}")
+            bets_df = pd.DataFrame(columns=["id", "player_1", "player_2", "wager", "terms", "status"])
 
         with st.expander("➕ Log a New Bet"):
             with st.form("new_bet_form", clear_on_submit=True):
@@ -848,37 +876,50 @@ with tabs[4]: # League Info
                 if st.form_submit_button("Post Official Bet", use_container_width=True, type="primary"):
                     if p1 != p2 and wager:
                         new_bet = {
-                            "Player 1": p1, "Player 2": p2, 
-                            "Wager": wager, "Terms": terms, "Status": "⏳ Pending"
+                            "player_1": p1, 
+                            "player_2": p2, 
+                            "wager": wager, 
+                            "terms": terms, 
+                            "status": "⏳ Pending"
                         }
-                        # SUPABASE INSERT
-                        conn.table("Bets").insert(new_bet).execute()
-                        st.cache_data.clear()
-                        st.success("Bet saved to database!")
-                        time.sleep(1)
-                        st.rerun()
+                        try:
+                            conn.table("bets").insert(new_bet).execute()
+                            st.cache_data.clear()
+                            st.success("Bet saved to database!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Save Error: {e}")
                     else:
                         st.error("Check player selection and wager details.")
 
         st.divider()
 
         if not bets_df.empty:
-            st.dataframe(bets_df, use_container_width=True, hide_index=True)
+            # Display table with readable column names
+            disp_bets = bets_df.copy()
+            disp_bets.columns = [c.replace("_", " ").title() if c != 'id' else c for c in disp_bets.columns]
+            st.dataframe(disp_bets.drop(columns=["id"]), use_container_width=True, hide_index=True)
             
             with st.expander("🏅 Update a Bet Status"):
-                bet_idx = st.selectbox("Select Bet #", range(len(bets_df)), format_func=lambda x: f"Bet {x+1}: {bets_df.iloc[x]['Player 1']} vs {bets_df.iloc[x]['Player 2']}")
+                bet_to_update = st.selectbox(
+                    "Select Bet to Update", 
+                    options=bets_df.to_dict('records'),
+                    format_func=lambda x: f"{x['player_1']} vs {x['player_2']} ({x['wager']})"
+                )
+                
                 new_status = st.radio("Outcome", ["⏳ Pending", "🏆 P1 Wins", "🏆 P2 Wins", "🤝 Draw"])
+                
                 if st.button("Update Status"):
-                    target_row = bets_df.iloc[bet_idx]
-                    
-                    # SUPABASE UPDATE (Matching by row data)
-                    conn.table("Bets").update({"Status": new_status}) \
-                        .eq("Player 1", target_row["Player 1"]) \
-                        .eq("Player 2", target_row["Player 2"]) \
-                        .eq("Wager", target_row["Wager"]).execute()
-                        
-                    st.cache_data.clear()
-                    st.rerun()
+                    try:
+                        # OPTIMIZED: Update specifically by the ID (much safer)
+                        conn.table("bets").update({"status": new_status}).eq("id", bet_to_update["id"]).execute()
+                        st.cache_data.clear()
+                        st.success("Status Updated!")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Update Error: {e}")
         else:
             st.info("No active bets found in the database.")
                         
