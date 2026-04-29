@@ -800,23 +800,36 @@ with tabs[4]: # League Info
 
         st.divider()
 
-        # Check if the DataFrame has the necessary columns before proceeding
-        if not expenses_df.empty and "Cost" in expenses_df.columns:
+        if not expenses_df.empty:
             disp_df = expenses_df.copy()
             
-            # Ensure the column is numeric before formatting
-            disp_df["cost"] = pd.to_numeric(disp_df["Cost"], errors='coerce').fillna(0)
+            # 1. Standardize column names to handle Case Sensitivity
+            # This makes sure we find the cost column regardless of if it's 'Cost' or 'cost'
+            cols = {col.lower(): col for col in disp_df.columns}
             
-            # Now apply the formatting
-            disp_df["cost_display"] = disp_df["cost"].map(lambda x: f"${x:,.2f}")
-            
-            # Display only the columns you want to show
-            st.dataframe(disp_df[["prize", "cost_display"]], use_container_width=True, hide_index=True)
-            
-            total = disp_df["Cost"].sum()
-            st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
+            target_cost = cols.get('cost')
+            target_prize = cols.get('prize')
+
+            if target_cost and target_prize:
+                # 2. Prepare the numeric data
+                disp_df[target_cost] = pd.to_numeric(disp_df[target_cost], errors='coerce').fillna(0)
+                
+                # 3. Create a formatted display column
+                disp_df["Amount"] = disp_df[target_cost].map(lambda x: f"${x:,.2f}")
+                
+                # 4. Show the table with the correct columns
+                st.dataframe(
+                    disp_df[[target_prize, "Amount"]], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
+                
+                total = disp_df[target_cost].sum()
+                st.markdown(f"### 💰 Total League Costs: ${total:,.2f}")
+            else:
+                st.warning(f"Found data, but couldn't find 'Prize' or 'Cost' columns. Found: {list(disp_df.columns)}")
         else:
-            st.info("No expenses found in the database.")
+            st.info("No expenses found in the database yet.")
 
     elif info_category == "Members":
         st.subheader("👥 League Members")
