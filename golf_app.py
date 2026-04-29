@@ -124,7 +124,6 @@ def render_live_scoring():
         return
 
     # --- 1. PLAYER SELECTION ---
-    # We use the same segmented control style as your Scorecard tab
     player_select = st.segmented_control(
         "Select Your Profile to Score", 
         options=EXISTING_PLAYERS,
@@ -135,8 +134,8 @@ def render_live_scoring():
     if not player_select:
         st.info("Please select your name above to begin live scoring.")
     else:
-        # --- 2. SECURITY CHECK (Matching Scorecard Tab Logic) ---
-        # Checks if: 1. Name matches, 2. Within 2-hour window, OR 3. Global Admin is authenticated
+        # --- 2. SECURITY CHECK ---
+        # Checks if: Name matches + Within 2-hour window OR Admin is authenticated
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
                       (time.time() - st.session_state.get("login_timestamp", 0)) < 7200) or \
                       st.session_state.get("authenticated", False)
@@ -151,7 +150,6 @@ def render_live_scoring():
                 
                 if submit_unlock:
                     if user_pin:
-                        # Fetch PIN from the main dataframe (Week 0 is registration row)
                         p_info = df_main[df_main['Player'] == player_select]
                         reg_row = p_info[p_info['Week'] == 0]
                         
@@ -182,7 +180,6 @@ def render_live_scoring():
 
                 st.write(f"**Select Hole: {st.session_state.active_hole}**")
                 
-                # Hole Selection Grid (2 rows of 9)
                 f9_cols = st.columns(9)
                 for i in range(1, 10):
                     if f9_cols[i-1].button(f"{i}", key=f"live_f9_{i}", 
@@ -203,32 +200,31 @@ def render_live_scoring():
                     score = st.selectbox("Score", options=range(1, 11), index=3)
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
-                    try:
-                        new_score = {
-                            "week": 1, 
-                            "player_name": player_select,
-                            "hole_number": st.session_state.active_hole,
-                            "score": score,
-                            "updated_at": "now()"
-                        }
-                        conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                        
-                        # --- THE KEY UPDATE: RESET THE TIMER ---
-                        # Every time they submit a score, we push the 2-hour window forward
-                        st.session_state["login_timestamp"] = time.time()
-                        
-                        st.success(f"Hole {st.session_state.active_hole} saved! Session refreshed.")
-                        
-                        # Auto-advance
-                        if st.session_state.active_hole < 18:
-                            st.session_state.active_hole += 1
-                        
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Save Failed: {e}")
+                        # --- INDENTATION FIXED BELOW ---
+                        try:
+                            new_score = {
+                                "week": 1, 
+                                "player_name": player_select,
+                                "hole_number": st.session_state.active_hole,
+                                "score": score,
+                                "updated_at": "now()"
+                            }
+                            conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                            
+                            # Refresh the 2-hour timer so they stay logged in
+                            st.session_state["login_timestamp"] = time.time()
+                            
+                            st.success(f"Hole {st.session_state.active_hole} saved!")
+                            
+                            if st.session_state.active_hole < 18:
+                                st.session_state.active_hole += 1
+                            
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Save Failed: {e}")
 
-    # --- 4. PUBLIC VIEW SECTION (Always visible to all) ---
+    # --- 4. PUBLIC VIEW SECTION ---
     st.divider()
     st.subheader("📊 League Scorecard")
     
