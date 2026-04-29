@@ -117,29 +117,36 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # 1. PERSISTENT PLAYER SELECTION
-    st.write("### Select Your Name")
+# --- 1. PERSISTENT PLAYER SELECTION (Grid of Buttons) ---
+    st.write("### 👤 Select Your Name")
     
-    # Use a container to keep the radio buttons organized
-    # Adjust the 'columns' number if you have more/less players per row
-    num_cols = 3 
-    cols = st.columns(num_cols)
-    
-    # Store the selection in session state
     if 'selected_live_player' not in st.session_state:
         st.session_state.selected_live_player = EXISTING_PLAYERS[0]
+    
+    current_selection = st.session_state.selected_live_player
 
-    # Create a grid of radio buttons
-    # Note: st.radio doesn't support grids natively, 
-    # so we use a loop with columns for a clean look
-    selected_player = st.radio(
-        "Who is entering scores?",
-        options=EXISTING_PLAYERS,
-        index=EXISTING_PLAYERS.index(st.session_state.selected_live_player),
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-    st.session_state.selected_live_player = selected_player
+    # Create a 3-column grid for player buttons
+    # This makes the list compact and easy to tap on mobile
+    player_cols = st.columns(3)
+    
+    for i, player_name in enumerate(EXISTING_PLAYERS):
+        col_idx = i % 3  # Cycles through 0, 1, 2 to place buttons in columns
+        
+        # Highlight the currently selected player with a 'primary' (colored) button
+        is_selected = (player_name == current_selection)
+        btn_type = "primary" if is_selected else "secondary"
+        
+        if player_cols[col_idx].button(
+            player_name, 
+            key=f"btn_{player_name}", 
+            use_container_width=True, 
+            type=btn_type
+        ):
+            st.session_state.selected_live_player = player_name
+            st.rerun()
+
+    # Create a clean label showing who is currently active
+    st.info(f"Currently Scoring for: **{st.session_state.selected_live_player}**")
 
     # 2. INPUT SECTION
     with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
