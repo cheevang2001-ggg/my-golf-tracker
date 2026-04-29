@@ -114,6 +114,104 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
     except Exception as e:
         st.error(f"❌ An error occurred: {e}")
             
+def render_live_scoring():
+    st.subheader("⛳ Live Scoring")
+    
+    # Ensure session state is initialized
+    if 'selected_live_player' not in st.session_state:
+        st.session_state.selected_live_player = EXISTING_PLAYERS[0] if EXISTING_PLAYERS else "Unknown"
+        
+    # --- 1. PERSISTENT PLAYER SELECTION (Grid of Buttons) ---
+    st.write("### 👤 Select Your Name")
+    
+    player_cols = st.columns(3)
+    for i, player_name in enumerate(EXISTING_PLAYERS):
+        col_idx = i % 3
+        is_selected = (player_name == st.session_state.selected_live_player)
+        btn_type = "primary" if is_selected else "secondary"
+        
+        if player_cols[col_idx].button(
+            player_name, 
+            key=f"btn_{player_name}", 
+            use_container_width=True, 
+            type=btn_type
+        ):
+            st.session_state.selected_live_player = player_name
+            st.rerun()
+
+    # Now define the variable explicitly for the expander
+    selected_player = st.session_state.selected_live_player
+    
+    st.info(f"Currently Scoring for: **{selected_player}**")
+
+    # --- 2. INPUT SECTION ---
+    # The variable 'selected_player' is now safely defined above
+    with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
+        with st.form("live_score_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            hole = col1.number_input("Hole #", min_value=1, max_value=18, step=1)
+            score = col2.number_input("Score", min_value=1, max_value=10, step=1)
+            
+            if st.form_submit_button("Submit Score", type="primary"):
+                try:
+                    new_score = {
+                        "week": 1, 
+                        "player_name": selected_player,
+                        "hole_number": hole,
+                        "score": score,
+                        "updated_at": "now()"
+                    }
+                    conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                    st.success(f"Saved: {selected_player} got a {score} on Hole {hole}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Save Failed: {e}")
+
+    # 3. Live Scorecard Section
+    st.divider()
+    st.subheader("📊 Current Scorecard")
+    
+    with st.expander("💡 How to read the Scorecard"):
+        st.markdown("""
+        * **Scores update automatically** in the database.
+        * If you don't see your update, click the **Refresh** button below.
+        * The scorecard shows your Front 9, Back 9, and 18-hole total.
+        * Dashes (`-`) indicate holes that have not been played yet.
+        """)
+    
+    if st.button("🔄 Refresh Scorecard"):
+        st.rerun()
+    
+    try:
+        response = conn.table("live_scores").select("*").eq("week", 1).execute()
+        df = pd.DataFrame(response.data)
+        
+        if not df.empty:
+            scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
+            
+            # Fill missing holes
+            for i in range(1, 19):
+                if i not in scorecard.columns:
+                    scorecard[i] = None
+            
+            # Convert to int/clean decimals
+            scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            
+            # Aggregation
+            scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
+            scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
+            scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
+            
+            cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
+            display_df = scorecard[cols_order].replace(0, '-')
+            
+            st.dataframe(display_df, use_container_width=True)
+        else:
+            st.info("No scores yet. Be the first to enter one!")
+            
+    except Exception as e:
+        st.warning(f"Could not load leaderboard: {e}")
+
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
@@ -125,7 +223,7 @@ st.image("GGGOLF-2.png", width=120)
 st.markdown("<h1>GGGOLF League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
+tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "⛳ Live Scoring", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
 with tabs[0]: # Scorecard
     if not EXISTING_PLAYERS: 
@@ -308,7 +406,11 @@ with tabs[2]: # History
     else:
         st.info("No completed rounds recorded yet.")
 
-with tabs[3]:  # GGG Challenge
+with tabs[3]:  # Live Scoring
+    # You MUST call the function here to make the content appear
+    render_live_scoring()
+
+with tabs[4]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
     st.write("Seasonal challenges and reward opportunities for GGGolf members.")
     st.divider()
@@ -455,7 +557,7 @@ with tabs[3]:  # GGG Challenge
             "- Questions about eligibility should be directed to the Rules and Players Committee."
         )
         
-with tabs[4]: # League Info
+with tabs[5]: # League Info
     st.header("ℹ️ League Information")
     info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets"], horizontal=True)
     st.divider()
@@ -923,7 +1025,7 @@ with tabs[4]: # League Info
         else:
             st.info("No active bets found in the database.")
                         
-with tabs[5]: # Registration
+with tabs[6]: # Registration
     st.header("👤 Registration")
     
     if not st.session_state.get("reg_access"):
@@ -983,7 +1085,7 @@ with tabs[5]: # Registration
                 else:
                     st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
 
-with tabs[6]: # Admin
+with tabs[7]: # Admin
     st.header("⚙️ Admin Control Panel")
     
     if not st.session_state.get("authenticated"):
@@ -1004,45 +1106,25 @@ with tabs[6]: # Admin
 
     else:
         st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores. This action cannot be undone.")
 
-        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
-            try:
-                # SUPABASE DELETE (Clear out table without dropping it)
-                conn.table("LiveScores").delete().neq("Player", "").execute()
-                st.cache_data.clear()
-                
-                st.success("✅ Live Round has been reset!")
-                time.sleep(1.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to reset table: {e}")
-
-        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
-            try:
-                all_players = df_main['Player'].unique().tolist()
-                hole_cols = [str(i) for i in range(1, 10)]
-                
-                # SUPABASE WIPE OLD DATA
-                conn.table("LiveScores").delete().neq("Player", "").execute()
-                
-                # BUILD NEW DICTIONARIES
-                records_to_insert = []
-                for p_name in all_players:
-                    if p_name: 
-                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
-                        records_to_insert.append(row_data)
-                
-                # SUPABASE BATCH INSERT
-                if records_to_insert:
-                    conn.table("LiveScores").insert(records_to_insert).execute()
+        # Safety Lock for Reset
+        confirm_reset = st.checkbox("I confirm that I want to delete all LIVE SCORES.")
+        
+        if confirm_reset:
+            if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
+                try:
+                    # Target correct table and force delete
+                    conn.table("live_scores").delete().neq("id", 0).execute()
                     
-                st.cache_data.clear()
-                st.success(f"Success! {len(records_to_insert)} players synced to the Live Board.")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Sync failed: {e}")
+                    st.cache_data.clear()
+                    st.success("✅ Live Round has been reset!")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to reset table: {e}")
+        else:
+            st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, disabled=True)
 
         st.divider()
         
