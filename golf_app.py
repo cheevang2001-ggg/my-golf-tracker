@@ -123,7 +123,7 @@ def render_live_scoring():
         st.session_state.selected_live_player = EXISTING_PLAYERS[0]
         
     selected_player = st.selectbox(
-        "Who is entering scores?", 
+        "Player", 
         options=EXISTING_PLAYERS, 
         index=EXISTING_PLAYERS.index(st.session_state.selected_live_player)
     )
@@ -151,9 +151,19 @@ def render_live_scoring():
                 except Exception as e:
                     st.error(f"Save Failed: {e}")
 
-    # --- 3. LIVE SCORECARD ---
+    # 3. Live Scorecard Section
     st.divider()
-    st.subheader("📊 Current Scorecard")
+    st.subheader("📊 Live Scorecard")
+
+    # --- PRO TIP UI BLOCK ---
+    with st.expander("💡 How to read the Scorecard"):
+        st.markdown("""
+        * **Scores update automatically** in the database.
+        * If you don't see your update, click the **Refresh** button below.
+        * The scorecard shows your Front 9, Back 9, and 18-hole total.
+        * Dashes (`-`) indicate holes that have not been played yet.
+        """)
+    # ------------------------
     
     if st.button("🔄 Refresh Scorecard"):
         st.rerun()
@@ -163,21 +173,34 @@ def render_live_scoring():
         df = pd.DataFrame(response.data)
         
         if not df.empty:
-            # Pivot logic
+            # Pivot data: Rows = Players, Columns = Holes
             scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
             
-            # Fill holes 1-18
+            # Ensure all 18 columns exist
             for i in range(1, 19):
                 if i not in scorecard.columns:
                     scorecard[i] = None
-            scorecard = scorecard[range(1, 19)]
-            scorecard["Total"] = scorecard.sum(axis=1)
             
-            st.dataframe(scorecard.fillna('-'), use_container_width=True)
+            # --- AGGREGATION LOGIC ---
+            # Front 9 (Holes 1-9)
+            scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
+            
+            # Back 9 (Holes 10-18)
+            scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
+            
+            # Total (18 Holes)
+            scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
+            
+            # Display Order: 1-9, Front 9, 10-18, Back 9, Total
+            cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
+            display_df = scorecard[cols_order].fillna('-')
+            
+            # Visual formatting
+            st.dataframe(display_df, use_container_width=True)
         else:
-            st.info("No scores yet. Be the first to enter one!")
+            st.info("No scores entered yet.")
     except Exception as e:
-        st.warning("Scorecard currently unavailable.")
+        st.warning(f"Could not load leaderboard: {e}")
             
 
 # --- 3. DATA LOAD ---
