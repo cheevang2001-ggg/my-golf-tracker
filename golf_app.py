@@ -113,6 +113,58 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
             
     except Exception as e:
         st.error(f"❌ An error occurred: {e}")
+
+def render_live_scoring():
+    st.subheader("⛳ Live Scoring")
+    
+    # 1. Input Section
+    with st.expander("📝 Enter My Score", expanded=True):
+        with st.form("live_score_form", clear_on_submit=True):
+            col1, col2, col3 = st.columns(3)
+            player = col1.selectbox("Player", options=EXISTING_PLAYERS)
+            hole = col2.number_input("Hole #", min_value=1, max_value=18, step=1)
+            score = col3.number_input("Score", min_value=1, max_value=10, step=1)
+            
+            if st.form_submit_button("Submit Score", type="primary"):
+                try:
+                    # The UPSERT handles the "2-hour update" requirement automatically
+                    # If hole/player/week combo exists, it updates; otherwise, it inserts
+                    new_score = {
+                        "week": 1, # You can make this dynamic based on the current week
+                        "player_name": player,
+                        "hole_number": hole,
+                        "score": score,
+                        "updated_at": "now()"
+                    }
+                    conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                    st.success(f"Score for Hole {hole} saved!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # 2. Live Leaderboard Section
+    st.divider()
+    st.subheader("📊 Current Leaderboard")
+
+    # ADD THIS: Refresh button for spectators
+    if st.button("🔄 Refresh Leaderboard"):
+        st.cache_data.clear()
+        st.rerun()
+    
+    try:
+        response = conn.table("live_scores").select("*").eq("week", 1).execute()
+        df = pd.DataFrame(response.data)
+        
+        if not df.empty:
+            # Pivot to show Holes 1-18 across the top
+            pivot_df = df.pivot(index="player_name", columns="hole_number", values="score")
+            # Calculate total
+            pivot_df["Total"] = pivot_df.sum(axis=1)
+            st.dataframe(pivot_df, use_container_width=True)
+        else:
+            st.info("No live scores submitted yet for this week.")
+    except Exception:
+        st.warning("Could not load live leaderboard.")
             
 
 # --- 3. DATA LOAD ---
