@@ -127,28 +127,24 @@ def render_live_scoring():
             
             if st.form_submit_button("Submit Score", type="primary"):
                 try:
-                    # The UPSERT handles the "2-hour update" requirement automatically
-                    # If hole/player/week combo exists, it updates; otherwise, it inserts
                     new_score = {
-                        "week": 1, # You can make this dynamic based on the current week
+                        "week": 1, 
                         "player_name": player,
                         "hole_number": hole,
                         "score": score,
                         "updated_at": "now()"
                     }
                     conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                    st.success(f"Score for Hole {hole} saved!")
+                    st.success(f"Score {score} saved for Hole {hole}!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # 2. Live Leaderboard Section
+    # 2. Live Scorecard Section
     st.divider()
-    st.subheader("📊 Current Leaderboard")
-
-    # ADD THIS: Refresh button for spectators
-    if st.button("🔄 Refresh Leaderboard"):
-        st.cache_data.clear()
+    st.subheader("📊 Live Scorecard")
+    
+    if st.button("🔄 Refresh"):
         st.rerun()
     
     try:
@@ -156,15 +152,28 @@ def render_live_scoring():
         df = pd.DataFrame(response.data)
         
         if not df.empty:
-            # Pivot to show Holes 1-18 across the top
-            pivot_df = df.pivot(index="player_name", columns="hole_number", values="score")
-            # Calculate total
-            pivot_df["Total"] = pivot_df.sum(axis=1)
-            st.dataframe(pivot_df, use_container_width=True)
+            # Pivot data: Rows = Players, Columns = Holes
+            scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
+            
+            # Ensure all 18 holes exist as columns, even if not yet played
+            for i in range(1, 19):
+                if i not in scorecard.columns:
+                    scorecard[i] = None
+            
+            # Reorder columns 1-18
+            scorecard = scorecard[range(1, 19)]
+            
+            # Add a Total column
+            scorecard["Total"] = scorecard.sum(axis=1)
+            
+            # Styling: Fill empty holes with '-' for readability
+            display_df = scorecard.fillna('-')
+            
+            st.dataframe(display_df, use_container_width=True)
         else:
-            st.info("No live scores submitted yet for this week.")
-    except Exception:
-        st.warning("Could not load live leaderboard.")
+            st.info("Waiting for first score entry...")
+    except Exception as e:
+        st.warning(f"Could not load leaderboard: {e}")
             
 
 # --- 3. DATA LOAD ---
