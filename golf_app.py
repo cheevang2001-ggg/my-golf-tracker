@@ -120,24 +120,35 @@ def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
     # --- 1. SESSION & TIMEOUT CHECK ---
-    # Use .replace(tzinfo=None) to ensure we are comparing 'naive' datetimes
     now = datetime.datetime.now().replace(tzinfo=None)
     is_logged_in = False
     
     if "unlocked_player" in st.session_state and "login_timestamp" in st.session_state:
-        # Ensure the stored timestamp is also naive for the comparison
-        stored_time = st.session_state["login_timestamp"].replace(tzinfo=None)
-        elapsed = now - stored_time
+        raw_timestamp = st.session_state["login_timestamp"]
         
-        if elapsed < datetime.timedelta(hours=2):
-            is_logged_in = True
-        else:
-            # Session expired
-            del st.session_state["unlocked_player"]
-            del st.session_state["login_timestamp"]
-            # Optional: Add a message if they were just logged out
-            st.info("🕒 Your 2-hour scoring session has expired. Please re-enter your PIN.")
-
+        try:
+            # Check if it's a date only (no time), and convert to datetime
+            if isinstance(raw_timestamp, datetime.date) and not isinstance(raw_timestamp, datetime.datetime):
+                stored_time = datetime.datetime.combine(raw_timestamp, datetime.time.min)
+            else:
+                # It's already a datetime, just strip timezone
+                stored_time = raw_timestamp.replace(tzinfo=None)
+            
+            elapsed = now - stored_time
+            
+            # Check if within 2 hours
+            if elapsed < datetime.timedelta(hours=2):
+                is_logged_in = True
+            else:
+                # Session expired
+                del st.session_state["unlocked_player"]
+                del st.session_state["login_timestamp"]
+                st.info("🕒 Your 2-hour scoring session has expired.")
+                
+        except Exception as e:
+            # If any conversion fails, we default to logged out for safety
+            is_logged_in = False
+            
     # --- 2. CONDITIONAL UI ---
     if not is_logged_in:
         st.warning("🔒 Please go to the **Scorecard** tab and enter your PIN to unlock live scoring.")
