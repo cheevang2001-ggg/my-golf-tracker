@@ -770,11 +770,11 @@ with tabs[4]: # League Info
         try:
             # SUPABASE READ
             response = conn.table("expenses").select("*").execute()
-            expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["Prize", "Cost"])
+            expenses_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["prize", "cost"])
             expenses_df = expenses_df.dropna(how='all')
         except Exception as e:
             st.error(f"Error loading expenses: {e}")
-            expenses_df = pd.DataFrame(columns=["Prize", "Cost"])
+            expenses_df = pd.DataFrame(columns=["prize", "cost"])
 
 
         with st.expander("Add a Prize / Expense", expanded=True):
@@ -784,13 +784,17 @@ with tabs[4]: # League Info
                 if st.form_submit_button("Add Expense", type="primary"):
                     if prize_desc:
                         # OPTIMIZED: Ensure consistent casing for keys
-                        new_entry = {"Prize": prize_desc.strip(), "Cost": float(prize_cost)}
+                        new_entry = {"prize": prize_desc.strip(), "cost": float(prize_cost)}
                         # INSERT using the correct lowercase table name
+                    try:
                         conn.table("expenses").insert(new_entry).execute()
                         st.cache_data.clear()
                         st.success(f"Saved: {prize_desc}")
                         time.sleep(0.5) # Reduced sleep for better UX
                         st.rerun()
+                    except Exception as e:
+                            # This catches the APIError and prints the REAL message
+                            st.error(f"⚠️ Database Error: {e}")
                     else:
                         st.warning("Please enter a description.")
 
@@ -801,13 +805,13 @@ with tabs[4]: # League Info
             disp_df = expenses_df.copy()
             
             # Ensure the column is numeric before formatting
-            disp_df["Cost"] = pd.to_numeric(disp_df["Cost"], errors='coerce').fillna(0)
+            disp_df["cost"] = pd.to_numeric(disp_df["Cost"], errors='coerce').fillna(0)
             
             # Now apply the formatting
-            disp_df["Cost_Display"] = disp_df["Cost"].map(lambda x: f"${x:,.2f}")
+            disp_df["cost_display"] = disp_df["cost"].map(lambda x: f"${x:,.2f}")
             
             # Display only the columns you want to show
-            st.dataframe(disp_df[["Prize", "Cost_Display"]], use_container_width=True, hide_index=True)
+            st.dataframe(disp_df[["prize", "cost_display"]], use_container_width=True, hide_index=True)
             
             total = disp_df["Cost"].sum()
             st.markdown(f"### Total Estimated Cost: ${total:,.2f}")
