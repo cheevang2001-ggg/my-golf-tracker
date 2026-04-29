@@ -203,25 +203,30 @@ def render_live_scoring():
                     score = st.selectbox("Score", options=range(1, 11), index=3)
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
-                        try:
-                            new_score = {
-                                "week": 1, # Update this based on current active week if needed
-                                "player_name": player_select,
-                                "hole_number": st.session_state.active_hole,
-                                "score": score,
-                                "updated_at": "now()"
-                            }
-                            conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                            st.success(f"Hole {st.session_state.active_hole} saved!")
-                            
-                            # Auto-advance
-                            if st.session_state.active_hole < 18:
-                                st.session_state.active_hole += 1
-                            
-                            time.sleep(1)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Save Failed: {e}")
+                    try:
+                        new_score = {
+                            "week": 1, 
+                            "player_name": player_select,
+                            "hole_number": st.session_state.active_hole,
+                            "score": score,
+                            "updated_at": "now()"
+                        }
+                        conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                        
+                        # --- THE KEY UPDATE: RESET THE TIMER ---
+                        # Every time they submit a score, we push the 2-hour window forward
+                        st.session_state["login_timestamp"] = time.time()
+                        
+                        st.success(f"Hole {st.session_state.active_hole} saved! Session refreshed.")
+                        
+                        # Auto-advance
+                        if st.session_state.active_hole < 18:
+                            st.session_state.active_hole += 1
+                        
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Save Failed: {e}")
 
     # --- 4. PUBLIC VIEW SECTION (Always visible to all) ---
     st.divider()
