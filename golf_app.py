@@ -374,9 +374,8 @@ with tabs[2]: # History
         st.info("No completed rounds recorded yet.")
 
 with tabs[3]:  # Live Scoring
-    st.header("⛳ Live Scoring")
-    st.write("Live Scoring")
-    st.divider()
+    # You MUST call the function here to make the content appear
+    render_live_scoring()
 
 with tabs[4]:  # GGG Challenge
     st.header("🏁 GGG Challenge")
