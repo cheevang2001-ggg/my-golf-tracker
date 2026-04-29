@@ -1089,45 +1089,25 @@ with tabs[7]: # Admin
 
     else:
         st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting the live board will delete all current scores in the 'Live Round' tab. This action cannot be undone.")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores. This action cannot be undone.")
 
-        if st.button("🚨 Reset Live Round Scoring", use_container_width=True, type="primary"):
-            try:
-                # SUPABASE DELETE (Clear out table without dropping it)
-                conn.table("LiveScores").delete().neq("Player", "").execute()
-                st.cache_data.clear()
-                
-                st.success("✅ Live Round has been reset!")
-                time.sleep(1.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to reset table: {e}")
-
-        if st.button("🛠️ Sync All Players to Live Board", use_container_width=True):
-            try:
-                all_players = df_main['Player'].unique().tolist()
-                hole_cols = [str(i) for i in range(1, 10)]
-                
-                # SUPABASE WIPE OLD DATA
-                conn.table("LiveScores").delete().neq("Player", "").execute()
-                
-                # BUILD NEW DICTIONARIES
-                records_to_insert = []
-                for p_name in all_players:
-                    if p_name: 
-                        row_data = {'Player': p_name, **{col: 0 for col in hole_cols}}
-                        records_to_insert.append(row_data)
-                
-                # SUPABASE BATCH INSERT
-                if records_to_insert:
-                    conn.table("LiveScores").insert(records_to_insert).execute()
+        # Safety Lock for Reset
+        confirm_reset = st.checkbox("I confirm that I want to delete all LIVE SCORES.")
+        
+        if confirm_reset:
+            if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
+                try:
+                    # Target correct table and force delete
+                    conn.table("live_scores").delete().neq("id", 0).execute()
                     
-                st.cache_data.clear()
-                st.success(f"Success! {len(records_to_insert)} players synced to the Live Board.")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Sync failed: {e}")
+                    st.cache_data.clear()
+                    st.success("✅ Live Round has been reset!")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to reset table: {e}")
+        else:
+            st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, disabled=True)
 
         st.divider()
         
