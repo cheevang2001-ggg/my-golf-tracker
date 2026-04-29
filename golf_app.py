@@ -117,23 +117,17 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-# --- 1. PERSISTENT PLAYER SELECTION (Grid of Buttons) ---
+    # Ensure session state is initialized
+    if 'selected_live_player' not in st.session_state:
+        st.session_state.selected_live_player = EXISTING_PLAYERS[0] if EXISTING_PLAYERS else "Unknown"
+        
+    # --- 1. PERSISTENT PLAYER SELECTION (Grid of Buttons) ---
     st.write("### 👤 Select Your Name")
     
-    if 'selected_live_player' not in st.session_state:
-        st.session_state.selected_live_player = EXISTING_PLAYERS[0]
-    
-    current_selection = st.session_state.selected_live_player
-
-    # Create a 3-column grid for player buttons
-    # This makes the list compact and easy to tap on mobile
     player_cols = st.columns(3)
-    
     for i, player_name in enumerate(EXISTING_PLAYERS):
-        col_idx = i % 3  # Cycles through 0, 1, 2 to place buttons in columns
-        
-        # Highlight the currently selected player with a 'primary' (colored) button
-        is_selected = (player_name == current_selection)
+        col_idx = i % 3
+        is_selected = (player_name == st.session_state.selected_live_player)
         btn_type = "primary" if is_selected else "secondary"
         
         if player_cols[col_idx].button(
@@ -145,10 +139,13 @@ def render_live_scoring():
             st.session_state.selected_live_player = player_name
             st.rerun()
 
-    # Create a clean label showing who is currently active
-    st.info(f"Currently Scoring for: **{st.session_state.selected_live_player}**")
+    # Now define the variable explicitly for the expander
+    selected_player = st.session_state.selected_live_player
+    
+    st.info(f"Currently Scoring for: **{selected_player}**")
 
-    # 2. INPUT SECTION
+    # --- 2. INPUT SECTION ---
+    # The variable 'selected_player' is now safely defined above
     with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
         with st.form("live_score_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
