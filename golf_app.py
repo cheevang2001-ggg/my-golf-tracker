@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+import datetime
 import random
 import altair as alt
 from PIL import Image 
@@ -114,98 +115,132 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
     except Exception as e:
         st.error(f"❌ An error occurred: {e}")
             
+
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # Ensure session state is initialized
-    if 'selected_live_player' not in st.session_state:
-        st.session_state.selected_live_player = EXISTING_PLAYERS[0] if EXISTING_PLAYERS else "Unknown"
+    if not EXISTING_PLAYERS: 
+        st.warning("No players registered yet.")
+        return
+
+    # --- 1. PLAYER SELECTION ---
+    player_select = st.segmented_control(
+        "Select Your Profile to Score", 
+        options=EXISTING_PLAYERS,
+        selection_mode="single",
+        key="live_player_select"
+    )
+
+    if not player_select:
+        st.info("Please select your name above to begin live scoring.")
+    else:
+        # --- 2. SECURITY CHECK ---
+        # Checks if: Name matches + Within 2-hour window OR Admin is authenticated
+        is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
+                      (time.time() - st.session_state.get("login_timestamp", 0)) < 7200) or \
+                      st.session_state.get("authenticated", False)
+
+        if not is_unlocked:
+            st.markdown("### 🔒 Live Scoring Lock")
+            st.info(f"Please enter your 4-digit PIN to unlock live scoring for **{player_select}**.")
+
+            with st.form("live_unlock_form"):
+                user_pin = st.text_input("Enter PIN", type="password", key=f"live_pin_{player_select}")
+                submit_unlock = st.form_submit_button("🔓 Unlock Live Scoring", use_container_width=True, type="primary")
+                
+                if submit_unlock:
+                    if user_pin:
+                        p_info = df_main[df_main['Player'] == player_select]
+                        reg_row = p_info[p_info['Week'] == 0]
+                        
+                        if not reg_row.empty:
+                            stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
+                            if user_pin.strip() == stored_pin:
+                                st.session_state.update({
+                                    "unlocked_player": player_select, 
+                                    "login_timestamp": time.time()
+                                })
+                                st.success(f"Identity Verified! Welcome, {player_select}.")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("❌ Incorrect PIN.")
+                        else:
+                            st.error("⚠️ Player not found in records.")
+                    else:
+                        st.warning("Please enter your PIN.")
         
-    # --- 1. PERSISTENT PLAYER SELECTION (Grid of Buttons) ---
-    st.write("### 👤 Select Your Name")
-    
-    player_cols = st.columns(3)
-    for i, player_name in enumerate(EXISTING_PLAYERS):
-        col_idx = i % 3
-        is_selected = (player_name == st.session_state.selected_live_player)
-        btn_type = "primary" if is_selected else "secondary"
-        
-        if player_cols[col_idx].button(
-            player_name, 
-            key=f"btn_{player_name}", 
-            use_container_width=True, 
-            type=btn_type
-        ):
-            st.session_state.selected_live_player = player_name
-            st.rerun()
+        else:
+            # --- 3. INPUT SECTION (Only visible when unlocked) ---
+            st.success(f"Scoring active for: **{player_select}**")
+            
+            with st.expander(f"📝 Enter Score for {player_select}", expanded=True):
+                if 'active_hole' not in st.session_state:
+                    st.session_state.active_hole = 1
 
-    # Now define the variable explicitly for the expander
-    selected_player = st.session_state.selected_live_player
-    
-    st.info(f"Currently Scoring for: **{selected_player}**")
+                st.write(f"**Select Hole: {st.session_state.active_hole}**")
+                
+                f9_cols = st.columns(9)
+                for i in range(1, 10):
+                    if f9_cols[i-1].button(f"{i}", key=f"live_f9_{i}", 
+                                           type="primary" if st.session_state.active_hole == i else "secondary",
+                                           use_container_width=True):
+                        st.session_state.active_hole = i
+                        st.rerun()
 
-    # --- 2. INPUT SECTION ---
-    # The variable 'selected_player' is now safely defined above
-    with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
-        with st.form("live_score_form", clear_on_submit=True):
-            # Select Hole Number
-            st.write("**Select Hole**")
-            
-            # Create two rows of 9 buttons for better mobile layout
-            cols_front = st.columns(9)
-            cols_back = st.columns(9)
-            
-            hole = st.radio("Hole", options=range(1, 19), index=0, horizontal=True, label_visibility="collapsed")
-            
-            # Select Score
-            score = st.slider("Score", min_value=1, max_value=10, value=3)
-            
-            if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
-                try:
-                    new_score = {
-                        "week": 1, 
-                        "player_name": selected_player,
-                        "hole_number": hole,
-                        "score": score,
-                        "updated_at": "now()"
-                    }
-                    conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                    st.success(f"Saved: Hole {hole} - Score: {score}")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Save Failed: {e}")
+                b9_cols = st.columns(9)
+                for i in range(10, 19):
+                    if b9_cols[i-10].button(f"{i}", key=f"live_b9_{i}", 
+                                            type="primary" if st.session_state.active_hole == i else "secondary",
+                                            use_container_width=True):
+                        st.session_state.active_hole = i
+                        st.rerun()
 
-    # 3. Live Scorecard Section
+                with st.form("live_score_entry_form", clear_on_submit=True):
+                    score = st.selectbox("Score", options=range(1, 11), index=3)
+                    
+                    if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
+                        # --- INDENTATION FIXED BELOW ---
+                        try:
+                            new_score = {
+                                "week": 1, 
+                                "player_name": player_select,
+                                "hole_number": st.session_state.active_hole,
+                                "score": score,
+                                "updated_at": "now()"
+                            }
+                            conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                            
+                            # Refresh the 2-hour timer so they stay logged in
+                            st.session_state["login_timestamp"] = time.time()
+                            
+                            st.success(f"Hole {st.session_state.active_hole} saved!")
+                            
+                            if st.session_state.active_hole < 18:
+                                st.session_state.active_hole += 1
+                            
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Save Failed: {e}")
+
+    # --- 4. PUBLIC VIEW SECTION ---
     st.divider()
-    st.subheader("📊 Current Scorecard")
-    
-    with st.expander("💡 How to read the Scorecard"):
-        st.markdown("""
-        * **Scores update automatically** in the database.
-        * If you don't see your update, click the **Refresh** button below.
-        * The scorecard shows your Front 9, Back 9, and 18-hole total.
-        * Dashes (`-`) indicate holes that have not been played yet.
-        """)
+    st.subheader("📊 League Scorecard")
     
     if st.button("🔄 Refresh Scorecard"):
         st.rerun()
     
     try:
         response = conn.table("live_scores").select("*").eq("week", 1).execute()
-        df = pd.DataFrame(response.data)
+        df_live = pd.DataFrame(response.data)
         
-        if not df.empty:
-            scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
-            
-            # Fill missing holes
+        if not df_live.empty:
+            scorecard = df_live.pivot(index="player_name", columns="hole_number", values="score")
             for i in range(1, 19):
-                if i not in scorecard.columns:
-                    scorecard[i] = None
+                if i not in scorecard.columns: scorecard[i] = None
             
-            # Convert to int/clean decimals
             scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
-            
-            # Aggregation
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
@@ -215,11 +250,10 @@ def render_live_scoring():
             
             st.dataframe(display_df, use_container_width=True)
         else:
-            st.info("No scores yet. Be the first to enter one!")
-            
+            st.info("No scores recorded yet.")
     except Exception as e:
-        st.warning(f"Could not load leaderboard: {e}")
-
+        st.warning("Scorecard is currently unavailable.")
+        
 
 # --- 3. DATA LOAD ---
 df_main = load_data()
