@@ -117,34 +117,45 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # 1. Input Section
-    with st.expander("📝 Enter My Score", expanded=True):
+    # --- 1. PERSISTENT PLAYER SELECTION ---
+    # Using session_state ensures the player doesn't have to keep re-selecting their name
+    if 'selected_live_player' not in st.session_state:
+        st.session_state.selected_live_player = EXISTING_PLAYERS[0]
+        
+    selected_player = st.selectbox(
+        "Who is entering scores?", 
+        options=EXISTING_PLAYERS, 
+        index=EXISTING_PLAYERS.index(st.session_state.selected_live_player)
+    )
+    st.session_state.selected_live_player = selected_player
+
+    # --- 2. INPUT SECTION ---
+    with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
         with st.form("live_score_form", clear_on_submit=True):
-            col1, col2, col3 = st.columns(3)
-            player = col1.selectbox("Player", options=EXISTING_PLAYERS)
-            hole = col2.number_input("Hole #", min_value=1, max_value=18, step=1)
-            score = col3.number_input("Score", min_value=1, max_value=10, step=1)
+            col1, col2 = st.columns(2)
+            hole = col1.number_input("Hole #", min_value=1, max_value=18, step=1)
+            score = col2.number_input("Score", min_value=1, max_value=10, step=1)
             
             if st.form_submit_button("Submit Score", type="primary"):
                 try:
                     new_score = {
                         "week": 1, 
-                        "player_name": player,
+                        "player_name": selected_player,
                         "hole_number": hole,
                         "score": score,
                         "updated_at": "now()"
                     }
                     conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                    st.success(f"Score {score} saved for Hole {hole}!")
-                    st.rerun()
+                    st.success(f"Saved: {selected_player} got a {score} on Hole {hole}")
+                    st.rerun() # Refresh to update the scorecard immediately
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Save Failed: {e}")
 
-    # 2. Live Scorecard Section
+    # --- 3. LIVE SCORECARD ---
     st.divider()
-    st.subheader("📊 Live Scorecard")
+    st.subheader("📊 Current Scorecard")
     
-    if st.button("🔄 Refresh"):
+    if st.button("🔄 Refresh Scorecard"):
         st.rerun()
     
     try:
@@ -152,28 +163,21 @@ def render_live_scoring():
         df = pd.DataFrame(response.data)
         
         if not df.empty:
-            # Pivot data: Rows = Players, Columns = Holes
+            # Pivot logic
             scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
             
-            # Ensure all 18 holes exist as columns, even if not yet played
+            # Fill holes 1-18
             for i in range(1, 19):
                 if i not in scorecard.columns:
                     scorecard[i] = None
-            
-            # Reorder columns 1-18
             scorecard = scorecard[range(1, 19)]
-            
-            # Add a Total column
             scorecard["Total"] = scorecard.sum(axis=1)
             
-            # Styling: Fill empty holes with '-' for readability
-            display_df = scorecard.fillna('-')
-            
-            st.dataframe(display_df, use_container_width=True)
+            st.dataframe(scorecard.fillna('-'), use_container_width=True)
         else:
-            st.info("Waiting for first score entry...")
+            st.info("No scores yet. Be the first to enter one!")
     except Exception as e:
-        st.warning(f"Could not load leaderboard: {e}")
+        st.warning("Scorecard currently unavailable.")
             
 
 # --- 3. DATA LOAD ---
