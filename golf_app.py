@@ -118,13 +118,26 @@ def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
     # 1. PERSISTENT PLAYER SELECTION
+    st.write("### Select Your Name")
+    
+    # Use a container to keep the radio buttons organized
+    # Adjust the 'columns' number if you have more/less players per row
+    num_cols = 3 
+    cols = st.columns(num_cols)
+    
+    # Store the selection in session state
     if 'selected_live_player' not in st.session_state:
         st.session_state.selected_live_player = EXISTING_PLAYERS[0]
-        
-    selected_player = st.selectbox(
-        "Player", 
-        options=EXISTING_PLAYERS, 
-        index=EXISTING_PLAYERS.index(st.session_state.selected_live_player)
+
+    # Create a grid of radio buttons
+    # Note: st.radio doesn't support grids natively, 
+    # so we use a loop with columns for a clean look
+    selected_player = st.radio(
+        "Who is entering scores?",
+        options=EXISTING_PLAYERS,
+        index=EXISTING_PLAYERS.index(st.session_state.selected_live_player),
+        horizontal=True,
+        label_visibility="collapsed"
     )
     st.session_state.selected_live_player = selected_player
 
