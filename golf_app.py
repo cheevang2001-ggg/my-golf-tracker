@@ -508,7 +508,7 @@ with tabs[4]: # League Info
         You may play at any course on the 2026 GGG Schedule, once you've logged a pre-season round it will be locked in for calculation for Week 1.
         
         * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
-        * **Option B:** If you do not complete 3 rounds, you will start Week 1 with a 0.0 handicap (or your current average) as per standard rolling math.
+        * **Option B:** If you do not complete the 3 pre-season rounds, you will start Week 1 with a 0.0 handicap until you have reach 3 completed rounds for a hanidcap (Includes the pre-season round you have completed).
         """)
 
         st.divider()
@@ -628,9 +628,20 @@ with tabs[4]: # League Info
         Whitnall: **Blue - 6308 yd**
         Currie: **Black - 6444 yd**
         
-        * C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.
-        * C2: If your handicap average equals 35+ or more, you may play from tee box ahead of C1.
-        * C3: If you are of Senior Age (60+), you may play from the forward tee.\n\n
+        ***C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.***
+        * Brown Deer: **White - 5893 yd**
+        * Dretzka: **White - 5970 yd**
+        * Oakwood: **White - 6301 yd**
+        * Whitnall: **White - 5909 yd**
+        * Currie: **White - 6105 yd**
+
+        ***C2: If you are of Senior Age (60+), you may play from the forward tee.**
+        * Brown Deer: **Gold - 4996 yd**
+        * Dretzka: **Gold - 4924 yd**
+        * Oakwood: **Gold - 5562 yd**
+        * Whitnall: **Gold - 5342 yd**
+        * Currie: **Gold - 5246 yd**
+        
 
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
