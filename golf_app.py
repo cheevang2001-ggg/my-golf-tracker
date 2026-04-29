@@ -120,18 +120,23 @@ def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
     # --- 1. SESSION & TIMEOUT CHECK ---
-    now = datetime.datetime.now()
+    # Use .replace(tzinfo=None) to ensure we are comparing 'naive' datetimes
+    now = datetime.datetime.now().replace(tzinfo=None)
     is_logged_in = False
     
-    # Check if a player is unlocked and if the session is still valid (within 2 hours)
     if "unlocked_player" in st.session_state and "login_timestamp" in st.session_state:
-        elapsed = now - st.session_state["login_timestamp"]
+        # Ensure the stored timestamp is also naive for the comparison
+        stored_time = st.session_state["login_timestamp"].replace(tzinfo=None)
+        elapsed = now - stored_time
+        
         if elapsed < datetime.timedelta(hours=2):
             is_logged_in = True
         else:
             # Session expired
             del st.session_state["unlocked_player"]
             del st.session_state["login_timestamp"]
+            # Optional: Add a message if they were just logged out
+            st.info("🕒 Your 2-hour scoring session has expired. Please re-enter your PIN.")
 
     # --- 2. CONDITIONAL UI ---
     if not is_logged_in:
