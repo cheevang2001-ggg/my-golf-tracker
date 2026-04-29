@@ -182,25 +182,28 @@ def render_live_scoring():
                     scorecard[i] = None
             
             # --- AGGREGATION LOGIC ---
-            # Front 9 (Holes 1-9)
+            # Ensure all 18 columns exist
+            for i in range(1, 19):
+                if i not in scorecard.columns:
+                    scorecard[i] = None
+            
+            # 1. Convert to numeric, fill with 0 for math, then cast to int
+            # This removes the decimals
+            scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            
+            # 2. Add totals (now that they are integers)
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
-            
-            # Back 9 (Holes 10-18)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
-            
-            # Total (18 Holes)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
-            # Display Order: 1-9, Front 9, 10-18, Back 9, Total
+            # 3. Apply Column Order
             cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
-            display_df = scorecard[cols_order].fillna('-')
+            display_df = scorecard[cols_order]
             
-            # Visual formatting
+            # 4. Replace 0s with '-' for display (only after calculations)
+            display_df = display_df.replace(0, '-')
+            
             st.dataframe(display_df, use_container_width=True)
-        else:
-            st.info("No scores entered yet.")
-    except Exception as e:
-        st.warning(f"Could not load leaderboard: {e}")
             
 
 # --- 3. DATA LOAD ---
