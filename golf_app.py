@@ -117,8 +117,7 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
     
-    # --- 1. PERSISTENT PLAYER SELECTION ---
-    # Using session_state ensures the player doesn't have to keep re-selecting their name
+    # 1. PERSISTENT PLAYER SELECTION
     if 'selected_live_player' not in st.session_state:
         st.session_state.selected_live_player = EXISTING_PLAYERS[0]
         
@@ -129,7 +128,7 @@ def render_live_scoring():
     )
     st.session_state.selected_live_player = selected_player
 
-    # --- 2. INPUT SECTION ---
+    # 2. INPUT SECTION
     with st.expander(f"📝 Enter Score for {selected_player}", expanded=True):
         with st.form("live_score_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -147,15 +146,14 @@ def render_live_scoring():
                     }
                     conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
                     st.success(f"Saved: {selected_player} got a {score} on Hole {hole}")
-                    st.rerun() # Refresh to update the scorecard immediately
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Save Failed: {e}")
 
     # 3. Live Scorecard Section
     st.divider()
-    st.subheader("📊 Live Scorecard")
-
-    # --- PRO TIP UI BLOCK ---
+    st.subheader("📊 Current Scorecard")
+    
     with st.expander("💡 How to read the Scorecard"):
         st.markdown("""
         * **Scores update automatically** in the database.
@@ -163,7 +161,6 @@ def render_live_scoring():
         * The scorecard shows your Front 9, Back 9, and 18-hole total.
         * Dashes (`-`) indicate holes that have not been played yet.
         """)
-    # ------------------------
     
     if st.button("🔄 Refresh Scorecard"):
         st.rerun()
@@ -173,37 +170,30 @@ def render_live_scoring():
         df = pd.DataFrame(response.data)
         
         if not df.empty:
-            # Pivot data: Rows = Players, Columns = Holes
             scorecard = df.pivot(index="player_name", columns="hole_number", values="score")
             
-            # Ensure all 18 columns exist
+            # Fill missing holes
             for i in range(1, 19):
                 if i not in scorecard.columns:
                     scorecard[i] = None
             
-            # --- AGGREGATION LOGIC ---
-            # Ensure all 18 columns exist
-            for i in range(1, 19):
-                if i not in scorecard.columns:
-                    scorecard[i] = None
-            
-            # 1. Convert to numeric, fill with 0 for math, then cast to int
-            # This removes the decimals
+            # Convert to int/clean decimals
             scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
             
-            # 2. Add totals (now that they are integers)
+            # Aggregation
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
-            # 3. Apply Column Order
             cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
-            display_df = scorecard[cols_order]
-            
-            # 4. Replace 0s with '-' for display (only after calculations)
-            display_df = display_df.replace(0, '-')
+            display_df = scorecard[cols_order].replace(0, '-')
             
             st.dataframe(display_df, use_container_width=True)
+        else:
+            st.info("No scores yet. Be the first to enter one!")
+            
+    except Exception as e:
+        st.warning(f"Could not load leaderboard: {e}")
             
 
 # --- 3. DATA LOAD ---
