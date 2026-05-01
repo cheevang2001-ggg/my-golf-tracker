@@ -580,20 +580,33 @@ with tabs[4]:  # GGG Challenge
 
         st.markdown("### Registered Players")
         
-        participants = []
+        participants_data = []
         try:
-            # Match the exact table name in the Supabase schema
+            # Fetch all registration records
             response = conn.table("ChallengeRegistrations").select("*").execute()
-            reg_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["ChallengeName", "PlayerName"])
+            reg_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["ChallengeName", "PlayerName", "Paid"])
             
+            # Filter participants for the selected challenge
             if not reg_df.empty and 'ChallengeName' in reg_df.columns:
-                participants = reg_df[reg_df['ChallengeName'] == challenge_selection]['PlayerName'].unique().tolist()
-            
-            if participants:
-                for p in participants:
-                    st.text(f"✅ {p}")
+                challenge_df = reg_df[reg_df['ChallengeName'] == challenge_selection]
+                
+                if not challenge_df.empty:
+                    # Display each player and their payment status
+                    for _, row in challenge_df.iterrows():
+                        p_name = row['PlayerName']
+                        is_paid = row.get('Paid', False)
+                        
+                        # Apply clear status text and emojis
+                        status_str = "💰 Paid" if is_paid else "❌ Unpaid"
+                        st.text(f"✅ {p_name} — Status: {status_str}")
+                    
+                    # Store unique participant names to check if the logged-in player has joined
+                    participants_data = challenge_df['PlayerName'].unique().tolist()
+                else:
+                    st.write("No players registered yet.")
             else:
                 st.write("No players registered yet.")
+                
         except Exception as e:
             st.warning("No players registered yet. Ensure the 'ChallengeRegistrations' table exists in Supabase.")
 
@@ -605,19 +618,20 @@ with tabs[4]:  # GGG Challenge
             
             if not player_name:
                 st.error("Please log in with your PIN on the Scorecard or Live Scoring tab to register for challenges.")
-            elif player_name in participants:
+            elif player_name in participants_data:
                 st.info("You are already registered for this challenge.")
             else:
                 new_reg = {
                     "PlayerName": player_name,
                     "ChallengeName": challenge_selection,
-                    "RegistrationDate": pd.Timestamp.now().strftime("%Y-%m-%d")
+                    "RegistrationDate": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                    "Paid": False  # Defaults to False on initial registration
                 }
                 
                 try:
                     conn.table("ChallengeRegistrations").insert(new_reg).execute()
-                    st.success(f"Successfully joined {challenge_selection}!")
-                    time.sleep(1)
+                    st.success(f"Successfully joined {challenge_selection}! Please submit your registration fee to a League Official to update your status.")
+                    time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Registration failed: {e}")
