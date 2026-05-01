@@ -249,29 +249,28 @@ def render_live_scoring():
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
-            # --- UPDATED: CORRECT GOLF LEADERBOARD SORTING ---
+            # --- UPDATED: CLEAN PODIUM (No arrows) ---
             st.write("### 🏆 Current Top 3")
             
-            # To prevent players who only scored 1 hole (e.g., total = 5) from jumping to 1st place,
-            # we filter out anyone who has a Total of 0.
-            # Then, we sort ascending (lowest score is 1st place).
+            # Sort the scorecard by Total score (ascending) and ignore 0 totals
             leaderboard = scorecard[scorecard["Total"] > 0].sort_values(by="Total", ascending=True)
             
             # Display Podium in a 3-column layout
             podium_cols = st.columns(3)
-            medals = ["🥇 1st Place", "🥈 2nd Place", "🥉 3rd Place"]
+            medals = ["🥇 1st", "🥈 2nd", "🥉 3rd"]
             
             for rank in range(3):
                 if rank < len(leaderboard):
                     player = leaderboard.index[rank]
                     score = leaderboard.iloc[rank]["Total"]
+                    
+                    # By putting the player's name in the label, the arrow is removed completely
                     podium_cols[rank].metric(
-                        label=medals[rank],
-                        value=f"{score} Strokes",
-                        delta=f"{player}"
+                        label=f"{medals[rank]} - {player}",
+                        value=f"{score} Strokes"
                     )
                 else:
-                    podium_cols[rank].metric(label=medals[rank], value="-", delta="Waiting...")
+                    podium_cols[rank].metric(label=medals[rank], value="Waiting...")
                     
             st.divider()
             
