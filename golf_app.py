@@ -1,3 +1,4 @@
+# --------------------------------------------------------------- DEV ENVIRONMENT FOR GGG GOLF ---------------------------------------------------------------
 import streamlit as st
 import pandas as pd
 import time
@@ -7,7 +8,7 @@ import altair as alt
 from PIL import Image 
 
 # --- 1. CONFIGURATION & SESSION STATE ---
-st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
+st.set_page_config(page_title="DEV GGGolf League Environment", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
 REGISTRATION_KEY = "2026!@#"
@@ -294,7 +295,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 # --- 4. APP UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1>GGGOLF League 2026</h1>", unsafe_allow_html=True)
+st.markdown("<h1>-----DEV GGGolf League Environment-----/h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "⛳ Live Scoring", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
