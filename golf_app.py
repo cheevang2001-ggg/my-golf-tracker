@@ -196,7 +196,8 @@ def render_live_scoring():
 
                 # 2. Score Form with Slider
                 with st.form("live_score_entry_form", clear_on_submit=True):
-                    score = st.slider("Score", min_value=1, max_value=10, value=4)
+                    # Increased max_value to 20
+                    score = st.slider("Score", min_value=1, max_value=20, value=4)
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                         try:
