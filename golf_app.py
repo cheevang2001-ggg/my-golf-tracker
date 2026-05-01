@@ -954,7 +954,7 @@ with tabs[5]: # League Info
 
                     st.image(image_to_display, use_container_width=True)
                     st.caption(prize["desc"])
-                   
+                       
     elif info_category == "Expenses":
         st.subheader("💵 League Expenses")
         st.write("Breakdown of league fees and administrative costs.")
@@ -968,24 +968,20 @@ with tabs[5]: # League Info
             st.error(f"Error loading expenses: {e}")
             expenses_df = pd.DataFrame(columns=["prize", "cost"])
 
-
         with st.expander("Add a Prize / Expense", expanded=True):
             with st.form("add_expense_form", clear_on_submit=True):
                 prize_desc = st.text_input("Prize Description", placeholder="e.g., Season Trophy")
                 prize_cost = st.number_input("Cost (USD)", min_value=0.0, step=1.0, format="%.2f")
                 if st.form_submit_button("Add Expense", type="primary"):
                     if prize_desc:
-                        # OPTIMIZED: Ensure consistent casing for keys
                         new_entry = {"prize": prize_desc.strip(), "cost": float(prize_cost)}
-                        # INSERT using the correct lowercase table name
-                    try:
-                        conn.table("expenses").insert(new_entry).execute()
-                        st.cache_data.clear()
-                        st.success(f"Saved: {prize_desc}")
-                        time.sleep(0.5) # Reduced sleep for better UX
-                        st.rerun()
-                    except Exception as e:
-                            # This catches the APIError and prints the REAL message
+                        try:
+                            conn.table("expenses").insert(new_entry).execute()
+                            st.cache_data.clear()
+                            st.success(f"Saved: {prize_desc}")
+                            time.sleep(0.5)
+                            st.rerun()
+                        except Exception as e:
                             st.error(f"⚠️ Database Error: {e}")
                     else:
                         st.warning("Please enter a description.")
@@ -994,22 +990,15 @@ with tabs[5]: # League Info
 
         if not expenses_df.empty:
             disp_df = expenses_df.copy()
-            
-            # 1. Standardize column names to handle Case Sensitivity
-            # This makes sure we find the cost column regardless of if it's 'Cost' or 'cost'
             cols = {col.lower(): col for col in disp_df.columns}
             
             target_cost = cols.get('cost')
             target_prize = cols.get('prize')
 
             if target_cost and target_prize:
-                # 2. Prepare the numeric data
                 disp_df[target_cost] = pd.to_numeric(disp_df[target_cost], errors='coerce').fillna(0)
-                
-                # 3. Create a formatted display column
                 disp_df["Amount"] = disp_df[target_cost].map(lambda x: f"${x:,.2f}")
                 
-                # 4. Show the table with the correct columns
                 st.dataframe(
                     disp_df[[target_prize, "Amount"]], 
                     use_container_width=True, 
@@ -1026,31 +1015,48 @@ with tabs[5]: # League Info
     elif info_category == "Members":
         st.subheader("👥 League Members")
         st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n\n"
-                "GGGOLF 2026 registration fees is **$140**.\n\n"
-                "Please pay registration fees by **Week 1** to Finance Officer: Mike Yang.\n\n"
-                "Accepted form of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
+                 "GGGOLF 2026 registration fee is **$140**.\n\n"
+                 "Please pay registration fees by **Week 1** to Finance Officer: Mike Yang.\n\n"
+                 "Accepted forms of payment: PayPal/Cash/Venmo/CashApp/Apple Pay/Zelle/EBTx2")
 
         if df_main is None or df_main.empty:
             st.info("No registered members yet.")
         else:
+            # Filter for the registration row (Week == 0)
             members_df = df_main[df_main['Week'] == 0].copy()
             if members_df.empty:
                 st.info("No registered members yet.")
             else:
+                # Base display columns
                 display_cols = ['Player']
+                
+                # --- 1. ACKNOWLEDGED COLUMN PROCESSING ---
                 if 'Acknowledged' in members_df.columns:
                     members_df['Acknowledged'] = members_df['Acknowledged'].astype(bool)
                     display_cols.append('Acknowledged')
+                    
+                # --- 2. LEAGUE FEE PAID COLUMN PROCESSING ---
+                if 'League Fee Paid' in members_df.columns:
+                    members_df['League Fee Paid'] = members_df['League Fee Paid'].astype(bool)
+                    display_cols.append('League Fee Paid')
+                
+                # Clean up and drop duplicate player rows
                 members_df = members_df[display_cols].drop_duplicates().sort_values('Player').reset_index(drop=True)
                 
                 st.markdown(f"**Total Members:** {len(members_df)}")
-                st.dataframe(members_df, use_container_width=True, hide_index=True)
+                
+                # Display visually using the native interactive dataframe
+                st.dataframe(
+                    members_df, 
+                    use_container_width=True, 
+                    hide_index=True
+                )
 
     elif info_category == "Bets":
         st.subheader("🤝 Season Bets")
         
         try:
-            # OPTIMIZED: Standard Supabase Read
+            # Standard Supabase Read
             response = conn.table("bets").select("*").execute()
             bets_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["id", "player_1", "player_2", "wager", "terms", "status"])
         except Exception as e:
@@ -1104,7 +1110,6 @@ with tabs[5]: # League Info
                 
                 if st.button("Update Status"):
                     try:
-                        # OPTIMIZED: Update specifically by the ID (much safer)
                         conn.table("bets").update({"status": new_status}).eq("id", bet_to_update["id"]).execute()
                         st.cache_data.clear()
                         st.success("Status Updated!")
@@ -1163,68 +1168,8 @@ with tabs[6]: # Registration
                         
                         # SUPABASE INSERT
                         conn.table("league_scores_2026").insert(new_reg).execute()
-
-                        st.success(f"Welcome to the league, {n}!")
-                        st.cache_data.clear()
-                        time.sleep(1.5)
-                        st.session_state["reg_access"] = False 
+                        st.success("Registration complete!")
+                        time.sleep(1)
                         st.rerun()
-                        
                     except Exception as e:
-                        st.error(f"Registration Error: {e}")
-                else:
-                    st.warning("Please ensure name is filled and PIN is exactly 4 digits.")
-
-with tabs[7]: # Admin
-    st.header("⚙️ Admin Control Panel")
-    
-    if not st.session_state.get("authenticated"):
-        st.info("Please enter the Administrative Password to access league management tools.")
-        
-        with st.form("admin_login_form"):
-            admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
-            submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
-            
-            if submit_admin:
-                if admin_input == ADMIN_PASSWORD:
-                    st.session_state["authenticated"] = True
-                    st.success("Access Granted!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ Incorrect Admin Password.")
-
-    else:
-        st.subheader("Leaderboard Management")
-        st.warning("⚠️ Warning: Resetting the live board will delete all current scores. This action cannot be undone.")
-
-        # Safety Lock for Reset
-        confirm_reset = st.checkbox("I confirm that I want to delete all LIVE SCORES.")
-        
-        if confirm_reset:
-            if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
-                try:
-                    # Target correct table and force delete
-                    conn.table("live_scores").delete().neq("id", 0).execute()
-                    
-                    st.cache_data.clear()
-                    st.success("✅ Live Round has been reset!")
-                    time.sleep(1.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to reset table: {e}")
-        else:
-            st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, disabled=True)
-
-        st.divider()
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 Refresh Data Cache", use_container_width=True):
-                st.cache_data.clear()
-                st.toast("App data synced with database.")
-        
-        with col2:
-            if st.button("🔒 Lock Admin Panel", use_container_width=True):
-                st.session_state["authenticated"] = False
-                st.rerun()
+                        st.error(f"Error during registration: {e}")
