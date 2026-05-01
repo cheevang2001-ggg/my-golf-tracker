@@ -582,7 +582,7 @@ with tabs[4]:  # GGG Challenge
         
         participants = []
         try:
-            # SUPABASE READ
+            # Match the exact table name in the Supabase schema
             response = conn.table("ChallengeRegistrations").select("*").execute()
             reg_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["ChallengeName", "PlayerName"])
             
@@ -595,13 +595,16 @@ with tabs[4]:  # GGG Challenge
             else:
                 st.write("No players registered yet.")
         except Exception as e:
-            st.warning(f"Could not load registration list. Ensure 'ChallengeRegistrations' table exists. Error: {e}")
+            st.warning("No players registered yet. Ensure the 'ChallengeRegistrations' table exists in Supabase.")
 
-        if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}"):
+        st.divider()
+
+        # Join Button Section
+        if st.button(f"Join {challenge_selection}", key=f"join_{challenge_selection}", type="primary", use_container_width=True):
             player_name = st.session_state.get("unlocked_player")
             
             if not player_name:
-                st.error("Please log in to register.")
+                st.error("Please log in with your PIN on the Scorecard or Live Scoring tab to register for challenges.")
             elif player_name in participants:
                 st.info("You are already registered for this challenge.")
             else:
@@ -612,7 +615,6 @@ with tabs[4]:  # GGG Challenge
                 }
                 
                 try:
-                    # SUPABASE INSERT
                     conn.table("ChallengeRegistrations").insert(new_reg).execute()
                     st.success(f"Successfully joined {challenge_selection}!")
                     time.sleep(1)
