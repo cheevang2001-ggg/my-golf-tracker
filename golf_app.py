@@ -223,11 +223,11 @@ def render_live_scoring():
                         except Exception as e:
                             st.error(f"Save Failed: {e}")
 
-    # --- 4. PUBLIC VIEW SECTION ---
+    # --- 4. PUBLIC VIEW SECTION (Always visible to all) ---
     st.divider()
-    st.subheader("📊 League Scorecard")
+    st.subheader("📊 Live Leaderboard & Scorecard")
     
-    if st.button("🔄 Refresh Scorecard"):
+    if st.button("🔄 Refresh Leaderboard"):
         st.rerun()
     
     try:
@@ -235,19 +235,48 @@ def render_live_scoring():
         df_live = pd.DataFrame(response.data)
         
         if not df_live.empty:
+            # 1. Pivot the data to create a scorecard
             scorecard = df_live.pivot(index="player_name", columns="hole_number", values="score")
             for i in range(1, 19):
                 if i not in scorecard.columns: scorecard[i] = None
             
+            # Convert values to numbers and calculate totals
             scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
+            # --- NEW: LIVE PODIUM (Top 3 Players) ---
+            st.write("### 🏆 Current Top 3")
+            
+            # Sort the scorecard by Total score (ascending, lowest score wins)
+            leaderboard = scorecard.sort_values(by="Total", ascending=True)
+            
+            # Display Podium in a 3-column layout
+            podium_cols = st.columns(3)
+            medals = ["🥇 1st Place", "🥈 2nd Place", "🥉 3rd Place"]
+            
+            for rank in range(3):
+                if rank < len(leaderboard):
+                    player = leaderboard.index[rank]
+                    score = leaderboard.iloc[rank]["Total"]
+                    podium_cols[rank].metric(
+                        label=medals[rank],
+                        value=f"{score} Strokes",
+                        delta=f"{player}"
+                    )
+                else:
+                    podium_cols[rank].metric(label=medals[rank], value="-", delta="Waiting...")
+                    
+            st.divider()
+            
+            # --- 2. FULL DETAILED SCORECARD ---
+            st.write("### 📋 Full Scorecard")
             cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
             display_df = scorecard[cols_order].replace(0, '-')
             
             st.dataframe(display_df, use_container_width=True)
+            
         else:
             st.info("No scores recorded yet.")
     except Exception as e:
