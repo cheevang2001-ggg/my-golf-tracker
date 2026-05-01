@@ -178,27 +178,25 @@ def render_live_scoring():
                 if 'active_hole' not in st.session_state:
                     st.session_state.active_hole = 1
 
-                st.write(f"**Select Hole: {st.session_state.active_hole}**")
+                # 1. Hole Selection via Horizontal Radio
+                # This stays contained and doesn't require vertical scrolling
+                st.write("**Select Hole**")
                 
-                f9_cols = st.columns(9)
-                for i in range(1, 10):
-                    if f9_cols[i-1].button(f"{i}", key=f"live_f9_{i}", 
-                                           type="primary" if st.session_state.active_hole == i else "secondary",
-                                           use_container_width=True):
-                        st.session_state.active_hole = i
-                        st.rerun()
+                hole = st.radio(
+                    "Hole Selection",
+                    options=list(range(1, 19)),
+                    index=list(range(1, 19)).index(st.session_state.active_hole),
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="live_hole_radio"
+                )
+                
+                # Update session state with the radio selection
+                st.session_state.active_hole = hole
 
-                b9_cols = st.columns(9)
-                for i in range(10, 19):
-                    if b9_cols[i-10].button(f"{i}", key=f"live_b9_{i}", 
-                                            type="primary" if st.session_state.active_hole == i else "secondary",
-                                            use_container_width=True):
-                        st.session_state.active_hole = i
-                        st.rerun()
-
+                # 2. Score Form with Slider
                 with st.form("live_score_entry_form", clear_on_submit=True):
-                    # Replaced selectbox with a slider for faster mobile entry
-                    score = st.slider("Score", min_value=1, max_value=10, value=4, help="Slide to select your score")
+                    score = st.slider("Score", min_value=1, max_value=10, value=4)
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                         try:
