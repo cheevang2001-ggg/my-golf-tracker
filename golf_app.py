@@ -240,17 +240,21 @@ def render_live_scoring():
             for i in range(1, 19):
                 if i not in scorecard.columns: scorecard[i] = None
             
-            # Convert values to numbers and calculate totals
+            # Convert values to numbers for calculation
             scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            
+            # Calculate Front 9, Back 9, and Total
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
-            # --- NEW: LIVE PODIUM (Top 3 Players) ---
+            # --- UPDATED: CORRECT GOLF LEADERBOARD SORTING ---
             st.write("### 🏆 Current Top 3")
             
-            # Sort the scorecard by Total score (ascending, lowest score wins)
-            leaderboard = scorecard.sort_values(by="Total", ascending=True)
+            # To prevent players who only scored 1 hole (e.g., total = 5) from jumping to 1st place,
+            # we filter out anyone who has a Total of 0.
+            # Then, we sort ascending (lowest score is 1st place).
+            leaderboard = scorecard[scorecard["Total"] > 0].sort_values(by="Total", ascending=True)
             
             # Display Podium in a 3-column layout
             podium_cols = st.columns(3)
