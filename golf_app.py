@@ -1062,6 +1062,7 @@ with tabs[5]: # League Info
                 use_container_width=True, 
                 hide_index=True
             )
+            
     elif info_category == "Bets":
         st.subheader("🤝 Season Bets")
         
