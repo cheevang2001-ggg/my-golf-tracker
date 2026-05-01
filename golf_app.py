@@ -178,27 +178,26 @@ def render_live_scoring():
                 if 'active_hole' not in st.session_state:
                     st.session_state.active_hole = 1
 
-                st.write(f"**Select Hole: {st.session_state.active_hole}**")
+                # 1. Hole Selection via Horizontal Radio
+                # This stays contained and doesn't require vertical scrolling
+                st.write("**Select Hole**")
                 
-                f9_cols = st.columns(9)
-                for i in range(1, 10):
-                    if f9_cols[i-1].button(f"{i}", key=f"live_f9_{i}", 
-                                           type="primary" if st.session_state.active_hole == i else "secondary",
-                                           use_container_width=True):
-                        st.session_state.active_hole = i
-                        st.rerun()
+                hole = st.radio(
+                    "Hole Selection",
+                    options=list(range(1, 19)),
+                    index=list(range(1, 19)).index(st.session_state.active_hole),
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="live_hole_radio"
+                )
+                
+                # Update session state with the radio selection
+                st.session_state.active_hole = hole
 
-                b9_cols = st.columns(9)
-                for i in range(10, 19):
-                    if b9_cols[i-10].button(f"{i}", key=f"live_b9_{i}", 
-                                            type="primary" if st.session_state.active_hole == i else "secondary",
-                                            use_container_width=True):
-                        st.session_state.active_hole = i
-                        st.rerun()
-
+                # 2. Score Form with Slider
                 with st.form("live_score_entry_form", clear_on_submit=True):
-                    # Replaced selectbox with a slider for faster mobile entry
-                    score = st.slider("Score", min_value=1, max_value=10, value=4, help="Slide to select your score")
+                    # Increased max_value to 20
+                    score = st.slider("Score", min_value=1, max_value=20, value=4)
                     
                     if st.form_submit_button("Submit Score", type="primary", use_container_width=True):
                         try:
@@ -224,12 +223,12 @@ def render_live_scoring():
                             st.rerun()
                         except Exception as e:
                             st.error(f"Save Failed: {e}")
-                            
-    # --- 4. PUBLIC VIEW SECTION ---
+
+    # --- 4. PUBLIC VIEW SECTION (Always visible to all) ---
     st.divider()
-    st.subheader("📊 League Scorecard")
+    st.subheader("📊 Live Leaderboard & Scorecard")
     
-    if st.button("🔄 Refresh Scorecard"):
+    if st.button("🔄 Refresh Leaderboard"):
         st.rerun()
     
     try:
@@ -237,19 +236,51 @@ def render_live_scoring():
         df_live = pd.DataFrame(response.data)
         
         if not df_live.empty:
+            # 1. Pivot the data to create a scorecard
             scorecard = df_live.pivot(index="player_name", columns="hole_number", values="score")
             for i in range(1, 19):
                 if i not in scorecard.columns: scorecard[i] = None
             
+            # Convert values to numbers for calculation
             scorecard = scorecard.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            
+            # Calculate Front 9, Back 9, and Total
             scorecard["Front 9"] = scorecard[range(1, 10)].sum(axis=1)
             scorecard["Back 9"] = scorecard[range(10, 19)].sum(axis=1)
             scorecard["Total"] = scorecard["Front 9"] + scorecard["Back 9"]
             
+            # --- UPDATED: CLEAN PODIUM (No arrows) ---
+            st.write("### 🏆 Current Top 3")
+            
+            # Sort the scorecard by Total score (ascending) and ignore 0 totals
+            leaderboard = scorecard[scorecard["Total"] > 0].sort_values(by="Total", ascending=True)
+            
+            # Display Podium in a 3-column layout
+            podium_cols = st.columns(3)
+            medals = ["🥇 1st", "🥈 2nd", "🥉 3rd"]
+            
+            for rank in range(3):
+                if rank < len(leaderboard):
+                    player = leaderboard.index[rank]
+                    score = leaderboard.iloc[rank]["Total"]
+                    
+                    # By putting the player's name in the label, the arrow is removed completely
+                    podium_cols[rank].metric(
+                        label=f"{medals[rank]} - {player}",
+                        value=f"{score} Strokes"
+                    )
+                else:
+                    podium_cols[rank].metric(label=medals[rank], value="Waiting...")
+                    
+            st.divider()
+            
+            # --- 2. FULL DETAILED SCORECARD ---
+            st.write("### 📋 Full Scorecard")
             cols_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
             display_df = scorecard[cols_order].replace(0, '-')
             
             st.dataframe(display_df, use_container_width=True)
+            
         else:
             st.info("No scores recorded yet.")
     except Exception as e:
