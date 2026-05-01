@@ -1,14 +1,13 @@
-# THIS IS THE DEV ENVIRONMENT FOR THE APP ----------------------------------------
 import streamlit as st
 import pandas as pd
-import datetime
 import time
+import datetime
 import random
 import altair as alt
 from PIL import Image 
 
 # --- 1. CONFIGURATION & SESSION STATE ---
-st.set_page_config(page_title="QA ENVIRONMENT GGGolf ", layout="wide")
+st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
 REGISTRATION_KEY = "2026!@#"
@@ -115,6 +114,7 @@ def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pi
             
     except Exception as e:
         st.error(f"❌ An error occurred: {e}")
+            
 
 def render_live_scoring():
     st.subheader("⛳ Live Scoring")
@@ -294,7 +294,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 # --- 4. APP UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1>QA ENVIRONMENT GGGolf</h1>", unsafe_allow_html=True)
+st.markdown("<h1>GGGOLF League 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "⛳ Live Scoring", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
@@ -1023,7 +1023,7 @@ with tabs[5]: # League Info
         else:
             st.info("No expenses found in the database yet.")
 
-elif info_category == "Members":
+    elif info_category == "Members":
         st.subheader("👥 League Members")
         st.write("This list is automatically populated from registered players. New registrations will appear here after the sheet updates.\n\n"
                 "GGGOLF 2026 registration fees is **$140**.\n\n"
