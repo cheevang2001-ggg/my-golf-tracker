@@ -1187,3 +1187,57 @@ with tabs[6]: # Registration
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error during registration: {e}")
+
+with tabs[7]: # Admin
+    st.header("⚙️ Admin Control Panel")
+    
+    if not st.session_state.get("authenticated"):
+        st.info("Please enter the Administrative Password to access league management tools.")
+        
+        with st.form("admin_login_form"):
+            admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
+            submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
+            
+            if submit_admin:
+                if admin_input == ADMIN_PASSWORD:
+                    st.session_state["authenticated"] = True
+                    st.success("Access Granted!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Incorrect Admin Password.")
+
+    else:
+        st.subheader("Leaderboard Management")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores. This action cannot be undone.")
+
+        # Safety Lock for Reset
+        confirm_reset = st.checkbox("I confirm that I want to delete all LIVE SCORES.")
+        
+        if confirm_reset:
+            if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
+                try:
+                    # Target correct table and force delete
+                    conn.table("live_scores").delete().neq("id", 0).execute()
+                    
+                    st.cache_data.clear()
+                    st.success("✅ Live Round has been reset!")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to reset table: {e}")
+        else:
+            st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, disabled=True)
+
+        st.divider()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Data Cache", use_container_width=True):
+                st.cache_data.clear()
+                st.toast("App data synced with database.")
+        
+        with col2:
+            if st.button("🔒 Lock Admin Panel", use_container_width=True):
+                st.session_state["authenticated"] = False
+                st.rerun()
