@@ -1140,6 +1140,75 @@ with tabs[6]: # Registration
                     st.error("❌ Invalid League Key. Please contact an Officer.")
 
     else:
+
+with tabs[7]:
+    st.header("Administrative Tools")
+
+    # 1. Admin Authentication Wall
+    admin_password = st.text_input("Enter Admin PIN/Password", type="password")
+    
+    # Replace 'YourSecretPassword' with your actual admin password/PIN
+    if admin_password == "YourSecretPassword":
+        st.success("Access Granted")
+        st.divider()
+
+        ### ---------------- SECTION: RESET LIVE SCOREBOARD ---------------- ###
+        st.subheader("Reset Live Board")
+        st.warning(
+            "This action will permanently wipe all current scores from the Live Board. "
+            "Make sure you have saved or backed up the data if needed."
+        )
+
+        # Safety Checkbox to enable the reset button
+        confirm_reset = st.checkbox("I understand this will erase all current live scores.")
+
+        if st.button("Reset Live Board", disabled=not confirm_reset):
+            try:
+                # 1. Retrieve your active connection (Google Sheets, SQL, etc.)
+                # If using st.connection("gsheets", type=GSheetsConnection):
+                # conn = st.connection("gsheets", type=GSheetsConnection)
+                
+                # 2. Define your player names and the empty score structure for holes 1-9
+                # (Adjust the player list retrieval if you load it dynamically)
+                
+                # Example player setup:
+                # players = ["Player 1", "Player 2", "Player 3"] 
+                
+                # Create an empty DataFrame matching your live score schema
+                columns = ["Player"] + [str(hole) for hole in range(1, 10)]
+                
+                # If you have a dynamic player roster, load it here. 
+                # Otherwise, this constructs a fresh, empty DataFrame.
+                reset_df = pd.DataFrame(columns=columns)
+                
+                # Optional: If you prepopulate rows for every player with empty strings or zeros:
+                # reset_df = pd.DataFrame([ [player] + [""]*9 for player in players ], columns=columns)
+
+                # 3. Write/Update the live scores table with the empty DataFrame
+                # For GSheets, it typically looks like:
+                # conn.update(worksheet="LiveScores", data=reset_df)
+                
+                # For this generic restoration, replace this with your specific connection update method:
+                # Example: conn.update(worksheet="LiveScores", data=reset_df)
+                
+                # Using st.cache_data.clear() ensures the app pulls the fresh, empty data immediately
+                st.cache_data.clear()
+                st.success("The Live Board has been successfully reset!")
+                
+            except Exception as e:
+                st.error(f"Error resetting the Live Board: {e}")
+
+        ### ---------------- SECTION: LEAGUE MANAGEMENT ---------------- ###
+        st.divider()
+        st.subheader("Cache Management")
+        if st.button("Clear App Cache"):
+            st.cache_data.clear()
+            st.success("App cache cleared successfully.")
+
+    elif admin_password != "":
+        st.error("Incorrect PIN/Password. Please try again.")
+
+
         st.info(
             "By registering for the GGGolf Summer League you confirm that you have read, "
             "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
