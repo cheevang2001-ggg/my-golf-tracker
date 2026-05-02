@@ -1139,107 +1139,56 @@ with tabs[6]: # Registration
                 else:
                     st.error("❌ Invalid League Key. Please contact an Officer.")
 
-    else:
-
-with tabs[7]:
-    st.header("Administrative Tools")
-
-    # 1. Admin Authentication Wall
-    admin_password = st.text_input("Enter Admin PIN/Password", type="password")
+with tabs[7]: # Admin
+    st.header("⚙️ Admin Control Panel")
     
-    # Replace 'YourSecretPassword' with your actual admin password/PIN
-    if admin_password == "YourSecretPassword":
-        st.success("Access Granted")
+    if not st.session_state.get("authenticated"):
+        st.info("Please enter the Administrative Password to access league management tools.")
+        
+        with st.form("admin_login_form"):
+            admin_input = st.text_input("Admin Password", type="password", key="admin_password_field")
+            submit_admin = st.form_submit_button("🔓 Verify Admin", use_container_width=True, type="primary")
+            
+            if submit_admin:
+                if admin_input == ADMIN_PASSWORD:
+                    st.session_state["authenticated"] = True
+                    st.success("Access Granted!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Incorrect Admin Password.")
+
+    else:
+        st.subheader("Leaderboard Management")
+        st.warning("⚠️ Warning: Resetting the live board will delete all current scores. This action cannot be undone.")
+
+        # Safety Lock for Reset
+        confirm_reset = st.checkbox("I confirm that I want to delete all LIVE SCORES.")
+        
+        if confirm_reset:
+            if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
+                try:
+                    # Target correct table and force delete
+                    conn.table("live_scores").delete().neq("id", 0).execute()
+                    
+                    st.cache_data.clear()
+                    st.success("✅ Live Round has been reset!")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to reset table: {e}")
+        else:
+            st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, disabled=True)
+
         st.divider()
-
-        ### ---------------- SECTION: RESET LIVE SCOREBOARD ---------------- ###
-        st.subheader("Reset Live Board")
-        st.warning(
-            "This action will permanently wipe all current scores from the Live Board. "
-            "Make sure you have saved or backed up the data if needed."
-        )
-
-        # Safety Checkbox to enable the reset button
-        confirm_reset = st.checkbox("I understand this will erase all current live scores.")
-
-        if st.button("Reset Live Board", disabled=not confirm_reset):
-            try:
-                # 1. Retrieve your active connection (Google Sheets, SQL, etc.)
-                # If using st.connection("gsheets", type=GSheetsConnection):
-                # conn = st.connection("gsheets", type=GSheetsConnection)
-                
-                # 2. Define your player names and the empty score structure for holes 1-9
-                # (Adjust the player list retrieval if you load it dynamically)
-                
-                # Example player setup:
-                # players = ["Player 1", "Player 2", "Player 3"] 
-                
-                # Create an empty DataFrame matching your live score schema
-                columns = ["Player"] + [str(hole) for hole in range(1, 10)]
-                
-                # If you have a dynamic player roster, load it here. 
-                # Otherwise, this constructs a fresh, empty DataFrame.
-                reset_df = pd.DataFrame(columns=columns)
-                
-                # Optional: If you prepopulate rows for every player with empty strings or zeros:
-                # reset_df = pd.DataFrame([ [player] + [""]*9 for player in players ], columns=columns)
-
-                # 3. Write/Update the live scores table with the empty DataFrame
-                # For GSheets, it typically looks like:
-                # conn.update(worksheet="LiveScores", data=reset_df)
-                
-                # For this generic restoration, replace this with your specific connection update method:
-                # Example: conn.update(worksheet="LiveScores", data=reset_df)
-                
-                # Using st.cache_data.clear() ensures the app pulls the fresh, empty data immediately
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Data Cache", use_container_width=True):
                 st.cache_data.clear()
-                st.success("The Live Board has been successfully reset!")
-                
-            except Exception as e:
-                st.error(f"Error resetting the Live Board: {e}")
-
-        ### ---------------- SECTION: LEAGUE MANAGEMENT ---------------- ###
-        st.divider()
-        st.subheader("Cache Management")
-        if st.button("Clear App Cache"):
-            st.cache_data.clear()
-            st.success("App cache cleared successfully.")
-
-    elif admin_password != "":
-        st.error("Incorrect PIN/Password. Please try again.")
-
-
-        st.info(
-            "By registering for the GGGolf Summer League you confirm that you have read, "
-            "understand, and agree to abide by the League Rules, Handicaps, and Policies. "
-            "Registration indicates acceptance of these terms."
-        )
-
-        ack = st.checkbox("I have read and agree to the League Rules and Policies", key="reg_ack_checkbox")
-
-        with st.form("registration_form", clear_on_submit=True):
-            st.subheader("📝 New Player Details")
-            
-            n = st.text_input("Full Name", key="reg_name_input")
-            p = st.text_input("Create 4-Digit PIN", max_chars=4, help="Used to unlock your scorecard", key="reg_pin_input")
-            
-            submit_reg = st.form_submit_button("Complete Registration", use_container_width=True, type="primary")
-            
-            if submit_reg:
-                if not ack:
-                    st.warning("You must acknowledge that you have read and agree to the League Rules and Policies before registering.")
-                elif n and len(p) == 4:
-                    try:
-                        new_reg = {
-                            "Week": 0, "Player": n, "PIN": str(p), "Handicap": 0.0, "DNF": True,
-                            "Pars_Count": 0, "Birdies_Count": 0, "Eagle_Count": 0,
-                            "Total_Score": 0, "Net_Score": 0.0, "Acknowledged": True
-                        }
-                        
-                        # SUPABASE INSERT
-                        conn.table("league_scores_2026").insert(new_reg).execute()
-                        st.success("Registration complete!")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error during registration: {e}")
+                st.toast("App data synced with database.")
+        
+        with col2:
+            if st.button("🔒 Lock Admin Panel", use_container_width=True):
+                st.session_state["authenticated"] = False
+                st.rerun()
