@@ -1,3 +1,4 @@
+# ----------------------------------------------------------------- GGG PROD APP -----------------------------------------------------------------
 import streamlit as st
 import pandas as pd
 import time
@@ -10,7 +11,7 @@ from PIL import Image
 st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
-REGISTRATION_KEY = "2026!@#"
+REGISTRATION_KEY = "2026summer!"
 SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
 if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
@@ -804,7 +805,9 @@ with tabs[5]: # League Info
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds.
+        * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
+        * Max handicap 20 points.\n\n
 
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
@@ -835,12 +838,23 @@ with tabs[5]: # League Info
         * Currie: **Gold - 5246 yd**
         
 
-        **Gimmies/Putting:**\n 
-        Promote competition of fair play, Putt out\n
-        ***Unless one of the below scenario***
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        **Gimmies/Putting:**
+        * Promote competition of fair play, Putt out.\n\n
+        
+        ***Gimmies with one of the below scenario***
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and have moved onto or are on their approach shot to their green, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to or are on their approach shot to their green, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and have moved onto or are on their approach shot to their green, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+
+        ***Fairway Play***
+        * If your ball ends up in a man made divot > inform one of your playing partners > you may move the ball out of the divot without penalty stroke > place the ball next to or behind the divot, no closer to the pin > continue play
+        * If your ball ends up on the path way > inform one of your playing partners > you may move the ball to the closes grass field without penalty stroke> place the ball one club length no closer to the pin > continue play
+        * If your ball ends up on the sprinkler head > inform one of your playing partners > you may move the ball without penalty stroke> place the ball one club length no closer to the pin > continue play
+
+        ***Bunker Play***
+        * Play from bunker as normal unless stated
+        * If your ball ends up in a bunker and lands in a unraked area > inform one of your playing partners > you may move the ball without penalty stroke > rake the area of where the ball is at rest > replace the ball to it's original resting location > continue play
+                
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.
         * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.
@@ -922,6 +936,8 @@ with tabs[5]: # League Info
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
+                st.divider()
+        
         st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
         "**Note:** GGG Challenge winners override the FINALE prize pick order.")
 
