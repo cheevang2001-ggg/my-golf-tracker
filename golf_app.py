@@ -936,8 +936,6 @@ with tabs[5]: # League Info
 
     elif info_category == "Prizes":
         st.subheader("🏆 Prize Pool")
-        st.divider()
-        
         st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
         "**Note:** GGG Challenge winners override the FINALE prize pick order.")
 
