@@ -83,8 +83,9 @@ def calculate_rolling_handicap(player_df, target_week):
         last_scores.sort() 
         hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
-        return float(hcp)
-
+        # Apply the Max 16 Cap
+        return float(min(hcp, 16.0))
+        
     except Exception:
         return 0.0
 
@@ -767,7 +768,9 @@ with tabs[5]: # League Info
                             used_scores = sorted_scores[:3]  
                             avg_score = sum(used_scores) / 3
                             hcp_val = round(avg_score - 36, 1)
-                            method = f"Best 3 of last 4 eligible rounds ({len(last_scores)} available rounds evaluated)"
+                        if hcp_val > 16.0:
+                            hcp_val = 16.0
+                            method = f"Best 3 of last 4 eligible rounds (Capped at 16.0)"
 
                         st.divider()
                         st.markdown("### Handicap Breakdown Result")
@@ -805,7 +808,9 @@ with tabs[5]: # League Info
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.\n\n
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
+        * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
+        * Max handicap 16 points.\n\n
 
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
@@ -821,7 +826,7 @@ with tabs[5]: # League Info
         * Whitnall: **Blue - 6308 yd**
         * Currie: **Black - 6444 yd**
         
-        ***C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.***
+        ***C1: If your handicap average equals 16+ you will have the option to play from the tee box ahead of the default tee box.***
         * Brown Deer: **White - 5893 yd**
         * Dretzka: **White - 5970 yd**
         * Oakwood: **White - 6301 yd**
