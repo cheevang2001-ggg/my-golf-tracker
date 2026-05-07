@@ -807,7 +807,7 @@ with tabs[5]: # League Info
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds.
         * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
-        * Max handicap 20 points.\n\n
+        * Max handicap 16 points.\n\n
 
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
@@ -823,7 +823,7 @@ with tabs[5]: # League Info
         * Whitnall: **Blue - 6308 yd**
         * Currie: **Black - 6444 yd**
         
-        ***C1: If your handicap average equals 20+ you will play from the tee box ahead of the default tee box.***
+        ***C1: If your handicap average equals 16+ you will have the option to play from the tee box ahead of the default tee box.***
         * Brown Deer: **White - 5893 yd**
         * Dretzka: **White - 5970 yd**
         * Oakwood: **White - 6301 yd**
