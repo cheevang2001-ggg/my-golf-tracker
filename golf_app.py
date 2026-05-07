@@ -83,7 +83,8 @@ def calculate_rolling_handicap(player_df, target_week):
         last_scores.sort() 
         hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
-        return float(hcp)
+        # Apply the Max 16 Cap
+        return float(min(hcp, 16.0))
 
     except Exception:
         return 0.0
@@ -767,7 +768,9 @@ with tabs[5]: # League Info
                             used_scores = sorted_scores[:3]  
                             avg_score = sum(used_scores) / 3
                             hcp_val = round(avg_score - 36, 1)
-                            method = f"Best 3 of last 4 eligible rounds ({len(last_scores)} available rounds evaluated)"
+                        if hcp_val > 16.0:
+                            hcp_val = 16.0
+                            method = f"Best 3 of last 4 eligible rounds (Capped at 16.0)"
 
                         st.divider()
                         st.markdown("### Handicap Breakdown Result")
