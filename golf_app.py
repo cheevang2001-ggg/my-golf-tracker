@@ -807,17 +807,31 @@ with tabs[5]: # League Info
 
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
+        
+        # --- First Markdown Block ---
         st.markdown("""
-        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds.
+        **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
         * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
         * Max handicap 16 points.\n\n
 
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
-        * The Net score will be automatically applied using the handicap.
+        * Score MUST be inputted by end of round, failure to do so can lead to DNF.
+        * The Net score will be automatically applied using the handicap on the GGG App.
         * GGG Points will be automatically applied.
-        * Any mis-aligned score please consult your Rules/Players Committee.\n\n
+        * Any mis-aligned score please consult your Rules/Players Committee.
+        * Score card needs to be written with total strokes of each hole. (Putting the strokes from par on the top right corner is acceptable)
+        * Birdies needs to be circle.
+        * Eagles needs to be double circled. **SEE IMAGE BELOW FOR EXAMPLE.**
+        """)
 
+        # --- The Image Rotation & Display ---
+        img = Image.open("newscorecard.jpg")
+        rotated_img = img.rotate(90, expand=True)  # -90 rotates it 90 degrees right
+        st.image(rotated_img, width=400, caption="Example of a correctly marked scorecard")
+
+        # --- Second Markdown Block ---
+        st.markdown("""
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
         * Brown Deer: **Blue - 6306 yd**
@@ -839,25 +853,14 @@ with tabs[5]: # League Info
         * Oakwood: **Gold - 5562 yd**
         * Whitnall: **Gold - 5342 yd**
         * Currie: **Gold - 5246 yd**
+
+        **Gimmies/Putting:**\n 
+        Promote competition of fair play, Putt out\n
+        ***Unless one of the below scenario***
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
+        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
         
-
-        **Gimmies/Putting:**
-        * Promote competition of fair play, Putt out.\n\n
-        
-        ***Gimmies with one of the below scenario***
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and have moved onto or are on their approach shot to their green, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to or are on their approach shot to their green, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
-        * Your group is holding up the playing field. All players in the group ahead of your's have tee off and have moved onto or are on their approach shot to their green, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-
-        ***Fairway Play***
-        * If your ball ends up in a man made divot > inform one of your playing partners > you may move the ball out of the divot without penalty stroke > place the ball next to or behind the divot, no closer to the pin > continue play
-        * If your ball ends up on the path way > inform one of your playing partners > you may move the ball to the closes grass field without penalty stroke> place the ball one club length no closer to the pin > continue play
-        * If your ball ends up on the sprinkler head > inform one of your playing partners > you may move the ball without penalty stroke> place the ball one club length no closer to the pin > continue play
-
-        ***Bunker Play***
-        * Play from bunker as normal unless stated
-        * If your ball ends up in a bunker and lands in a unraked area > inform one of your playing partners > you may move the ball without penalty stroke > rake the area of where the ball is at rest > replace the ball to it's original resting location > continue play
-                
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.
         * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.
