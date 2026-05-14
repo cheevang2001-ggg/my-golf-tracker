@@ -825,12 +825,9 @@ with tabs[5]: # League Info
         * Eagles needs to be double circled. **SEE IMAGE BELOW FOR EXAMPLE.**
         """)
 
-        # --- The Image Command (Must be outside the triple quotes) ---
-        #st.image("newscorecard.jpg", width=400, caption="Example of a correctly marked scorecard")
-
         # --- The Image Rotation & Display ---
         img = Image.open("newscorecard.jpg")
-        rotated_img = img.rotate(-90, expand=True)  # -90 rotates it 90 degrees right
+        rotated_img = img.rotate(90, expand=True)  # -90 rotates it 90 degrees right
         st.image(rotated_img, width=400, caption="Example of a correctly marked scorecard")
 
         # --- Second Markdown Block ---
