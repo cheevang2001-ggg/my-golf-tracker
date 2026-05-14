@@ -866,7 +866,7 @@ with tabs[5]: # League Info
         * P2 - If your ball falls into unraked bunkers, inform atleast 1 playing partner, you may lift ball, rake the bunker, and place the ball back in area of original ball rest, and continue play.
         * P3 - If your ball comes to rest on cart path, inform atleast 1 playing partner, you may lift ball, place it to closest grass area no closer to pin where your feet is not standing on cart path, and continue play.
         * P4 - If your ball comes to rest on tree root, inform atleast 1 playing partner, you may lift ball, place ball next to tree root no more than scorecard length no closer to the pin, and continue play.
-        * P4 - If your ball comes to rest on man made equipment, inform atleast 1 playing partner, you may lift ball, place ball next to man made equipment no more than scorecard length no closer to the pin, and continue play.\n\n
+        * P5 - If your ball comes to rest on man made equipment, inform atleast 1 playing partner, you may lift ball, place ball next to man made equipment no more than scorecard length no closer to the pin, and continue play.\n\n
         """)
 
         # --- Fifth Markdown Block ---
