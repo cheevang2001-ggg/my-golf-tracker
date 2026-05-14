@@ -820,13 +820,13 @@ with tabs[5]: # League Info
         * The Net score will be automatically applied using the handicap on the GGG App.
         * GGG Points will be automatically applied.
         * Any mis-aligned score please consult your Rules/Players Committee.
-        * Score card needs to be written with total strokes of each hole.
+        * Score card needs to be written with total strokes of each hole. (Putting the stroke from par on the top right corner is acceptable)
         * Birdies needs to be circle.
         * Eagles needs to be double circled. **SEE IMAGE BELOW FOR EXAMPLE.**
         """)
 
         # --- The Image Command (Must be outside the triple quotes) ---
-        st.image("scorecard.jpg", width=400, caption="Example of a correctly marked scorecard")
+        st.image("newscorecard.jpg", width=400, caption="Example of a correctly marked scorecard")
 
         # --- Second Markdown Block ---
         st.markdown("""
