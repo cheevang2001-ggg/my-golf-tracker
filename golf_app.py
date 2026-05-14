@@ -11,7 +11,7 @@ from PIL import Image
 st.set_page_config(page_title="DEV GGGolf League Environment", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
-REGISTRATION_KEY = "2026!@#"
+REGISTRATION_KEY = "2026summer!"
 SESSION_TIMEOUT = 2 * 60 * 60  # Updated: 2 hours in seconds
 
 if "api_cooling_until" not in st.session_state: st.session_state["api_cooling_until"] = 0
@@ -814,9 +814,14 @@ with tabs[5]: # League Info
 
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
-        * The Net score will be automatically applied using the handicap.
+        * Score MUST be inputted by end of round, failure to do so can lead to DNF.
+        * The Net score will be automatically applied using the handicap on the GGG App.
         * GGG Points will be automatically applied.
-        * Any mis-aligned score please consult your Rules/Players Committee.\n\n
+        * Any mis-aligned score please consult your Rules/Players Committee.
+        * Score card needs to be written with total strokes of each hole.
+        * Birdies needs to be circle.
+        * Eagles needs to be double circledSEE IMAGE BELOW FOR EXAMPLE.\n\n
+        st.image("scorecard.jpg", width=120) 
 
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
