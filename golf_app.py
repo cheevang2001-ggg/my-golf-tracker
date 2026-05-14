@@ -829,7 +829,7 @@ with tabs[5]: # League Info
         #st.image("newscorecard.jpg", width=400, caption="Example of a correctly marked scorecard")
 
         # --- The Image Rotation & Display ---
-        img = Image.open("newscorecard.jpg.jpg")
+        img = Image.open("newscorecard.jpg")
         rotated_img = img.rotate(-90, expand=True)  # -90 rotates it 90 degrees right
         st.image(rotated_img, width=400, caption="Example of a correctly marked scorecard")
 
