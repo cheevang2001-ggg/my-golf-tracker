@@ -807,6 +807,8 @@ with tabs[5]: # League Info
 
     elif info_category == "Rules":
         st.subheader("League Rules and Format")
+        
+        # --- First Markdown Block ---
         st.markdown("""
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
         * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
@@ -820,9 +822,14 @@ with tabs[5]: # League Info
         * Any mis-aligned score please consult your Rules/Players Committee.
         * Score card needs to be written with total strokes of each hole.
         * Birdies needs to be circle.
-        * Eagles needs to be double circledSEE IMAGE BELOW FOR EXAMPLE.\n\n
-        st.image("scorecard.jpg", width=120) 
+        * Eagles needs to be double circled. **SEE IMAGE BELOW FOR EXAMPLE.**
+        """)
 
+        # --- The Image Command (Must be outside the triple quotes) ---
+        st.image("scorecard.jpg", width=400, caption="Example of a correctly marked scorecard")
+
+        # --- Second Markdown Block ---
+        st.markdown("""
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
         * Brown Deer: **Blue - 6306 yd**
@@ -844,7 +851,6 @@ with tabs[5]: # League Info
         * Oakwood: **Gold - 5562 yd**
         * Whitnall: **Gold - 5342 yd**
         * Currie: **Gold - 5246 yd**
-        
 
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
@@ -852,6 +858,7 @@ with tabs[5]: # League Info
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
+        
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.
         * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.
