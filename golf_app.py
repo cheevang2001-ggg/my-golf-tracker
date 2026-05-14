@@ -702,7 +702,7 @@ with tabs[5]: # League Info
         You may play at any course on the 2026 GGG Schedule, once you've logged a pre-season round it will be locked in for calculation for Week 1.
         
         * **Option A:** Complete 3 rounds before May 31. Your Week 1 handicap will be the average of these three pre-season scores.
-        * **Option B:** If you do not complete the 3 pre-season rounds, you will start Week 1 with a 0.0 handicap until you have reach 3 completed rounds for a hanidcap (Includes the pre-season round you have completed).
+        * **Option B:** If you do not complete the 3 pre-season rounds, you will start Week 1 with a 0.0 handicap until you have reach 3 completed rounds for a hanidcap.
         """)
 
         st.divider()
