@@ -813,7 +813,10 @@ with tabs[5]: # League Info
         **Handicaps:** Rolling average of the best 3 of the last 4 rounds to a par 36. If you have not played 4 rounds, your avg of the rounds you have completed will be used for handicap.
         * If you have not completed the three pre-round for handicap, your gross will be your net score until you have completed three rounds for the handicap average.
         * Max handicap 16 points.\n\n
+        """)
 
+        
+        st.markdown("""
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
         * Score MUST be inputted by end of round, failure to do so can lead to DNF.
@@ -853,14 +856,18 @@ with tabs[5]: # League Info
         * Oakwood: **Gold - 5562 yd**
         * Whitnall: **Gold - 5342 yd**
         * Currie: **Gold - 5246 yd**
+        """)
 
+        st.markdown("""
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
         ***Unless one of the below scenario***
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup - within putter blade length. Example: Putting for par, finish hole with Gimme Par.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 2 stroke from 15-19 feet 5 full putter length. Example: Putting for par, finish hole with Gimme Bogey.
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
-        
+        """)
+
+        st.markdown("""
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.
         * If the group behind you has reached the tee box while you are still searching for your ball, STOP searching - drop at point of entry or lateral drop and continue play.
@@ -870,10 +877,8 @@ with tabs[5]: # League Info
         * Move off the greens and record score at the next tee box.
         * Use common sense to keep play moving.
         * If your group is warned by the golf course ranger, it is your group's responsibility to catch up.\n\n
-
-        **DNFs:** If you cannot finish, mark 'DNF'.
         """)
-        
+             
         st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
 
     elif info_category == "Schedule":
