@@ -815,7 +815,7 @@ with tabs[5]: # League Info
         * Max handicap 16 points.\n\n
         """)
 
-        
+        # --- Second Markdown Block ---
         st.markdown("""
         **Scoring:** Use the GGGolf app AND hand in one of the group's (your playing partners) physical score card. ***Failure to do so can result in a DNF round and not receive GGG points.***
         * Individual Players are RESPONSIBLE to input and/or update their weekly rounds GROSS score into the GGG App.
@@ -833,7 +833,7 @@ with tabs[5]: # League Info
         rotated_img = img.rotate(90, expand=True)  # -90 rotates it 90 degrees right
         st.image(rotated_img, width=400, caption="Example of a correctly marked scorecard")
 
-        # --- Second Markdown Block ---
+        # --- Third Markdown Block ---
         st.markdown("""
         **Tee Box:** All players will play from tee box as stated below.\n  
         ***Unless you meet the criteria of C1 or C2 or have approval from the players committee to play from a forward tee box:***
@@ -857,7 +857,19 @@ with tabs[5]: # League Info
         * Whitnall: **Gold - 5342 yd**
         * Currie: **Gold - 5246 yd**
         """)
+        
+        # --- Fourth Markdown Block ---
+        st.markdown("""
+        **Fairway/Bunkers/Rough:**\n
+        * Play as it lies except for if your ball comes to rest and meets one of the 'P' criteria below: 
+        * P1 - If your ball falls in a divot, inform atleast 1 playing partner, you may lift ball, place ball next to or behind divot no more than scorecard length no closer to the pin, and continue play.
+        * P2 - If your ball falls into unraked bunkers, inform atleast 1 playing partner, you may lift ball, rake the bunker, and place the ball back in area of original ball rest, and continue play.
+        * P3 - If your ball comes to rest on cart path, inform atleast 1 playing partner, you may lift ball, place it to closest grass area no closer to pin where your feet is not standing on cart path, and continue play.
+        * P4 - If your ball comes to rest on tree root, inform atleast 1 playing partner, you may lift ball, place ball next to tree root no more than scorecard length no closer to the pin, and continue play.
+        * P4 - If your ball comes to rest on man made equipment, inform atleast 1 playing partner, you may lift ball, place ball next to man made equipment no more than scorecard length no closer to the pin, and continue play.\n\n
+        """)
 
+        # --- Fifth Markdown Block ---
         st.markdown("""
         **Gimmies/Putting:**\n 
         Promote competition of fair play, Putt out\n
@@ -867,6 +879,7 @@ with tabs[5]: # League Info
         * Your group is holding up the playing field. All players in the group ahead of your's have tee off and are moving to the next hole, pickup with 3 stroke from 30+ feet 10 full putter length. Example: Putting for par, finish hole with Gimme Double Bogey.\n
         """)
 
+        # --- Sixth Markdown Block ---
         st.markdown("""
         **Pace of Play Etiquette:** Keep pace of play for your league members and others outside of the league.\n  
         * 2 Minutes ball search.
