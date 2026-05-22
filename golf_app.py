@@ -239,6 +239,17 @@ def render_live_scoring():
                             }
                             conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
                             
+                            # Refresh both temporary and persistent 2-hour storage timers
+                            current_time = time.time()
+                            st.session_state["login_timestamp"] = current_time
+                            st.html(
+                                f"""
+                                <script>
+                                    localStorage.setItem("live_timestamp", Math.floor({current_time}));
+                                </script>
+                                """
+                            )
+                            
                             # Refresh the 2-hour timer so they stay logged in
                             st.session_state["login_timestamp"] = time.time()
                             
