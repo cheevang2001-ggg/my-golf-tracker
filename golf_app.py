@@ -296,7 +296,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 # --- 4. APP UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1>----DEV GGGolf League Environment----</h1>", unsafe_allow_html=True)
+st.markdown("<h1>----GGGolf League----</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Inject Custom CSS to make tabs compact and responsive on mobile screens
