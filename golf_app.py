@@ -296,8 +296,29 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 # --- 4. APP UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=120) 
-st.markdown("<h1>GGGOLF League 2026</h1>", unsafe_allow_html=True)
+st.markdown("<h1>----DEV GGGolf League Environment----</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
+
+# Inject Custom CSS to make tabs compact and responsive on mobile screens
+st.html(
+    """
+    <style>
+        /* Target the container for the tabs */
+        [data-testid="stTabs"] [role="tablist"] {
+            display: flex;
+            flex-wrap: wrap; /* Allows tabs to wrap to a new line on small screens instead of scrolling */
+            justify-content: center; /* Centers the tabs horizontally */
+            gap: 4px; /* Decreases the spacing between tabs */
+        }
+        /* Target each individual tab button */
+        [data-testid="stTabs"] [role="tab"] {
+            padding: 6px 10px !important; /* Reduces vertical and horizontal padding */
+            font-size: 13px !important; /* Slightly reduces font size for better fit */
+            white-space: nowrap; /* Keeps the tab name on one line */
+        }
+    </style>
+    """
+)
 
 tabs = st.tabs(["📝 Scorecard", "🏆 Standings", "📅 History", "⛳ Live Scoring", "🏁 GGG Challenge", "ℹ️ League Info", "👤 Registration", "⚙️ Admin"])
 
