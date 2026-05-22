@@ -137,9 +137,9 @@ def render_live_scoring():
         st.info("Please select your name above to begin live scoring.")
     else:
         # --- 2. SECURITY CHECK ---
-        # Checks if: Name matches + Within 2-hour window OR Admin is authenticated
+        # Checks if: Name matches + Within the session timeout window OR Admin is authenticated
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
-                      (time.time() - st.session_state.get("login_timestamp", 0)) < 7200) or \
+                    (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
 
         if not is_unlocked:
