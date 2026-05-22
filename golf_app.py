@@ -980,6 +980,28 @@ with tabs[5]: # League Info
                         st.write("Standard league play rules and rolling handicaps apply.")
 
     elif info_category == "Prizes":
+        st.subheader("GGGolf 2026 Purse")
+        
+        # Create a clean DataFrame for the cash payouts
+        purse_data = pd.DataFrame([
+            {"Place": "🥇 1st Place", "Payout": "$500 cash + GGG Champ Belt"},
+            {"Place": "🥈 2nd Place", "Payout": "$250 cash"},
+            {"Place": "🥉 3rd Place", "Payout": "$140 cash"}
+        ])
+        
+        # Render the table cleanly without column headers showing sorting arrows, taking full width
+        st.dataframe(
+            purse_data, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Place": st.column_config.TextColumn("Place", width="medium"),
+                "Payout": st.column_config.TextColumn("Payout", width="large")
+            }
+        )
+        
+        st.divider() # Visual separation before the rest of the Prize Pool section
+        
         st.subheader("🏆 Prize Pool")
         st.info("The GGGOLF FINALE will determine the order of prize selection.\n\n"
         "**Note:** GGG Challenge winners override the FINALE prize pick order.")
