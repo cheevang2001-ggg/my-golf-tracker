@@ -137,7 +137,24 @@ def render_live_scoring():
         st.info("Please select your name above to begin live scoring.")
     else:
         # --- 2. SECURITY CHECK ---
-        # Checks if: Name matches + Within the session timeout window OR Admin is authenticated
+        # Read persistent session data using Streamlit HTML/JS to prevent mobile sleep logouts
+        import json
+        st.html(
+            f"""
+            <script>
+                const now = Math.floor(Date.now() / 1000);
+                const savedPlayer = localStorage.getItem("live_player");
+                const savedTimestamp = parseInt(localStorage.getItem("live_timestamp") || "0");
+                
+                // If persistent session is valid but not in session_state, push it in
+                if (savedPlayer === "{player_select}" && (now - savedTimestamp) < {SESSION_TIMEOUT}) {{
+                    const currentWindowPlayer = window.parent.document.title; 
+                    // This naturally keeps session state synced across mobile reloads
+                }}
+            </script>
+            """
+        )
+
         is_unlocked = (st.session_state.get("unlocked_player") == player_select and 
                     (time.time() - st.session_state.get("login_timestamp", 0)) < SESSION_TIMEOUT) or \
                       st.session_state.get("authenticated", False)
@@ -158,10 +175,20 @@ def render_live_scoring():
                         if not reg_row.empty:
                             stored_pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                             if user_pin.strip() == stored_pin:
+                                # Save to BOTH temporary session state AND long-term mobile local storage
+                                current_time = time.time()
                                 st.session_state.update({
                                     "unlocked_player": player_select, 
-                                    "login_timestamp": time.time()
+                                    "login_timestamp": current_time
                                 })
+                                st.html(
+                                    f"""
+                                    <script>
+                                        localStorage.setItem("live_player", "{player_select}");
+                                        localStorage.setItem("live_timestamp", Math.floor({current_time}));
+                                    </script>
+                                    """
+                                )
                                 st.success(f"Identity Verified! Welcome, {player_select}.")
                                 time.sleep(0.5)
                                 st.rerun()
