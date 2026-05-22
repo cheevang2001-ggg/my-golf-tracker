@@ -982,21 +982,33 @@ with tabs[5]: # League Info
     elif info_category == "Prizes":
         st.subheader("GGGolf 2026 Purse")
         
-        # Create a clean DataFrame for the cash payouts
+        # Custom CSS to force text-wrapping inside Streamlit dataframe cells on mobile screens
+        st.html(
+            """
+            <style>
+                [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+            </style>
+            """
+        )
+        
+        # Clean DataFrame for the cash payouts
         purse_data = pd.DataFrame([
             {"Place": "🥇 1st Place", "Payout": "$500 cash + GGG Champ Belt"},
             {"Place": "🥈 2nd Place", "Payout": "$250 cash"},
             {"Place": "🥉 3rd Place", "Payout": "$140 cash"}
         ])
         
-        # Render the table cleanly without column headers showing sorting arrows, taking full width
+        # Optimized layout configuration that fits 100% within mobile viewport dimensions
         st.dataframe(
             purse_data, 
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Place": st.column_config.TextColumn("Place", width="medium"),
-                "Payout": st.column_config.TextColumn("Payout", width="large")
+                "Place": st.column_config.TextColumn("Place", width="small"),
+                "Payout": st.column_config.TextColumn("Payout", width="medium")
             }
         )
         
