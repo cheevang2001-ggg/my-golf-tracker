@@ -25,7 +25,7 @@ def load_active_players():
 
 # --- 3. CORE APPLICATION LAYOUT ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-st.image("GGGOLF-2.png", width=120) 
+st.image("CurrieMemorial2026.jpg", width=120) 
 st.markdown("<h1>July 4 Battle 2026</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
