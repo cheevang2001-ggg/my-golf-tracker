@@ -237,8 +237,8 @@ def render_live_scoring():
                                 "score": score,
                                 "updated_at": "now()"
                             }
-                             conn.table("live_scores_event").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
-                           # conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()    # This line was duplicated below to reference the event live scoring table called live_scores_event
+                            # conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()    # This line was duplicated below to reference the event live scoring table called live_scores_event
+                            conn.table("live_scores_event").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
                             
                             # Refresh both temporary and persistent 2-hour storage timers
                             current_time = time.time()
