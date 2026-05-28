@@ -79,7 +79,7 @@ def render_live_scoring():
                         "updated_at": "now()"
                     }
                     # Upserts directly to your live scores event table
-                    conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                    conn.table("live_scores_event").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
                     
                     st.success(f"Hole {st.session_state.active_hole} saved!")
                     
@@ -100,7 +100,7 @@ def render_live_scoring():
         st.rerun()
     
     try:
-        response = conn.table("live_scores").select("*").eq("week", 1).execute()
+        response = conn.table("live_scores_event").select("*").eq("week", 1).execute()
         df_live = pd.DataFrame(response.data)
         
         if not df_live.empty:
