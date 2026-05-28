@@ -237,7 +237,8 @@ def render_live_scoring():
                                 "score": score,
                                 "updated_at": "now()"
                             }
-                            conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                             conn.table("live_scores_event").upsert(new_score, on_conflict="week,player_name,hole_number").execute()
+                           # conn.table("live_scores").upsert(new_score, on_conflict="week,player_name,hole_number").execute()    # This line was duplicated below to reference the event live scoring table called live_scores_event
                             
                             # Refresh both temporary and persistent 2-hour storage timers
                             current_time = time.time()
@@ -272,7 +273,8 @@ def render_live_scoring():
         st.rerun()
     
     try:
-        response = conn.table("live_scores").select("*").eq("week", 1).execute()
+        # response = conn.table("live_scores").select("*").eq("week", 1).execute() # This line was duplicated below to reference the event live scoring table called live_scores_event
+        response = conn.table("live_scores_event").select("*").eq("week", 1).execute()
         df_live = pd.DataFrame(response.data)
         
         if not df_live.empty:
@@ -1299,7 +1301,8 @@ with tabs[7]: # Admin
             if st.button("🚨 DELETE ALL LIVE SCORES", use_container_width=True, type="primary"):
                 try:
                     # Target correct table and force delete
-                    conn.table("live_scores").delete().neq("id", 0).execute()
+                    # conn.table("live_scores").delete().neq("id", 0).execute() # This line was duplicated below to reference the event live scoring table called live_scores_event
+                    conn.table("live_scores_event").delete().neq("id", 0).execute()
                     
                     st.cache_data.clear()
                     st.success("✅ Live Round has been reset!")
