@@ -34,16 +34,22 @@ active_players = load_active_players()
 
 st.subheader("⛳ Live Scoring")
 
-# Selection menu allowing players to choose their name or type a new one
-selection_options = ["-- Select Name --"] + active_players + ["➕ Add New Player"]
-player_choice = st.selectbox("Who is entering scores?", options=selection_options, key="player_selector")
+# COMPACT RADIO BUTTON ROW FOR PLAYER SELECTION
+selection_options = active_players + ["➕ Add New Player"]
+player_choice = st.radio(
+    "Select Your Name to Score:",
+    options=selection_options,
+    index=None,  # Keeps it blank until a selection is explicitly clicked
+    horizontal=True,
+    key="player_radio_selector"
+)
 
 player_name = None
 if player_choice == "➕ Add New Player":
     new_name_input = st.text_input("Type Your Full Name to Register & Score:", key="new_player_name_field").strip()
     if new_name_input:
         player_name = new_name_input
-elif player_choice != "-- Select Name --":
+elif player_choice is not None:
     player_name = player_choice
 
 # Render inputs only if a player identity is established
@@ -130,7 +136,7 @@ try:
         
         st.write("### 🏆 Current Top 4")
         podium_cols = st.columns(4)
-        medals = ["🥇 1st", "🥈 2nd", "🥉 3rd", "🥉 4th" ]
+        medals = ["🥇 1st", "🥈 2nd", "🥉 3rd", "🥉 4th"]
         
         for rank in range(4):
             if rank < len(leaderboard):
