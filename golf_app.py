@@ -32,7 +32,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 # Fetch current list of event players
 active_players = load_active_players()
 
-st.subheader("⛳ Live Scoring Input")
+st.subheader("⛳ Live Scoring")
 
 # Selection menu allowing players to choose their name or type a new one
 selection_options = ["-- Select Name --"] + active_players + ["➕ Add New Player"]
@@ -128,11 +128,11 @@ try:
         # Podium calculation parsing
         leaderboard = scorecard[scorecard["Total"] > 0].sort_values(by="Total", ascending=True)
         
-        st.write("### 🏆 Current Top 3")
-        podium_cols = st.columns(3)
-        medals = ["🥇 1st", "🥈 2nd", "🥉 3rd"]
+        st.write("### 🏆 Current Top 4")
+        podium_cols = st.columns(4)
+        medals = ["🥇 1st", "🥈 2nd", "🥉 3rd", "🥉 4th" ]
         
-        for rank in range(3):
+        for rank in range(4):
             if rank < len(leaderboard):
                 p_name = leaderboard.index[rank]
                 p_score = leaderboard.iloc[rank]["Total"]
