@@ -147,7 +147,7 @@ try:
                 podium_cols[rank].metric(label=medals[rank], value="--")
                 
         st.divider()
-        st.write("### Full Score Card - Enter your total strokes per hole")
+        st.write("### Score Card")
         
         # STRICT COLUMN SEQUENCE MAP (Locks horizontal layout order perfectly)
         perfect_columns_order = list(range(1, 10)) + ["Front 9"] + list(range(10, 19)) + ["Back 9", "Total"]
