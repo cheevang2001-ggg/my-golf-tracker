@@ -136,7 +136,7 @@ try:
             if rank < len(leaderboard):
                 p_name = leaderboard.index[rank]
                 p_score = leaderboard.iloc[rank]["Total"]
-                podium_cols[rank].metric(label=f"{medals[rank]} - {p_name}", value=f"{p_score} Gross")
+                podium_cols[rank].metric(label=f"{medals[rank]} - {p_name}", value=f"{p_score}")
             else:
                 podium_cols[rank].metric(label=medals[rank], value="--")
                 
