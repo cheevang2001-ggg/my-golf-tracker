@@ -1258,8 +1258,10 @@ with tabs[5]: # League Info
 
     elif info_category == "Player Pairings":
         st.subheader("⛳ Weekly Player Pairings")
-        
+        st.write("Find your assigned playing group for the week. Note: Pairings exclude GGG Events (Weeks 4, 8, and 12).")
+
         try:
+            # Fetch pairings from Supabase
             response = conn.table("weekly_pairings").select("*").execute()
             pairings_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["week", "group_id", "players"])
         except Exception as e:
@@ -1267,27 +1269,30 @@ with tabs[5]: # League Info
             pairings_df = pd.DataFrame(columns=["week", "group_id", "players"])
 
         if not pairings_df.empty:
+            # Filter out GGG Event weeks
             pairings_df = pairings_df[~pairings_df['week'].isin([4, 8, 12])]
             
             weeks_available = sorted(pairings_df['week'].unique())
             if weeks_available:
                 selected_week = st.selectbox("Select Week", options=weeks_available, format_func=lambda x: f"Week {x}")
                 
-                # --- THIS IS THE FIX ---
-                # We sort by group_id so the loop below runs in order 1, 2, 3...
+                # --- FIX: SORT BY GROUP_ID HERE ---
                 week_data = pairings_df[pairings_df['week'] == selected_week].sort_values("group_id")
-                # -----------------------
-
+                
+                # Display in a grid format (4 groups per row)
                 cols = st.columns(4) 
-                for idx, row in week_data.iterrows():
+                for idx, (index, row) in enumerate(week_data.iterrows()):
+                    # Use the loop index (0, 1, 2...) to determine the column
                     with cols[idx % 4]:
                         with st.container(border=True):
-                            st.markdown(f"**Group {row['group_id']}**")
+                            st.markdown(f"### Group {int(row['group_id'])}")
                             players_list = str(row['players']).split(',')
                             for p in players_list:
                                 st.write(f"🏌️ {p.strip()}")
             else:
                 st.info("No regular season pairings published yet.")
+        else:
+            st.info("Pairings have not been posted yet.")
                         
 with tabs[6]: # Registration
     st.header("👤 Registration")
