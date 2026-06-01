@@ -496,12 +496,16 @@ with tabs[1]: # Standings
                 m = v['Week'] == w
                 v.loc[m, 'R'] = v.loc[m, 'Net_Score'].rank(method='min')
                 for idx, row in v[m].iterrows():
+                    # Uses the 1.0 floor fallback from the previous fix
                     base_pts = GGG_POINTS.get(int(row['R']), 1.0)
                     final_pts = base_pts * 2 if w == 12 else base_pts
                     v.at[idx, 'Pts'] = final_pts                    
-            res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
-            res['Avg Net'] = res['Avg Net'].round(1)
-            st.dataframe(res.sort_values(['Total Pts', 'Avg Net'], ascending=[False, True]), use_container_width=True, hide_index=True)
+            
+            # Aggregate only the total points per player
+            res = v.groupby('Player').agg({'Pts':'sum'}).reset_index().rename(columns={'Pts':'Total Pts'})
+            
+            # Display sorted by Total Points from highest to lowest
+            st.dataframe(res.sort_values('Total Pts', ascending=False), use_container_width=True, hide_index=True)
 
 
 with tabs[2]: # History
