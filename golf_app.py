@@ -715,7 +715,7 @@ with tabs[4]:  # GGG Challenge
         
 with tabs[5]: # League Info
     st.header("ℹ️ League Information")
-    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets"], horizontal=True)
+    info_category = st.radio("Select a Category:", ["About Us", "Handicaps", "Rules", "Schedule", "Prizes", "Expenses", "Members", "Bets", "Player Pairings"], horizontal=True)
     st.divider()
 
     if info_category == "About Us":
@@ -1255,6 +1255,42 @@ with tabs[5]: # League Info
                         st.error(f"Update Error: {e}")
         else:
             st.info("No active bets found in the database.")
+
+    elif info_category == "Player Pairings":
+        st.subheader("⛳ Weekly Player Pairings")
+        st.write("Find your assigned playing group for the week. Note: Pairings exclude GGG Events (Weeks 4, 8, and 12).")
+
+        try:
+            response = conn.table("weekly_pairings").select("*").execute()
+            pairings_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["week", "group_id", "players"])
+        except Exception as e:
+            st.error(f"Error loading pairings: {e}")
+            pairings_df = pd.DataFrame(columns=["week", "group_id", "players"])
+
+        if not pairings_df.empty:
+            # Filter out GGG Event weeks just in case they were accidentally added
+            pairings_df = pairings_df[~pairings_df['week'].isin([4, 8, 12])]
+            
+            weeks_available = sorted(pairings_df['week'].unique())
+            if weeks_available:
+                selected_week = st.selectbox("Select Week", options=weeks_available, format_func=lambda x: f"Week {x}")
+                
+                week_data = pairings_df[pairings_df['week'] == selected_week].sort_values("group_id")
+                
+                # Display nicely in a grid format
+                cols = st.columns(4) 
+                for idx, row in week_data.iterrows():
+                    with cols[idx % 4]:
+                        with st.container(border=True):
+                            st.markdown(f"**Group {row['group_id']}**")
+                            # Splits the comma-separated string of players
+                            players_list = str(row['players']).split(',')
+                            for p in players_list:
+                                st.write(f"🏌️ {p.strip()}")
+            else:
+                st.info("No regular season pairings published yet.")
+        else:
+            st.info("Pairings have not been posted yet.")
                         
 with tabs[6]: # Registration
     st.header("👤 Registration")
@@ -1363,3 +1399,37 @@ with tabs[7]: # Admin
             if st.button("🔒 Lock Admin Panel", use_container_width=True):
                 st.session_state["authenticated"] = False
                 st.rerun()
+
+        st.divider()
+        st.subheader("👥 Manage Player Pairings")
+        st.write("Manually create and publish groups for non-event weeks.")
+        
+        with st.expander("➕ Add New Group Pairing"):
+            with st.form("add_pairing_form", clear_on_submit=True):
+                col_p1, col_p2 = st.columns(2)
+                p_week = col_p1.number_input("Week Number", min_value=1, max_value=14, step=1)
+                p_group = col_p2.number_input("Group Number (e.g., 1 for Group 1)", min_value=1, step=1)
+                
+                # Multi-select pulls directly from your existing dynamic player list
+                selected_players = st.multiselect("Select Players for this Group", options=EXISTING_PLAYERS)
+                
+                if st.form_submit_button("Save Group", type="primary"):
+                    if p_week in [4, 8, 12]:
+                        st.error("Weeks 4, 8, and 12 are GGG Events. Pairings are not required for these weeks.")
+                    elif not selected_players:
+                        st.warning("Please select at least one player.")
+                    else:
+                        players_str = ", ".join(selected_players)
+                        new_pairing = {
+                            "week": int(p_week),
+                            "group_id": int(p_group),
+                            "players": players_str
+                        }
+                        try:
+                            conn.table("weekly_pairings").insert(new_pairing).execute()
+                            st.cache_data.clear()
+                            st.success(f"Group {p_group} saved for Week {p_week}!")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error saving pairing: {e}")
