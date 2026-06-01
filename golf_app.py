@@ -29,9 +29,10 @@ MASTER_COLUMNS = [
 ]
 
 GGG_POINTS = {
-    1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41,
-    7: 36, 8: 31, 9: 27, 10: 24, 11: 21, 12: 16, 13: 13, 14: 9,
-    15: 5, 16: 3, 17: 1 
+    1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41, 7: 36, 8: 31, 9: 27, 10: 24,
+    11: 21, 12: 16, 13: 13, 14: 9, 15: 8, 16: 7, 17: 6, 18: 5, 19: 4, 20: 3,
+    21: 2, 22: 2, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 
+    31: 1, 32: 1 
 }
 
 # --- 2. CORE FUNCTIONS ---
@@ -514,7 +515,7 @@ with tabs[1]: # Standings
                 m = v['Week'] == w
                 v.loc[m, 'R'] = v.loc[m, 'Net_Score'].rank(method='min')
                 for idx, row in v[m].iterrows():
-                    base_pts = GGG_POINTS.get(int(row['R']), 10.0)
+                    base_pts = GGG_POINTS.get(int(row['R']), 1.0)
                     final_pts = base_pts * 2 if w == 12 else base_pts
                     v.at[idx, 'Pts'] = final_pts                    
             res = v.groupby('Player').agg({'Pts':'sum', 'Net_Score':'mean'}).reset_index().rename(columns={'Pts':'Total Pts', 'Net_Score':'Avg Net'})
@@ -531,7 +532,7 @@ with tabs[2]: # History
             mask = h_df['Week'] == w
             h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
             for idx, row in h_df[mask].iterrows():
-                base_pts = GGG_POINTS.get(int(row['Rank']), 10.0)
+                base_pts = GGG_POINTS.get(int(row['Rank']), 1.0)
                 h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
                         
         f_col1, f_col2 = st.columns(2)
