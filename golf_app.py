@@ -1261,6 +1261,7 @@ with tabs[5]: # League Info
         st.write("Find your assigned playing group for the week. Note: Pairings exclude GGG Events (Weeks 4, 8, and 12).")
 
         try:
+            # Fetch pairings from Supabase
             response = conn.table("weekly_pairings").select("*").execute()
             pairings_df = pd.DataFrame(response.data) if response.data else pd.DataFrame(columns=["week", "group_id", "players"])
         except Exception as e:
@@ -1268,22 +1269,23 @@ with tabs[5]: # League Info
             pairings_df = pd.DataFrame(columns=["week", "group_id", "players"])
 
         if not pairings_df.empty:
-            # Filter out GGG Event weeks just in case they were accidentally added
+            # Filter out GGG Event weeks
             pairings_df = pairings_df[~pairings_df['week'].isin([4, 8, 12])]
             
             weeks_available = sorted(pairings_df['week'].unique())
             if weeks_available:
                 selected_week = st.selectbox("Select Week", options=weeks_available, format_func=lambda x: f"Week {x}")
                 
+                # --- FIX: SORT BY GROUP_ID HERE ---
                 week_data = pairings_df[pairings_df['week'] == selected_week].sort_values("group_id")
                 
-                # Display nicely in a grid format
+                # Display in a grid format (4 groups per row)
                 cols = st.columns(4) 
-                for idx, row in week_data.iterrows():
+                for idx, (index, row) in enumerate(week_data.iterrows()):
+                    # Use the loop index (0, 1, 2...) to determine the column
                     with cols[idx % 4]:
                         with st.container(border=True):
-                            st.markdown(f"**Group {row['group_id']}**")
-                            # Splits the comma-separated string of players
+                            st.markdown(f"### Group {int(row['group_id'])}")
                             players_list = str(row['players']).split(',')
                             for p in players_list:
                                 st.write(f"🏌️ {p.strip()}")
