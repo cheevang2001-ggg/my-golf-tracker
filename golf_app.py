@@ -334,7 +334,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 # --- 4. APP UI ---
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=480)
-st.image("2026_Players.jpeg", width=480) 
+st.image("2026_Players.jpeg", width=960) 
 st.markdown("<h1>GGGolf League</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
