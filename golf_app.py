@@ -1076,7 +1076,7 @@ with tabs[5]: # League Info
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
             {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."},
             {"img": "20260602_115446.jpg", "desc": "G/FORE Golf Shoes Size:9.5"},
-            {"img": "20260603_213525.jpg", "desc": "UST Mamiya LINQ 7F4 Fairway Wood Shaft"},
+            {"img": "20260603_213525.jpg", "desc": "UST Mamiya LINQ 7F4 Fairway Wood Shaft with Taylomade tip"},
             {"img": "Sandals.jpg", "desc": "Sandals."}
         ]
 
