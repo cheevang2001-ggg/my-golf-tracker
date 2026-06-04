@@ -1075,6 +1075,7 @@ with tabs[5]: # League Info
             {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
             {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."},
+            {"img": "20260602_115446.jpg", "desc": " G/FORE Golf Shoes Size:9.5."},
             {"img": "Sandals.jpg", "desc": "Sandals."}
         ]
 
