@@ -525,7 +525,54 @@ with tabs[1]: # Standings
             
             # Display sorted by Total Points from highest to lowest
             st.dataframe(res.sort_values('Total Pts', ascending=False), use_container_width=True, hide_index=True)
+st.divider()
+        st.subheader("🟩 League-Wide Progress Matrix")
+        st.write("A bird's-eye view of everyone's Net Scores. Darker greens mean lower, better net scores.")
 
+        # Filter out pre-season/event weeks and DNF records to keep data clean
+        matrix_df = df_main[
+            (df_main['Week'] > 0) & 
+            (~df_main['Week'].isin([4, 8, 12])) & 
+            (df_main['DNF'] == False)
+        ].copy()
+
+        if not matrix_df.empty:
+            # Pivot data so players are rows and weeks are columns
+            heatmap_data = matrix_df.pivot(index="Player", columns="Week", values="Net_Score").reset_index()
+            
+            # Melt it back to an Altair-friendly format
+            heatmap_melted = heatmap_data.melt(id_vars=["Player"], var_name="Week", value_name="Net Score")
+            
+            # Build the Heatmap Chart
+            heatmap = alt.Chart(heatmap_melted).mark_rect().encode(
+                x=alt.X('Week:O', title='Week Number'),
+                y=alt.Y('Player:N', title='League Members', sort='ascending'),
+                # Reverse color scheme so lower net scores get the prominent dark color
+                color=alt.Color('Net Score:Q', scale=alt.Scale(scheme='greens', reverse=True), title='Net Score'),
+                tooltip=['Player', 'Week', 'Net Score']
+            ).properties(
+                height=400
+            )
+
+            # Add text numbers inside the heatmap boxes for easy reading
+            text = heatmap.mark_text(baseline='middle').encode(
+                text=alt.Text('Net Score:Q', format='.0f'),
+                color=alt.condition(
+                    alt.datum['Net Score'] < matrix_df['Net_Score'].median(),
+                    alt.value('white'),
+                    alt.value('black')
+                )
+            )
+
+            # Layer the chart together
+            final_heatmap = (heatmap + text).configure_axis(
+                labelFontSize=12,
+                titleFontSize=14
+            )
+
+            st.altair_chart(final_heatmap, use_container_width=True)
+        else:
+            st.info("Log scores to populate the progress matrix.")
 
 with tabs[2]: # History
     st.subheader("📅 Weekly Scores & GGG Points")
