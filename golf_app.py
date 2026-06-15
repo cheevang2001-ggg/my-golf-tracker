@@ -567,8 +567,8 @@ with tabs[2]: # History
         st.info("No completed rounds recorded yet.")
 
 st.divider()
-        st.subheader("🟩 League-Wide Progress Matrix")
-        st.write("A bird's-eye view of everyone's Net Scores. Darker greens mean lower, better net scores.")
+    st.subheader("🟩 League-Wide Progress Matrix")
+    st.write("A bird's-eye view of everyone's Net Scores. Darker greens mean lower, better net scores.")
 
         # Filter out pre-season/event weeks and DNF records to keep data clean
         matrix_df = df_main[
