@@ -526,7 +526,7 @@ with tabs[1]: # Standings
             # Display sorted by Total Points from highest to lowest
             st.dataframe(res.sort_values('Total Pts', ascending=False), use_container_width=True, hide_index=True)
 st.divider()
-        st.subheader("🟩 League-Wide Progress Matrix")
+    st.subheader("🟩 League-Wide Progress Matrix")
         st.write("A bird's-eye view of everyone's Net Scores. Darker greens mean lower, better net scores.")
 
         # Filter out pre-season/event weeks and DNF records to keep data clean
