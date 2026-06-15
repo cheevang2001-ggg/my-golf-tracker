@@ -526,6 +526,46 @@ with tabs[1]: # Standings
             # Display sorted by Total Points from highest to lowest
             st.dataframe(res.sort_values('Total Pts', ascending=False), use_container_width=True, hide_index=True)
 
+
+with tabs[2]: # History
+    st.subheader("📅 Weekly Scores & GGG Points")
+    h_df = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
+    if not h_df.empty:
+        h_df['Points'] = 0.0
+        for w in h_df['Week'].unique():
+            mask = h_df['Week'] == w
+            h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
+            for idx, row in h_df[mask].iterrows():
+                base_pts = GGG_POINTS.get(int(row['Rank']), 1.0)
+                h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
+                        
+        f_col1, f_col2 = st.columns(2)
+        all_players = ["All Players"] + sorted(h_df['Player'].unique().tolist())
+        sel_player = f_col1.selectbox("Filter by Player", all_players)
+        all_weeks = ["All Weeks"] + sorted(h_df['Week'].unique().tolist())
+        sel_week = f_col2.selectbox("Filter by Week", all_weeks)
+        
+        filtered_df = h_df.copy()
+        if sel_player != "All Players":
+            filtered_df = filtered_df[filtered_df['Player'] == sel_player]
+        if sel_week != "All Weeks":
+            filtered_df = filtered_df[filtered_df['Week'] == sel_week]
+            
+        display_df = filtered_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
+        display_df = display_df.sort_values(['Week', 'Points'], ascending=[False, False])
+        
+        st.dataframe(
+            display_df, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Points": st.column_config.NumberColumn("GGG Points", format="%d pts"),
+                "Week": st.column_config.NumberColumn("Week", format="Wk %d")
+            }
+        )
+    else:
+        st.info("No completed rounds recorded yet.")
+
 st.divider()
         st.subheader("🟩 League-Wide Progress Matrix")
         st.write("A bird's-eye view of everyone's Net Scores. Darker greens mean lower, better net scores.")
@@ -574,46 +614,6 @@ st.divider()
             st.altair_chart(final_heatmap, use_container_width=True)
         else:
             st.info("Log scores to populate the progress matrix.")
-            
-
-with tabs[2]: # History
-    st.subheader("📅 Weekly Scores & GGG Points")
-    h_df = df_main[(df_main['Week'] > 0) & (df_main['DNF'] == False)].copy()
-    if not h_df.empty:
-        h_df['Points'] = 0.0
-        for w in h_df['Week'].unique():
-            mask = h_df['Week'] == w
-            h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
-            for idx, row in h_df[mask].iterrows():
-                base_pts = GGG_POINTS.get(int(row['Rank']), 1.0)
-                h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
-                        
-        f_col1, f_col2 = st.columns(2)
-        all_players = ["All Players"] + sorted(h_df['Player'].unique().tolist())
-        sel_player = f_col1.selectbox("Filter by Player", all_players)
-        all_weeks = ["All Weeks"] + sorted(h_df['Week'].unique().tolist())
-        sel_week = f_col2.selectbox("Filter by Week", all_weeks)
-        
-        filtered_df = h_df.copy()
-        if sel_player != "All Players":
-            filtered_df = filtered_df[filtered_df['Player'] == sel_player]
-        if sel_week != "All Weeks":
-            filtered_df = filtered_df[filtered_df['Week'] == sel_week]
-            
-        display_df = filtered_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
-        display_df = display_df.sort_values(['Week', 'Points'], ascending=[False, False])
-        
-        st.dataframe(
-            display_df, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "Points": st.column_config.NumberColumn("GGG Points", format="%d pts"),
-                "Week": st.column_config.NumberColumn("Week", format="Wk %d")
-            }
-        )
-    else:
-        st.info("No completed rounds recorded yet.")
 
 with tabs[3]:  # Live Scoring
     # You MUST call the function here to make the content appear
