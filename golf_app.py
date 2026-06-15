@@ -764,6 +764,61 @@ with tabs[5]: # League Info
         """)
 
     elif info_category == "Handicaps":
+        st.subheader("📊 League-Wide Handicaps")
+        
+        # Determine the latest week played to auto-set the default target week
+        if 'df_main' in globals() and not df_main.empty:
+            played_rounds = df_main[(df_main['Week'] > 0) & (df_main['Total_Score'] > 0)]
+            if not played_rounds.empty:
+                latest_week = int(played_rounds['Week'].max())
+                default_target = latest_week + 1
+            else:
+                default_target = 1
+        else:
+            default_target = 1
+            
+        # Skip GGG Event weeks (4, 8, 12) for the default display
+        if default_target in [4, 8, 12]:
+            default_target += 1
+        # Ensure default doesn't exceed the 14-week season
+        if default_target > 14:
+            default_target = 14
+
+        # Let user choose the week they want to view handicaps for
+        target_week = st.selectbox(
+            "Select Week to View Applied Handicaps", 
+            options=list(range(1, 15)), 
+            index=list(range(1, 15)).index(default_target) if default_target in range(1, 15) else 0,
+            help="Select the upcoming week to see everyone's playing handicap."
+        )
+
+        if target_week in [4, 8, 12]:
+            st.info(f"💡 Week {target_week} is a GGG Event week. No handicaps are applied.")
+        else:
+            # Generate the handicap table for all registered players
+            hcp_data = []
+            if EXISTING_PLAYERS:
+                for player in EXISTING_PLAYERS:
+                    p_data = df_main[df_main['Player'] == player]
+                    hcp = calculate_rolling_handicap(p_data, target_week)
+                    
+                    # Format for display: Add "+" to positive handicaps for traditional golf styling
+                    hcp_disp = f"+{abs(hcp)}" if hcp < 0 else f"{hcp}"
+                    
+                    hcp_data.append({
+                        "Player": player, 
+                        f"W{target_week} Handicap": hcp_disp,
+                        "_sort_val": hcp # Hidden column just for accurate numeric sorting
+                    })
+                
+                # Create DataFrame, sort by lowest handicap to highest, then drop the hidden sort column
+                hcp_df = pd.DataFrame(hcp_data).sort_values(by=["_sort_val", "Player"]).drop(columns=["_sort_val"])
+                
+                st.dataframe(hcp_df, use_container_width=True, hide_index=True)
+            else:
+                st.warning("No registered players found.")
+
+        st.divider()
         st.subheader("Establishing Your Handicap")
         st.info("""
         **Pre-Season Requirement:**
