@@ -32,7 +32,7 @@ GGG_POINTS = {
     1: 100, 2: 77, 3: 64, 4: 54, 5: 47, 6: 41, 7: 36, 8: 31, 9: 27, 10: 24,
     11: 21, 12: 16, 13: 13, 14: 9, 15: 8, 16: 7, 17: 6, 18: 5, 19: 4, 20: 3,
     21: 2, 22: 2, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 
-    31: 1, 32: 1 
+    31: 1, 32: 1
 }
 
 # --- 2. CORE FUNCTIONS ---
@@ -336,7 +336,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=480)
 st.image("2026_Players.jpeg", width=1920) 
-st.markdown("<h1>----DEV---GGGolf League----DEV---</h1>", unsafe_allow_html=True)
+st.markdown("<h1>GGGolf League</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Inject Custom CSS to make tabs compact and responsive on mobile screens
@@ -468,36 +468,17 @@ with tabs[0]: # Scorecard
 
             st.divider()
 
-            # --- PRODUCTION GUARD RAIL: TIME-LOCK ENTRY ---
-            league_start_date = pd.to_datetime("2026-05-31")
-            is_locked = False
-            
-            if w_s > 0:
-                # Calculate the scheduled Sunday for the selected week
-                round_date = league_start_date + pd.Timedelta(weeks=int(w_s) - 1)
-                # Deadline is the following Monday at 12:00 PM (Noon)
-                deadline = round_date + pd.Timedelta(days=1) + pd.Timedelta(hours=12)
-                
-                # Fetch current time explicitly localized to Central Time (Wisconsin)
-                current_time_ct = pd.Timestamp.now(tz='America/Chicago').tz_localize(None)
-                if current_time_ct > deadline:
-                    is_locked = True
-
             with st.form("score_entry", clear_on_submit=True):
                 st.subheader("Submit Weekly Round")
-                
-                if is_locked:
-                    st.error(f"🔒 **Score Entry Locked:** The deadline for Week {w_s} passed on {deadline.strftime('%A, %B %d at %I:%M %p')} CT. Unsubmitted rounds automatically receive a DNF.")
-                
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}", disabled=is_locked)
-                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}", disabled=is_locked)
+                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
+                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
                 
                 c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}", disabled=is_locked)
-                b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}", disabled=is_locked)
-                e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}", disabled=is_locked)
+                p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}")
+                b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}")
+                e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}")
                 
-                if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary", disabled=is_locked):
+                if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary"):
                     reg_row = p_data[p_data['Week'] == 0]
                     pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
                     save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
@@ -565,8 +546,6 @@ with tabs[2]: # History
         )
     else:
         st.info("No completed rounds recorded yet.")
-
-
 
 with tabs[3]:  # Live Scoring
     # You MUST call the function here to make the content appear
@@ -1039,7 +1018,7 @@ with tabs[5]: # League Info
              
         st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
 
-        elif info_category == "Schedule":
+    elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
         courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
         league_start = pd.to_datetime("2026-05-31")
@@ -1151,6 +1130,8 @@ with tabs[5]: # League Info
             {"img": "radgolfgps.jpg", "desc": "RADGOLF GPS Watch."},
             {"img": "70wedge.jpg", "desc": "FULL CHOICE 70 degree Wedge."},
             {"img": "ForezoBallMarkers.jpg", "desc": "Slope Master Ball Marker & Forezo Putter Grip."},
+            {"img": "20260602_115446.jpg", "desc": "G/FORE Golf Shoes Size:9.5"},
+            {"img": "20260603_213525.jpg", "desc": "UST Mamiya LINQ 7F4 Fairway Wood Shaft with Taylomade tip"},
             {"img": "Sandals.jpg", "desc": "Sandals."}
         ]
 
