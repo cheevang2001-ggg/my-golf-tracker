@@ -8,7 +8,7 @@ import altair as alt
 from PIL import Image 
 
 # --- 1. CONFIGURATION & SESSION STATE ---
-st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
+st.set_page_config(page_title="DEV ENVIRONMENT 2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
 REGISTRATION_KEY = "2026summer!"
@@ -336,7 +336,7 @@ EXISTING_PLAYERS = sorted(df_main['Player'].unique().tolist()) if not df_main.em
 st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
 st.image("GGGOLF-2.png", width=480)
 st.image("2026_Players.jpeg", width=1920) 
-st.markdown("<h1>GGGolf League</h1>", unsafe_allow_html=True)
+st.markdown("<h1>---DEV ENVIRONMENT---GGGolf League---DEV ENVIRONMENT---</h1>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Inject Custom CSS to make tabs compact and responsive on mobile screens
