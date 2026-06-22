@@ -1020,7 +1020,7 @@ with tabs[5]: # League Info
 
     elif info_category == "Schedule":
         st.subheader("📅 2026 Season Schedule")
-        courses = ["Dretzka", "Currie", "Whitnall", "Dretzka", "Oakwood", "Dretzka", "Currie", "Dretzka", "Whitnall", "Oakwood", "Dretzka", "Dretzka", "Grant"]
+        courses = ["Dretzka", "Currie", "Whitnall", "Brown Deer", "Oakwood", "Dretzka", "Currie", "Brown Deer", "Whitnall", "Oakwood", "Dretzka", "Brown Deer", "Grant"]
         league_start = pd.to_datetime("2026-05-31")
         
         schedule_data = []
