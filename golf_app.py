@@ -1039,7 +1039,7 @@ with tabs[5]: # League Info
              
         st.info("**Note:** The League Committee reserves the right to amend, add, or remove rules during the season to optimize operations, resolve procedural issues, or adjust gameplay as necessary. All players are expected to uphold the integrity of the game. For any disputes, please contact the Players Committee.")
 
-    elif info_category == "Schedule":
+elif info_category == "Schedule":
     st.subheader("📅 2026 Season Schedule")
     # Updated: Replaced "Brown Deer" with "Dretzka" for Weeks 4, 8, and 12
     courses = ["Dretzka", "Currie", "Whitnall", "Dretzka", "Oakwood", "Dretzka", "Currie", "Dretzka", "Whitnall", "Oakwood", "Dretzka", "Dretzka", "Grant"]
