@@ -5,7 +5,8 @@ import time
 import datetime
 import random
 import altair as alt
-from PIL import Image 
+from PIL import Image
+from zoneinfo import ZoneInfo #<---Add for time zone
 
 # --- 1. CONFIGURATION & SESSION STATE ---
 st.set_page_config(page_title="DEV ENVIRONMENT 2026 GGGolf Summer League", layout="wide")
@@ -89,6 +90,37 @@ def calculate_rolling_handicap(player_df, target_week):
 
     except Exception:
         return 0.0
+
+# Start for time lock
+def get_score_window_status(week_num):
+    # Leave Pre-Season (Week <= 0) open, or adjust as needed
+    if week_num <= 0:
+        return True, ""
+        
+    tz = ZoneInfo('America/Chicago')
+    now = datetime.datetime.now(tz)
+    
+    # League start date is May 31, 2026
+    league_start = datetime.datetime(2026, 5, 31, tzinfo=tz)
+    
+    # Calculate the Sunday of the target week
+    play_date = league_start + datetime.timedelta(weeks=week_num - 1)
+    
+    # Window opens Sunday at 2:00 PM CDT
+    window_start = play_date.replace(hour=14, minute=0, second=0, microsecond=0)
+    
+    # Window closes Monday at 12:00 PM CDT
+    window_end = play_date + datetime.timedelta(days=1)
+    window_end = window_end.replace(hour=12, minute=0, second=0, microsecond=0)
+    
+    # Check if current time falls within the window
+    if now < window_start:
+        return False, f"Score entry for Week {week_num} opens on {window_start.strftime('%A, %b %d at %I:%M %p')}."
+    elif now > window_end:
+        return False, f"Score entry for Week {week_num} closed on {window_end.strftime('%A, %b %d at %I:%M %p')}."
+    else:
+        return True, ""
+# End for time lock
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     try:
@@ -468,23 +500,32 @@ with tabs[0]: # Scorecard
 
             st.divider()
 
-            with st.form("score_entry", clear_on_submit=True):
-                st.subheader("Submit Weekly Round")
-                s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
-                h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
-                
-                c1, c2, c3 = st.columns(3)
-                p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}")
-                b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}")
-                e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}")
-                
-                if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary"):
-                    reg_row = p_data[p_data['Week'] == 0]
-                    pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
-                    save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
-                    st.success("Score Saved!")
-                    time.sleep(1)
-                    st.rerun()
+            # --- CHECK TIME LOCK BEFORE SHOWING FORM ---
+            is_open, lock_msg = get_score_window_status(w_s)
+            
+            if is_open:
+                with st.form("score_entry", clear_on_submit=True):
+                    st.subheader("Submit Weekly Round")
+                    s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
+                    h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}")
+                    b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}")
+                    e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}")
+                    
+                    if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary"):
+                        reg_row = p_data[p_data['Week'] == 0]
+                        pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
+                        save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
+                        
+                        st.success("Score Saved!")
+                        time.sleep(1)
+                        st.rerun()
+            else:
+                # DISPLAY LOCK MESSAGE INSTEAD OF THE FORM
+                st.error("🔒 **Score Entry Locked**")
+                st.info(lock_msg)
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
