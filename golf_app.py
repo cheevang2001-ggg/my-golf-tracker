@@ -6,7 +6,7 @@ import datetime
 import random
 import altair as alt
 from PIL import Image
-from zoneinfo import ZoneInfo #<---Add for time zone
+from zoneinfo import ZoneInfo #<---Add for time zone######################
 
 # --- 1. CONFIGURATION & SESSION STATE ---
 st.set_page_config(page_title="DEV ENVIRONMENT 2026 GGGolf Summer League", layout="wide")
@@ -91,7 +91,7 @@ def calculate_rolling_handicap(player_df, target_week):
     except Exception:
         return 0.0
 
-# Start for time lock
+# Start for time lock  #--------------JULY 6 TIME LOCK EDIT START ---------------
 def get_score_window_status(week_num):
     # Leave Pre-Season (Week <= 0) open, or adjust as needed
     if week_num <= 0:
@@ -120,7 +120,7 @@ def get_score_window_status(week_num):
         return False, f"Score entry for Week {week_num} closed on {window_end.strftime('%A, %b %d at %I:%M %p')}."
     else:
         return True, ""
-# End for time lock
+# End for time lock #--------------JULY 6 TIME LOCK EDIT START ---------------
 
 def save_weekly_data(week, player, pars, birdies, eagles, score_val, hcp_val, pin):
     try:
@@ -500,7 +500,7 @@ with tabs[0]: # Scorecard
 
             st.divider()
 
-            # --- CHECK TIME LOCK BEFORE SHOWING FORM ---
+            # --- CHECK TIME LOCK BEFORE SHOWING FORM START HERE JULY 6 UPDATE TIME LOCK-----<<<<<<<<<<<<<<---------------------------------
             is_open, lock_msg = get_score_window_status(w_s)
             
             if is_open:
@@ -525,7 +525,7 @@ with tabs[0]: # Scorecard
             else:
                 # DISPLAY LOCK MESSAGE INSTEAD OF THE FORM
                 st.error("🔒 **Score Entry Locked**")
-                st.info(lock_msg)
+                st.info(lock_msg) #--------------JULY 6 TIME LOCK EDIT END ---------------
 
 with tabs[1]: # Standings
     st.subheader("🏆 Standings")
