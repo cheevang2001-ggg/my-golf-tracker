@@ -1099,7 +1099,7 @@ with tabs[5]: # League Info
                     elif "4 Man Team Scramble" in entry['Note']:
                         st.info("""
                         **4-Man Team Battle Scramble:**
-                        * Any team with less then 4 players, the team can choose to play as the fourht player but MUST rotate alternate shot to play as the fourth player.
+                        * Any team with less then 4 players, play the scramble as is with your team members.
                         * All players tee off and selects the desired drive.
                         * All players continue play from best desired shot until hole is complete.
                         * Team members receives the same GGG points for the week.
