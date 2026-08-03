@@ -61,22 +61,27 @@ def load_data():
 
 def calculate_rolling_handicap(player_df, target_week):
     try:
-        if target_week in [4, 8, 12]:
+        # Map internal weeks 121 and 122 chronologically for sorting
+        week_order = {-2: -2, -1: -1, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, 121: 12.1, 122: 12.2, 13: 13, 14: 14}
+        effective_target = week_order.get(target_week, target_week)
+
+        if target_week in [4, 8]:
             return 0.0
 
         if 'Total_Score' in player_df.columns:
             player_df = player_df.copy()
             player_df['Total_Score'] = pd.to_numeric(player_df['Total_Score'], errors='coerce')
+            player_df['Effective_Week'] = player_df['Week'].map(lambda w: week_order.get(w, w))
 
-        excluded_weeks = [4, 8, 12]
+        excluded_weeks = [4, 8]
         
         eligible_rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) &
             (player_df['DNF'] == False) &
-            (player_df['Week'] < target_week) &
+            (player_df['Effective_Week'] < effective_target) &
             (player_df['Total_Score'].notna()) &
             (player_df['Total_Score'] > 0)
-        ].sort_values('Week', ascending=False)
+        ].sort_values('Effective_Week', ascending=False)
 
         if len(eligible_rounds) < 3:
             return 0.0
@@ -85,16 +90,35 @@ def calculate_rolling_handicap(player_df, target_week):
         last_scores.sort() 
         hcp = round((sum(last_scores[:3]) / 3) - 36, 1)
 
-        # Apply the Max 16 Cap
         return float(min(hcp, 16.0))
 
     except Exception:
         return 0.0
 
-# Start for time lock  #--------------JULY 6 TIME LOCK EDIT START ---------------
 def get_score_window_status(week_num):
-    # Leave Pre-Season (Week <= 0) open, or adjust as needed
     if week_num <= 0:
+        return True, ""
+        
+    tz = ZoneInfo('America/Chicago')
+    now = datetime.datetime.now(tz)
+    
+    league_start = datetime.datetime(2026, 5, 31, tzinfo=tz)
+    
+    # Map 121 and 122 back to Week 12 for the actual timeline date
+    real_week = 12 if week_num in [121, 122] else week_num
+    play_date = league_start + datetime.timedelta(weeks=real_week - 1)
+    
+    window_start = play_date.replace(hour=14, minute=0, second=0, microsecond=0)
+    window_end = play_date + datetime.timedelta(days=1)
+    window_end = window_end.replace(hour=12, minute=0, second=0, microsecond=0)
+    
+    display_week = "12-A" if week_num == 121 else "12-B" if week_num == 122 else str(week_num)
+
+    if now < window_start:
+        return False, f"Score entry for Week {display_week} opens on {window_start.strftime('%A, %b %d at %I:%M %p')}."
+    elif now > window_end:
+        return False, f"Score entry for Week {display_week} closed on {window_end.strftime('%A, %b %d at %I:%M %p')}."
+    else:
         return True, ""
         
     tz = ZoneInfo('America/Chicago')
@@ -448,14 +472,14 @@ with tabs[0]: # Scorecard
                 "Pre-Season": [-2, -1, 0],
                 "Phase 1": [1, 2, 3, 4],
                 "Phase 2": [5, 6, 7, 8],
-                "Phase 3": [9, 10, 11, 12],
+                "Phase 3": [9, 10, 11, '12-A', '12-B'],
                 "Finals": [13, 14]
             }
 
             w_s = st.segmented_control(
                 "Choose Week",
-                options=[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                format_func=lambda x: f"P{abs(x-1)}" if x <= 0 else f"W{x}",
+                options=[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, '12-A', '12-B', 13, 14],
+                format_func=lambda x: f"P{abs(x-1)}" if isinstance(x, int) and x <= 0 else (f"W{x}" if isinstance(x, int) else x),
                 selection_mode="single",
                 default=1,
                 key=f"week_tabs_{player_select}"
@@ -464,21 +488,24 @@ with tabs[0]: # Scorecard
             if w_s is None:
                 w_s = 1
 
-            if w_s <= 0:
+            # Convert string selection to integer week for backend database operations
+            db_w_s = 121 if w_s == '12-A' else 122 if w_s == '12-B' else w_s
+
+            if isinstance(w_s, int) and w_s <= 0:
                 st.caption(f"📍 Currently Entering: **Pre-Season Round {abs(w_s-1)}**")
-            elif w_s in [4, 8, 12]:
+            elif db_w_s in [4, 8]:
                 st.caption(f"📍 Currently Entering: **Week {w_s} (Event Week)**")
             else:
                 st.caption(f"📍 Currently Entering: **Week {w_s}**")
 
-            if w_s <= 0:
+            if isinstance(w_s, int) and w_s <= 0:
                 current_hcp = 0.0
                 st.info("🛠️ Pre-Season: Logging rounds to establish your Week 1 handicap.")
-            elif w_s in [4, 8, 12]:
+            elif db_w_s in [4, 8]:
                 current_hcp = 0.0
                 st.info("💡 GGG Event: No handicap applied for this round.")
             else:
-                current_hcp = calculate_rolling_handicap(p_data, w_s)
+                current_hcp = calculate_rolling_handicap(p_data, db_w_s)
             
             h_disp = f"+{abs(current_hcp)}" if current_hcp < 0 else f"{current_hcp}"
             played_rounds = p_data[(p_data['Week'] > 0) & (p_data['DNF'] == False)].sort_values('Week')
@@ -500,30 +527,29 @@ with tabs[0]: # Scorecard
 
             st.divider()
 
-            # --- CHECK TIME LOCK BEFORE SHOWING FORM START HERE JULY 6 UPDATE TIME LOCK-----<<<<<<<<<<<<<<---------------------------------
-            is_open, lock_msg = get_score_window_status(w_s)
+            is_open, lock_msg = get_score_window_status(db_w_s)
             
             if is_open:
                 with st.form("score_entry", clear_on_submit=True):
                     st.subheader("Submit Weekly Round")
-                    s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{w_s}")
-                    h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{w_s}")
+                    s_v = st.selectbox("Gross Score", ["DNF"] + [str(i) for i in range(25, 120)], key=f"gross_{player_select}_{db_w_s}")
+                    h_r = st.number_input("HCP to Apply", value=float(current_hcp), key=f"hcp_{player_select}_{db_w_s}")
                     
                     c1, c2, c3 = st.columns(3)
-                    p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{w_s}")
-                    b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{w_s}")
-                    e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{w_s}")
+                    p_c = c1.number_input("Pars", 0, 18, key=f"p_{player_select}_{db_w_s}")
+                    b_c = c2.number_input("Birdies", 0, 18, key=f"b_{player_select}_{db_w_s}")
+                    e_c = c3.number_input("Eagles", 0, 18, key=f"e_{player_select}_{db_w_s}")
                     
                     if st.form_submit_button("Confirm & Submit Score", use_container_width=True, type="primary"):
                         reg_row = p_data[p_data['Week'] == 0]
                         pin = str(reg_row['PIN'].iloc[0]).split('.')[0].strip()
-                        save_weekly_data(w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
+                        # Use db_w_s to save 121 or 122 instead of the string format
+                        save_weekly_data(db_w_s, player_select, p_c, b_c, e_c, s_v, h_r, pin)
                         
                         st.success("Score Saved!")
                         time.sleep(1)
                         st.rerun()
             else:
-                # DISPLAY LOCK MESSAGE INSTEAD OF THE FORM
                 st.error("🔒 **Score Entry Locked**")
                 st.info(lock_msg) #--------------JULY 6 TIME LOCK EDIT END ---------------
 
@@ -539,8 +565,7 @@ with tabs[1]: # Standings
                 for idx, row in v[m].iterrows():
                     # Uses the 1.0 floor fallback from the previous fix
                     base_pts = GGG_POINTS.get(int(row['R']), 1.0)
-                    final_pts = base_pts * 2 if w == 12 else base_pts
-                    v.at[idx, 'Pts'] = final_pts                    
+                    v.at[idx, 'Pts'] = base_pts                    
             
             # Aggregate only the total points per player
             res = v.groupby('Player').agg({'Pts':'sum'}).reset_index().rename(columns={'Pts':'Total Pts'})
@@ -559,13 +584,20 @@ with tabs[2]: # History
             h_df.loc[mask, 'Rank'] = h_df.loc[mask, 'Net_Score'].rank(method='min')
             for idx, row in h_df[mask].iterrows():
                 base_pts = GGG_POINTS.get(int(row['Rank']), 1.0)
-                h_df.at[idx, 'Points'] = base_pts * 2 if w == 12 else base_pts
+                h_df.at[idx, 'Points'] = base_pts
                         
         f_col1, f_col2 = st.columns(2)
         all_players = ["All Players"] + sorted(h_df['Player'].unique().tolist())
         sel_player = f_col1.selectbox("Filter by Player", all_players)
-        all_weeks = ["All Weeks"] + sorted(h_df['Week'].unique().tolist())
-        sel_week = f_col2.selectbox("Filter by Week", all_weeks)
+        
+        # Format the week dropdown dynamically
+        raw_weeks = sorted(h_df['Week'].unique().tolist())
+        all_weeks = ["All Weeks"] + raw_weeks
+        sel_week = f_col2.selectbox(
+            "Filter by Week", 
+            all_weeks,
+            format_func=lambda x: "12-A" if x == 121 else ("12-B" if x == 122 else (f"Wk {x}" if isinstance(x, int) else x))
+        )
         
         filtered_df = h_df.copy()
         if sel_player != "All Players":
@@ -576,13 +608,17 @@ with tabs[2]: # History
         display_df = filtered_df[['Week', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']].copy()
         display_df = display_df.sort_values(['Week', 'Points'], ascending=[False, False])
         
+        # Translate the Week values for display inside the Dataframe
+        display_df['Week_Label'] = display_df['Week'].map(lambda x: '12-A' if x == 121 else ('12-B' if x == 122 else f"Wk {int(x)}"))
+        display_df = display_df[['Week_Label', 'Player', 'Total_Score', 'Handicap', 'Net_Score', 'Points']]
+
         st.dataframe(
             display_df, 
             use_container_width=True, 
             hide_index=True,
             column_config={
                 "Points": st.column_config.NumberColumn("GGG Points", format="%d pts"),
-                "Week": st.column_config.NumberColumn("Week", format="Wk %d")
+                "Week_Label": "Week"
             }
         )
     else:
@@ -833,8 +869,10 @@ with tabs[5]: # League Info
             help="Select the upcoming week to see everyone's playing handicap."
         )
 
-        if target_week in [4, 8, 12]:
+        if target_week in [4, 8]:
             st.info(f"💡 Week {target_week} is a GGG Event week. No handicaps are applied.")
+        elif target_week == 12:
+            st.info("💡 Week 12 is a Double Points Event (18 Holes). The Front 9 (12-A) and Back 9 (12-B) each use your rolling handicap.")
         else:
             # Generate the handicap table for all registered players
             hcp_data = []
