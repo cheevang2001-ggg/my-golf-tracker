@@ -9,7 +9,7 @@ from PIL import Image
 from zoneinfo import ZoneInfo #<---Add for time zone######################
 
 # --- 1. CONFIGURATION & SESSION STATE ---
-st.set_page_config(page_title="DEV ENVIRONMENT 2026 GGGolf Summer League", layout="wide")
+st.set_page_config(page_title="2026 GGGolf Summer League", layout="wide")
 
 ADMIN_PASSWORD = "!@#Seahawks6145!@#"
 REGISTRATION_KEY = "2026summer!"
