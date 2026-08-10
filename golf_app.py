@@ -75,6 +75,13 @@ def calculate_rolling_handicap(player_df, target_week):
 
         excluded_weeks = [4, 8]
         
+        # --- WEEK 11 GOLD CARD EXCLUSION ---
+        # If the player played Week 11 with a 0 handicap, exclude it from future rolling averages
+        if 'Handicap' in player_df.columns:
+            week_11_gold_card = player_df[(player_df['Week'] == 11) & (player_df['Handicap'] == 0.0)]
+            if not week_11_gold_card.empty:
+                excluded_weeks.append(11)
+
         eligible_rounds = player_df[
             (~player_df['Week'].isin(excluded_weeks)) &
             (player_df['DNF'] == False) &
