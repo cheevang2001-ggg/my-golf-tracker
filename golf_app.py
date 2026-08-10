@@ -871,9 +871,10 @@ with tabs[5]: # League Info
 
         if target_week in [4, 8]:
             st.info(f"💡 Week {target_week} is a GGG Event week. No handicaps are applied.")
-        elif target_week == 12:
-            st.info("💡 Week 12 is a Double Points Event (18 Holes). The Front 9 (12-A) and Back 9 (12-B) each use your rolling handicap.")
         else:
+            if target_week == 12:
+                st.info("💡 Week 12 is a Double Points Event (18 Holes). The Front 9 (12-A) and Back 9 (12-B) each use your rolling handicap.")
+            
             # Generate the handicap table for all registered players
             hcp_data = []
             if EXISTING_PLAYERS:
